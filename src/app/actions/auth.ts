@@ -12,6 +12,8 @@ export async function iniciarSesion(
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/");
+  // Solo rutas relativas de un slash: evita open redirect vía "next" (p. ej. "//evil.com" o "https://evil.com").
+  const destino = next.startsWith("/") && !next.startsWith("//") ? next : "/";
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
@@ -20,7 +22,7 @@ export async function iniciarSesion(
     return { error: "Email o contraseña incorrectos." };
   }
 
-  redirect(next || "/");
+  redirect(destino);
 }
 
 export async function registrarse(
