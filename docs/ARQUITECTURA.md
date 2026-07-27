@@ -559,6 +559,32 @@ avatar por iniciales, tal cual llegan de la base de datos. Datos de prueba limpi
 
 ---
 
+## 7quindecies. El "···" del chat solo se veía con el ratón
+
+La ronda anterior (7undecies) arregló que en el móvil no hubiera NINGUNA forma de tocar
+responder/editar/borrar/reaccionar, añadiendo el gesto de mantener pulsado. Pero el botón visible
+—el "···"— seguía viviendo en un contenedor `opacity-0` que solo se hacía visible con
+`group-hover/msg`, restringido además a `md:flex` (invisible por debajo del punto de corte de
+escritorio). Es decir: el **gesto** funcionaba en el móvil, pero no había ningún **indicio visual**
+de que existiera — exactamente lo que el señor señaló: "en escritorio veo los tres puntos, ¿pero en
+el móvil cómo los veo?". Para una app pensada para gente poco tecnológica, un gesto invisible sin
+pista no es una solución completa.
+
+Arreglo: el botón "···" pasa a vivir **dentro de la propia burbuja**, en la fila de la hora, junto a
+los checks de leído — **siempre visible**, en móvil y en escritorio, sin depender de hover ni de
+ningún gesto. La pulsación larga se queda como atajo adicional para quien la conozca de otras apps,
+pero ya no es la única vía. Al estar el botón dentro del área que también escucha la pulsación
+larga, se le corta la propagación del puntero (`stopPropagation` en `onPointerDown`) para que
+tocarlo no arme además el temporizador del padre y acabe abriendo el menú por partida doble en
+ratón.
+
+Verificado con Playwright en tres escenarios reales (no solo compilación): viewport móvil sin tocar
+nada — los 10 botones ya están visibles de entrada; un toque simple (no una pulsación larga) sobre
+el botón abre el menú completo; la pulsación larga sigue funcionando en paralelo como atajo; y en
+escritorio, tanto el botón como el clic siguen funcionando. Capturas de pantalla revisadas a mano.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

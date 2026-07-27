@@ -54,9 +54,6 @@ function BurbujaMensaje({
     return mapa;
   }, [reacciones]);
 
-  const botonAccion =
-    "flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white/70 backdrop-blur-sm transition-colors duration-150 hover:bg-white/20 hover:text-white";
-
   return (
     <div className={`flex items-end gap-2 ${mio ? "justify-end" : "justify-start"}`}>
       {!mio && (
@@ -112,28 +109,34 @@ function BurbujaMensaje({
                 )
               )}
               {mio && esTemporal && <Check size={13} aria-label="Enviando" />}
+
+              {/* Botón "···" siempre visible, dentro de la propia burbuja: el
+                  flotante de antes solo aparecía al pasar el ratón por
+                  encima, así que en el móvil (el uso principal de la app) no
+                  había NINGUNA pista de que las acciones existieran. La
+                  pulsación larga sigue funcionando como atajo, pero esto es
+                  lo que de verdad se ve y se toca. */}
+              {!esTemporal && !m.borrado && (
+                <button
+                  type="button"
+                  onClick={abrirMenu}
+                  // El botón vive dentro del área con el gesto de pulsación
+                  // larga: sin cortar la propagación, tocarlo también arma el
+                  // temporizador del padre y en ratón llega a disparar el
+                  // menú dos veces.
+                  onPointerDown={(e) => e.stopPropagation()}
+                  aria-label="Acciones del mensaje"
+                  className={`-mr-1 flex h-6 w-6 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-150 ${
+                    mio
+                      ? "text-black/40 hover:bg-black/10 hover:text-black"
+                      : "text-white/40 hover:bg-white/10 hover:text-white"
+                  }`}
+                >
+                  <MoreHorizontal size={14} aria-hidden="true" />
+                </button>
+              )}
             </div>
           </div>
-
-          {/* Atajo de escritorio: al pasar por encima aparece el acceso al
-              mismo menú. En móvil no existe el hover — por eso las acciones
-              eran inalcanzables— y ahí manda la pulsación larga. */}
-          {!m.borrado && (
-            <div
-              className={`pointer-events-none absolute top-1/2 hidden -translate-y-1/2 items-center opacity-0 transition-opacity duration-150 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100 md:flex ${
-                mio ? "right-full mr-1" : "left-full ml-1"
-              }`}
-            >
-              <button
-                type="button"
-                onClick={abrirMenu}
-                aria-label="Acciones del mensaje"
-                className={botonAccion}
-              >
-                <MoreHorizontal size={16} aria-hidden="true" />
-              </button>
-            </div>
-          )}
         </div>
 
         {grupos.size > 0 && (
