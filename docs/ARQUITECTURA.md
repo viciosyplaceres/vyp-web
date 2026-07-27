@@ -671,6 +671,28 @@ revisada a mano. Datos y cuentas de prueba borrados después.
 
 ---
 
+## 7novodecies. El directorio de miembros no tenía enlace en la navegación móvil
+
+`/miembros` (el directorio público de la peña, distinto de `/admin/miembros`, que es solo de la
+directiva) ya funcionaba de sobra para cualquier miembro aprobado — ni el código de la página ni
+`proxy.ts` lo restringían a admin. Lo que faltaba era **cómo llegar ahí**: su único enlace vivía en
+`Header.tsx`, en un `<nav>` marcado `hidden md:flex` (solo escritorio). En el móvil —el uso
+principal de la app, según la propia razón de ser de este proyecto— no había ningún botón ni icono
+que llevara a esa página; solo se podía llegar tecleando la URL a mano, que es justo como el señor
+la encontró "que falta".
+
+Arreglo: nuevo ítem "Miembros" (icono `Users`) en `BottomNav.tsx`, junto a Chat y Gestión, visible
+para cualquier `esMiembro`. Con él la barra inferior pasa a tener 6 elementos como máximo (para
+quien ve Chat y Gestión); comprobado que caben con holgura incluso en el iPhone SE (375 px, la
+pantalla habitual más estrecha).
+
+Verificado con una cuenta de miembro **no-admin** desechable (creada, usada y borrada en la misma
+prueba): la barra inferior muestra el ítem "Miembros", tocarlo lleva a `/miembros` de verdad (no
+redirige a `/login` ni a `/perfil`), la página carga "Miembros de la peña" y lista al propio
+miembro de prueba en el directorio. Captura de pantalla revisada a mano.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

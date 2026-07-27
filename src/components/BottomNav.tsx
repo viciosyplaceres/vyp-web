@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Images, Music, MessageCircle, Settings } from "lucide-react";
+import { Home, Images, Music, MessageCircle, Users, Settings } from "lucide-react";
 import { suscribirRealtime, type Escucha } from "@/lib/realtime";
 
 type Item = {
@@ -61,6 +61,11 @@ export default function BottomNav({
 
   if (esMiembro) {
     items.push({ href: "/chat", etiqueta: "Chat", Icono: MessageCircle });
+    // El directorio (`/miembros`) solo tenía enlace en el nav de escritorio
+    // (`Header.tsx`, oculto en móvil): en el móvil —el uso principal de la
+    // app— no había ninguna forma de llegar ahí salvo escribiendo la URL
+    // a mano. Es de cualquier miembro, no solo de la directiva.
+    items.push({ href: "/miembros", etiqueta: "Miembros", Icono: Users });
     // Organizar las fiestas es cosa de toda la peña, no solo de la junta:
     // dentro de Gestión ya se distingue lo que es exclusivo de la directiva.
     items.push({ href: "/admin", etiqueta: "Gestión", Icono: Settings });
