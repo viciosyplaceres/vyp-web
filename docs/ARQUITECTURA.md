@@ -226,6 +226,25 @@ dejando el texto tal cual en la base de datos; la ocultación es solo de interfa
 
 ---
 
+## 7ter. Burbuja de pendientes en el avatar
+
+`components/AvatarPendientes.tsx` + `app/actions/pendientes.ts`: el avatar del header (única
+puerta a `/perfil` desde que se quitó el botón redundante del menú inferior) lleva una burbuja roja
+en tiempo real con el total de **tareas asignadas sin marcar como hechas** más **artículos de la
+lista de la compra asignados sin marcar como comprados**. A propósito no cuenta nada de música ni
+fotos: ahí no existe un estado "pendiente", solo "subido".
+
+- El número inicial se calcula en el servidor (`obtenerPendientesPerfil`, cruzando
+  `tareas_miembros`/`compra_miembros` con `tareas.hecha`/`lista_compra.comprado` vía embed
+  PostgREST) y se pasa como prop, igual que la burbuja de no leídos del chat.
+- En el cliente se suscribe a un canal que escucha `UPDATE` en `tareas` y `lista_compra` (cualquier
+  cambio de cualquiera, porque no se puede filtrar por "asignado a mí" directamente en esas tablas)
+  y `*` en `tareas_miembros`/`compra_miembros` **filtrado por `perfil_id=eq.<yo>`** (asignaciones
+  nuevas o quitadas). Cualquiera de los cuatro eventos vuelve a pedir el total al servidor.
+- Solo se abre el canal si `esMiembro`: quien está pendiente de aprobación no tiene nada asignado.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

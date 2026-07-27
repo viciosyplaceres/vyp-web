@@ -1,7 +1,8 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getSesion } from "@/lib/auth";
-import Avatar from "@/components/Avatar";
+import { obtenerPendientesPerfil } from "@/app/actions/pendientes";
+import AvatarPendientes from "@/components/AvatarPendientes";
 
 /** Enlaces solo para pantallas grandes: en móvil manda la barra inferior. */
 const ENLACES = [
@@ -12,6 +13,7 @@ const ENLACES = [
 
 export default async function Header() {
   const sesion = await getSesion();
+  const pendientes = sesion?.esMiembro ? await obtenerPendientesPerfil().catch(() => 0) : 0;
 
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-black/90 backdrop-blur-md">
@@ -57,20 +59,14 @@ export default async function Header() {
 
         <div className="flex shrink-0 items-center gap-3 text-sm">
           {sesion ? (
-            <Link
-              href="/perfil"
-              aria-label="Mi perfil"
-              className="flex cursor-pointer items-center gap-2 rounded-full transition-opacity duration-200 hover:opacity-80"
-            >
-              <span className="hidden text-white/60 sm:block">
-                {sesion.usuario ?? sesion.nombre ?? "Mi perfil"}
-              </span>
-              <Avatar
-                nombre={sesion.nombre}
-                avatarUrl={sesion.avatarUrl}
-                tamano={32}
-              />
-            </Link>
+            <AvatarPendientes
+              nombre={sesion.nombre}
+              usuario={sesion.usuario}
+              avatarUrl={sesion.avatarUrl}
+              userId={sesion.userId}
+              esMiembro={sesion.esMiembro}
+              pendientesInicial={pendientes}
+            />
           ) : (
             <Link
               href="/login"
