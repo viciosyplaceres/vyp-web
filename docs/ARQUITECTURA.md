@@ -196,6 +196,36 @@ que un miembro quite lo suyo, que solo tocan la base de datos).
 
 ---
 
+## 7bis. Chat profesional (migración `0008_chat_pro.sql`)
+
+El chat (`components/Chat.tsx` + `app/actions/chat.ts`) tiene todas las funciones habituales de una
+app de mensajería **menos la subida de multimedia**, excluida a propósito para no poder disparar el
+consumo de Cloudinary/R2 desde un canal sin límite de tamaño de conversación:
+
+- **Responder**: al citar, el texto y autor del mensaje original se copian en columnas propias
+  (`respuesta_texto`, `respuesta_autor`) en el momento de enviar. Es una foto fija a propósito: si el
+  original se edita o se borra después, la cita no cambia, igual que en WhatsApp.
+- **Editar**: solo el autor (columna `editado_at`, se ve "editado" junto a la hora).
+- **Eliminar**: borrado *blando* — `borrado = true`, el texto se queda tal cual en la base de datos
+  (la columna exige entre 1 y 4000 caracteres, así que no se puede vaciar) y es la interfaz la que
+  oculta el contenido y muestra "Mensaje eliminado".
+- **Reacciones** (`mensaje_reacciones`): un emoji por persona y mensaje; upsert por `(mensaje_id,
+  perfil_id)`, así que reaccionar dos veces con emojis distintos reemplaza la reacción, no la suma.
+- **Visto / doble check azul** (`chat_lecturas`): una fila por persona con "hasta qué momento he
+  leído", no una fila por mensaje — comparar `created_at` del mensaje contra esa marca de cada
+  miembro basta para saber si alguien más ya lo vio.
+- **Burbuja de no leídos en tiempo real**: `BottomNav.tsx` se suscribe en solitario (no depende de
+  que `/chat` esté montado) al canal de `mensajes`; si el chat está abierto se marca leído al
+  instante y la burbuja se queda en cero, si no, va sumando.
+- Igual que en `perfiles`, un trigger `mensajes_before_update` impide que alguien que no sea admin
+  reasigne `autor_id` o falsee `created_at` al editar su propio mensaje.
+
+Gotcha real encontrado al verificar en producción: el primer intento de borrado blando ponía
+`texto: ""`, y saltaba el `check` de la columna (`char_length(texto) between 1 and 4000`). Arreglado
+dejando el texto tal cual en la base de datos; la ocultación es solo de interfaz.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

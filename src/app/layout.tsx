@@ -8,6 +8,7 @@ import RegistrarSW from "@/components/RegistrarSW";
 import InstalarApp from "@/components/InstalarApp";
 import ActivarAvisosAuto from "@/components/ActivarAvisosAuto";
 import { getSesion } from "@/lib/auth";
+import { obtenerNoLeidos } from "@/app/actions/chat";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -81,6 +82,7 @@ export default async function RootLayout({
   children: React.ReactNode;
 }>) {
   const sesion = await getSesion();
+  const noLeidos = sesion?.esMiembro ? await obtenerNoLeidos().catch(() => 0) : 0;
 
   return (
     <html
@@ -109,6 +111,7 @@ export default async function RootLayout({
           <BottomNav
             esMiembro={sesion?.esMiembro ?? false}
             esAdmin={sesion?.esAdmin ?? false}
+            noLeidosInicial={noLeidos}
           />
         </ReproductorProvider>
         <RegistrarSW />

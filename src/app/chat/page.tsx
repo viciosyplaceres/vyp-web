@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { marcarChatLeido } from "@/app/actions/chat";
 import Chat, { type Mensaje, type InfoAutor } from "@/components/Chat";
 
 export const dynamic = "force-dynamic";
@@ -51,11 +52,19 @@ export default async function ChatPage() {
 
   const supabase = await createClient();
 
-  const { data: filas } = await supabase
-    .from("mensajes")
-    .select("id, texto, created_at, autor_id, autores(nombre, avatar_url)")
-    .order("created_at", { ascending: true })
-    .limit(200);
+  const [{ data: filas }, { data: todosAutores }, { data: reaccionesFilas }, { data: lecturasFilas }] =
+    await Promise.all([
+      supabase
+        .from("mensajes")
+        .select(
+          "id, texto, created_at, autor_id, respuesta_a, respuesta_texto, respuesta_autor, editado_at, borrado, autores(nombre, avatar_url)",
+        )
+        .order("created_at", { ascending: true })
+        .limit(200),
+      supabase.from("autores").select("id, nombre, avatar_url"),
+      supabase.from("mensaje_reacciones").select("mensaje_id, perfil_id, emoji"),
+      supabase.from("chat_lecturas").select("perfil_id, ultimo_leido_at"),
+    ]);
 
   type RelAutor = { nombre: string | null; avatar_url: string | null };
 
@@ -69,18 +78,39 @@ export default async function ChatPage() {
       autor_id: m.autor_id,
       autor: info?.nombre ?? null,
       avatarUrl: info?.avatar_url ?? null,
+      respuestaA: m.respuesta_a,
+      respuestaTexto: m.respuesta_texto,
+      respuestaAutor: m.respuesta_autor,
+      editadoAt: m.editado_at,
+      borrado: m.borrado,
     };
   });
 
   // Índice de autores para poder etiquetar los mensajes que llegan en vivo,
   // que solo traen el autor_id.
-  const { data: todosAutores } = await supabase
-    .from("autores")
-    .select("id, nombre, avatar_url");
   const autores: Record<string, InfoAutor> = {};
   for (const a of todosAutores ?? []) {
     autores[a.id] = { nombre: a.nombre, avatarUrl: a.avatar_url };
   }
+
+  const reaccionesIniciales: Record<string, { emoji: string; perfilId: string; nombre: string | null }[]> = {};
+  for (const r of reaccionesFilas ?? []) {
+    (reaccionesIniciales[r.mensaje_id] ??= []).push({
+      emoji: r.emoji,
+      perfilId: r.perfil_id,
+      nombre: autores[r.perfil_id]?.nombre ?? null,
+    });
+  }
+
+  const lecturas: Record<string, string> = {};
+  for (const l of lecturasFilas ?? []) {
+    lecturas[l.perfil_id] = l.ultimo_leido_at;
+  }
+
+  // Entrar al chat cuenta como haberlo leído hasta ahora: la burbuja de no
+  // leídos del menú inferior baja a cero y el doble check azul avisa a los
+  // demás de que sus mensajes ya se han visto.
+  await marcarChatLeido().catch(() => undefined);
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 sm:px-6">
@@ -91,7 +121,13 @@ export default async function ChatPage() {
         </p>
       </div>
 
-      <Chat inicial={mensajes} userId={sesion.userId} autores={autores} />
+      <Chat
+        inicial={mensajes}
+        userId={sesion.userId}
+        autores={autores}
+        reaccionesIniciales={reaccionesIniciales}
+        lecturasIniciales={lecturas}
+      />
     </main>
   );
 }
