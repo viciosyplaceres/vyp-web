@@ -1,5 +1,6 @@
-import type { Metadata } from "next";
+import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Header from "@/components/Header";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -13,8 +14,13 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vicios y Placeres (VYP)",
-  description: "Web de la peña Vicios y Placeres — galería y gestión de las fiestas",
+  title: "Vicios & Placeres (VYP)",
+  description:
+    "Web de la peña Vicios & Placeres — Fuente Álamo de Murcia. Galería, música y gestión de las fiestas.",
+};
+
+export const viewport: Viewport = {
+  themeColor: "#000000",
 };
 
 export default function RootLayout({
@@ -24,10 +30,13 @@ export default function RootLayout({
 }>) {
   return (
     <html
-      lang="en"
+      lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col">{children}</body>
+      <body className="min-h-full flex flex-col bg-black text-white">
+        <Header />
+        {children}
+      </body>
     </html>
   );
 }

@@ -165,13 +165,14 @@ a partir de la lista de `/musica`.
 
 ---
 
-## 10. Identidad visual
+## 10. Identidad visual — CERRADA
 
-- **Logo**: generado con Higgsfield en formato vectorial (escala sin pixelarse, sirve igual para la
-  web que para estampar camisetas). Cuatro variantes en `design/logo-candidatos/`.
-- **Paleta**: fondo casi negro, oro cálido y carmesí — festivo y mediterráneo, y hace que las fotos
-  de las fiestas destaquen.
-- Tipografía de sistema para que cargue rápido con mala cobertura.
+- **Logotipo**: wordmark horizontal ("VICIOS & PLACERES" en una línea, serif elegante), pensado
+  para un header de web real, no un badge circular que obligaría a un header gigante. Icono
+  cuadrado aparte ("V&P" compacto) para favicon y app icon. Ambos vectoriales (Recraft V4.1),
+  descartes en `design/logo-candidatos/`.
+- **Paleta**: negro puro de fondo, blanco de texto. Sin modo claro — serio y sobrio, no festivo.
+- Tipografía de sistema (Geist) para que cargue rápido con mala cobertura en el recinto.
 
 ---
 

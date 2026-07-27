@@ -15,7 +15,7 @@ Público: todo el mundo ve y escucha. Solo los miembros suben y comentan.
 | Credenciales verificadas | Hecho (ver `CREDENCIALES.md`, fichero local no versionado) |
 | Preset de subida de fotos | Hecho — `vyp_galeria`, **modo firmado** (solo miembros) |
 | Plan del proyecto | **Hecho** — `docs/PLAN.md` |
-| Logo | Candidatos generados en `design/logo-candidatos/`; falta elegir |
+| Identidad visual | **Hecho** — logotipo horizontal (`public/logo/vyp-wordmark.png`), icono cuadrado para favicon, paleta negro/blanco, header con el logo |
 | Repositorio GitHub | **Hecho** — código subido a `viciosyplaceres/vyp-web`, rama `main` |
 | Código de la aplicación | Portada de bienvenida desplegada; falta galería y panel de gestión |
 | Esquema de base de datos | Pendiente |
@@ -34,6 +34,16 @@ Todo sobre capas gratuitas permanentes, alojado **fuera** del VPS propio:
 - **Dominio**: `viciosyplaceres.com`, DNS gestionado en el panel de la zona
 
 Ver `docs/PLAN.md` para el detalle de páginas, modelo de datos, roles y fases.
+
+## Identidad visual
+
+- **Logotipo horizontal** (`public/logo/vyp-wordmark.svg` + `.png`): wordmark serio en serif,
+  pensado para un header real — no un badge circular. Se usa en `Header.tsx` a 32-36px de alto.
+- **Icono cuadrado** (`public/logo/vyp-icon.svg`): monograma "V&P" compacto, usado como favicon
+  y app icon (funciona a tamaños pequeños, a diferencia del wordmark).
+- **Paleta**: negro puro de fondo, blanco de texto. Sin modo claro.
+- Ambos generados con Higgsfield (Recraft V4.1, vectorial) — fuente y variantes descartadas en
+  `design/logo-candidatos/`.
 
 ## Configuración local
 
