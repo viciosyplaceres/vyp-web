@@ -101,6 +101,7 @@ export default function SubirMusica({ onSubido }: { onSubido?: () => void }) {
         anio: anio === "" ? null : Number(anio),
         clave,
         duracionS: duracion,
+        bytes: fichero.size,
       });
 
       setProgreso(null);

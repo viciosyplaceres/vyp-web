@@ -33,7 +33,7 @@ Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran
 | `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar. **Miembros**: botón "Subir música" arriba de la página |
 | `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp |
 | `/perfil` | Con sesión | Avatar y nombre de usuario, mis tareas, mi compra, mis fotos, mi música, ajustes y cerrar sesión |
-| `/admin` · `/admin/participantes` · `/admin/deudas` · `/admin/tareas` · `/admin/compras` · `/admin/miembros` | **Directiva** | Talla y pago por miembro y año (2026–2040), quién le debe dinero a quién (incluida "VYP"), tareas de agosto con calendario, lista de la compra, aprobar altas |
+| `/admin` · `/admin/participantes` · `/admin/deudas` · `/admin/tareas` · `/admin/compras` · `/admin/miembros` · `/admin/almacenamiento` | **Directiva** | Talla y pago por miembro y año (2026–2040), quién le debe dinero a quién (incluida "VYP"), tareas de agosto con calendario, lista de la compra, aprobar altas, uso real de Cloudinary/R2 con borrado para hacer sitio |
 
 ## Arquitectura
 
@@ -88,5 +88,6 @@ npx tsc --noEmit && npx eslint src && npm run build
 
 - **Rotar el token de GitHub**: el actual funciona pero tiene permisos de administrador de toda la
   cuenta, muy por encima de lo necesario (ver aviso en `CREDENCIALES.md`).
-- Al borrar una foto o pista se borra el registro, pero el archivo sigue en Cloudinary/R2.
+- Cuando un miembro borra algo suyo, solo se borra el registro (el archivo sigue en Cloudinary/R2).
+  Desde `/admin/almacenamiento` la directiva sí borra el archivo real, no solo la fila.
 - Avisos push también al subir fotos nuevas (hoy solo avisa el chat).

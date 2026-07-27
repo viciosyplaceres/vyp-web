@@ -261,6 +261,39 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 
 ---
 
+## 9-pre-ter. Control de almacenamiento (`/admin/almacenamiento`, 2026-07-27)
+
+Todo el proyecto está pensado para no pagar nunca, así que hacía falta una manera de **verlo venir**
+antes de pasarse de las cuentas gratuitas, no enterarse cuando ya sea tarde.
+
+- **Cloudinary**: se consulta su propia API de uso (`cloudinary.api.usage()`, créditos reales de la
+  cuenta, no una estimación) — fotos, vídeos y avatares comparten esos 25 créditos.
+- **R2**: se recorre el bucket entero sumando el tamaño de cada objeto (`ListObjectsV2`, con
+  paginación). A la escala de una peña son pocos ficheros, así que es instantáneo.
+- Dos barras de progreso en `/admin/almacenamiento`, con el número exacto al lado.
+
+**La restricción de verdad** vive en el servidor, no en la interfaz: `/api/cloudinary/firma` y
+`/api/r2/subir` comprueban el uso **antes de firmar nada** y devuelven `507` si se pasaría del 90%
+del plan gratuito (el umbral es más bajo que el límite a propósito, para no dejar a alguien a mitad
+de subir sin sitio donde caer). Verificado con la fórmula real: al 92% de Cloudinary bloquea, al
+0,44% actual deja pasar — y las dos rutas, probadas contra la cuenta real, siguen firmando con
+normalidad hoy.
+
+**Vaciar espacio de verdad, no solo la fila.** Antes, borrar una foto o una pista solo quitaba el
+registro de la base de datos: el archivo se quedaba ocupando espacio en Cloudinary o R2 sin que
+nadie lo supiera. Las nuevas acciones (`borrarMediaAdmin`, `borrarPistaAdmin`) primero borran el
+**archivo real** (`cloudinary.uploader.destroy` / `DeleteObjectCommand`) y solo después la fila.
+Verificado subiendo un fichero de prueba a R2 y confirmando con `HeadObjectCommand` que, tras
+borrarlo desde el panel, el objeto ya no existe en el bucket (antes: `ContentLength: 500000`;
+después: `NotFound`).
+
+El panel lista fotos/vídeos y música propia **ordenados de mayor a menor tamaño**, para que la
+directiva sepa exactamente qué borrar primero si hay que hacer sitio. El tamaño de cada archivo se
+guarda al subirlo (columna `bytes` en `media` y `pistas`) para no tener que preguntarle a
+Cloudinary/R2 uno por uno.
+
+---
+
 ## 9-pre-bis. Participantes por año y Deudas (2026-07-27)
 
 ### Participantes (`/admin/participantes`)

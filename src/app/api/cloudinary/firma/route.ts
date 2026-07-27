@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getSesion } from "@/lib/auth";
+import { haySitioCloudinary } from "@/lib/almacenamiento";
 
 /**
  * Emite una firma de subida de Cloudinary SOLO si quien la pide es un miembro
@@ -20,6 +21,13 @@ export async function POST(request: Request) {
       { error: "Solo los miembros de la peña pueden subir." },
       { status: 403 },
     );
+  }
+
+  // Antes de firmar nada: si ya casi no queda crédito gratuito, se corta aquí
+  // y no en mitad de la subida. Nunca se debe pasar del plan Free de Cloudinary.
+  const sitio = await haySitioCloudinary();
+  if (!sitio.ok) {
+    return NextResponse.json({ error: sitio.error }, { status: 507 });
   }
 
   const { anio, tipo } = await request.json().catch(() => ({}));

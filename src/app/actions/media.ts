@@ -15,6 +15,7 @@ export type DatosMedia = {
   alto?: number | null;
   duracionS?: number | null;
   descripcion?: string | null;
+  bytes?: number | null;
 };
 
 /**
@@ -42,6 +43,7 @@ export async function registrarMedia(datos: DatosMedia) {
     alto: datos.alto ?? null,
     duracion_s: datos.duracionS ?? null,
     descripcion: datos.descripcion?.trim() || null,
+    bytes: datos.bytes ?? null,
     subido_por: sesion.userId,
   });
 

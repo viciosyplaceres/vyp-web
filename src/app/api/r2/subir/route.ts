@@ -3,6 +3,7 @@ import { PutObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2, R2_BUCKET } from "@/lib/r2";
 import { getSesion } from "@/lib/auth";
+import { haySitioR2 } from "@/lib/almacenamiento";
 
 const TIPOS_AUDIO = [
   "audio/mpeg",
@@ -84,6 +85,13 @@ export async function POST(request: Request) {
       },
       { status: 400 },
     );
+  }
+
+  // Antes de firmar nada: si este fichero no cabe sin pasar del 90% del plan
+  // gratuito de R2, se corta aquí y no en mitad de la subida.
+  const sitio = await haySitioR2(tamano);
+  if (!sitio.ok) {
+    return NextResponse.json({ error: sitio.error }, { status: 507 });
   }
 
   // La clave la decide el servidor: el cliente no elige dónde escribe.

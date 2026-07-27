@@ -14,6 +14,7 @@ export async function registrarPistaR2(datos: {
   anio?: number | null;
   clave: string;
   duracionS?: number | null;
+  bytes?: number | null;
 }) {
   const sesion = await exigirMiembro();
   const supabase = await createClient();
@@ -29,6 +30,7 @@ export async function registrarPistaR2(datos: {
     url: datos.clave,
     embed_url: null,
     duracion_s: datos.duracionS ?? null,
+    bytes: datos.bytes ?? null,
     subido_por: sesion.userId,
   });
 

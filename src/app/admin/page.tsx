@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { ShoppingCart, Users, ListChecks, UserRound, Coins } from "lucide-react";
+import { ShoppingCart, Users, ListChecks, UserRound, Coins, HardDrive } from "lucide-react";
 import { getSesion } from "@/lib/auth";
 
 export const dynamic = "force-dynamic";
@@ -17,6 +17,7 @@ const SECCIONES = [
   { href: "/admin/tareas", texto: "Tareas", Icono: ListChecks },
   { href: "/admin/compras", texto: "Lista de la compra", Icono: ShoppingCart },
   { href: "/admin/miembros", texto: "Miembros", Icono: Users },
+  { href: "/admin/almacenamiento", texto: "Almacenamiento", Icono: HardDrive },
 ];
 
 export default async function AdminPage() {

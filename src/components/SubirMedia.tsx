@@ -125,6 +125,7 @@ export default function SubirMedia({
           alto: subido.height ?? null,
           duracionS: subido.duration ? Math.round(subido.duration) : null,
           descripcion: ficheros.length === 1 ? descripcion : null,
+          bytes: subido.bytes ?? null,
         });
 
         setHechos(i + 1);

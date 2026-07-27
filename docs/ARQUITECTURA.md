@@ -32,7 +32,7 @@ src/
     musica/                 Lista de pistas (R2 + embeds externos). Botón "Subir música" propio (miembros)
     chat/                   Chat interno de miembros
     perfil/                 Avatar, usuario, mis tareas/compra/fotos/música, ajustes, salir
-    admin/                  Participantes · deudas · tareas · compras · miembros (solo directiva)
+    admin/                  Participantes · deudas · tareas · compras · miembros · almacenamiento
     login/ registro/        Acceso y alta
     actions/                Server actions (toda la escritura pasa por aquí)
     api/                    Rutas que el navegador llama directamente
@@ -185,6 +185,13 @@ con el código.
 
 El reparto está pensado justo para esto: lo que se escucha en bucle (música) va donde la salida es
 gratis, y lo que se ve una vez (fotos) donde hay optimización automática.
+
+**Ya no hace falta vigilarlo a mano**: `/admin/almacenamiento` (ver `lib/almacenamiento.ts`) muestra
+el uso real de Cloudinary y R2, y `/api/cloudinary/firma` + `/api/r2/subir` bloquean subidas nuevas
+al llegar al 90% de cada plan gratuito — antes de firmar, no a mitad de subida. Desde ese mismo panel
+se puede borrar cualquier foto, vídeo o pista para hacer sitio: el borrado admin elimina el archivo
+real en Cloudinary/R2, no solo la fila (a diferencia de `borrarMedia`/`borrarPista`, pensados para
+que un miembro quite lo suyo, que solo tocan la base de datos).
 
 ---
 
