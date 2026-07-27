@@ -5,47 +5,48 @@ import {
   Music,
   MapPin,
   ArrowRight,
-  MessageCircle,
+  Navigation,
   Upload,
   ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import CarruselFotos, { type FotoCarrusel } from "@/components/CarruselFotos";
+import MusicaCompacta from "@/components/MusicaCompacta";
+import type { PistaListada } from "@/components/ListaMusica";
 
 export const dynamic = "force-dynamic";
 
-const PILARES = [
-  {
-    href: "/galeria",
-    Icono: Images,
-    titulo: "Galería",
-    texto: "Fotos y vídeos de cada año de fiestas, organizados por año.",
-  },
-  {
-    href: "/musica",
-    Icono: Music,
-    titulo: "Música",
-    texto: "Sesiones y canciones que no se cortan al cambiar de página.",
-  },
-  {
-    href: "/chat",
-    Icono: MessageCircle,
-    titulo: "Chat",
-    texto: "El grupo de la peña, en vivo, solo para miembros.",
-  },
-];
+const LAT = 37.717352;
+const LON = -1.17391;
+const DIRECCION = "C. Asturias, 30320 Fuente Álamo, Murcia";
+const COMO_LLEGAR = `https://www.google.com/maps/dir/?api=1&destination=${LAT},${LON}`;
+
+// El embed de Google Maps sin clave de API ("output=embed") ya no se puede
+// incrustar: su respuesta llega con "X-Frame-Options: SAMEORIGIN" y el
+// navegador la bloquea en cualquier dominio que no sea google.com. OpenStreetMap
+// no impone esa restricción y no pide clave, así que es el que se ve de verdad.
+const DELTA_LON = 0.004;
+const DELTA_LAT = 0.003;
+const BBOX = [LON - DELTA_LON, LAT - DELTA_LAT, LON + DELTA_LON, LAT + DELTA_LAT].join(",");
+const MAPA_EMBED = `https://www.openstreetmap.org/export/embed.html?bbox=${BBOX}&marker=${LAT}%2C${LON}&layer=mapnik`;
 
 export default async function Home() {
   const supabase = await createClient();
   const sesion = await getSesion();
 
-  const [{ data: ultimas }, { data: mediaAnios }, { count: miembros }] =
+  const [{ data: ultimasFotos }, { data: ultimasPistas }, { data: mediaAnios }, { count: miembros }] =
     await Promise.all([
       supabase
         .from("media")
         .select("id, anio, tipo, url, thumb_url, descripcion")
         .order("created_at", { ascending: false })
-        .limit(6),
+        .limit(10),
+      supabase
+        .from("pistas")
+        .select("id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s")
+        .order("created_at", { ascending: false })
+        .limit(5),
       supabase.from("media").select("anio"),
       supabase
         .from("perfiles")
@@ -69,8 +70,6 @@ export default async function Home() {
     <main className="flex-1">
       {/* Hero */}
       <section className="relative overflow-hidden px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-20">
-        {/* Halo decorativo, muy sutil, para que la portada no sea un plano
-            de negro sólido sin dar ningún color de más. */}
         <div
           aria-hidden="true"
           className="pointer-events-none absolute inset-x-0 -top-32 h-96 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.08),transparent_70%)]"
@@ -131,91 +130,90 @@ export default async function Home() {
         </div>
       </section>
 
-      {/* Los tres pilares */}
-      <section className="px-4 pb-14 sm:px-6">
-        <div className="mx-auto max-w-5xl">
-          <ul className="grid gap-3 sm:grid-cols-3">
-            {PILARES.map(({ href, Icono, titulo, texto }) => (
-              <li key={href}>
-                <Link
-                  href={href}
-                  className="group flex h-full cursor-pointer flex-col gap-3 rounded-xl border border-white/12 p-5 transition-colors duration-200 hover:border-white/30 hover:bg-white/5"
-                >
-                  <span className="flex h-11 w-11 items-center justify-center rounded-full bg-white/10 text-white transition-colors duration-200 group-hover:bg-white group-hover:text-black">
-                    <Icono size={20} aria-hidden="true" />
-                  </span>
-                  <div>
-                    <p className="font-medium">{titulo}</p>
-                    <p className="mt-1 text-sm text-white/50">{texto}</p>
-                  </div>
-                </Link>
-              </li>
-            ))}
-          </ul>
-        </div>
-      </section>
-
-      {/* Últimas subidas */}
-      {ultimas && ultimas.length > 0 && (
-        <section className="px-4 pb-14 sm:px-6">
-          <div className="mx-auto max-w-5xl">
+      {/* Carrusel de la galería */}
+      {ultimasFotos && ultimasFotos.length > 0 && (
+        <section className="pb-14">
+          <div className="mx-auto max-w-5xl px-4 sm:px-6">
             <div className="mb-4 flex items-baseline justify-between gap-4">
-              <h2 className="text-lg font-semibold sm:text-xl">Lo último</h2>
+              <h2 className="text-lg font-semibold sm:text-xl">Galería</h2>
               <Link
                 href="/galeria"
                 className="inline-flex cursor-pointer items-center gap-1 text-sm text-white/50 transition-colors duration-200 hover:text-white"
               >
-                Toda la galería
+                Ver todas
+                <ArrowRight size={14} aria-hidden="true" />
+              </Link>
+            </div>
+          </div>
+
+          {/* Sin el max-w del contenedor: la cinta puede sangrar hasta el borde. */}
+          <div className="px-4 sm:px-6">
+            <CarruselFotos fotos={ultimasFotos as FotoCarrusel[]} />
+          </div>
+        </section>
+      )}
+
+      {/* Música */}
+      {ultimasPistas && ultimasPistas.length > 0 && (
+        <section className="px-4 pb-14 sm:px-6">
+          <div className="mx-auto max-w-5xl">
+            <div className="mb-4 flex items-baseline justify-between gap-4">
+              <h2 className="text-lg font-semibold sm:text-xl">Música</h2>
+              <Link
+                href="/musica"
+                className="inline-flex cursor-pointer items-center gap-1 text-sm text-white/50 transition-colors duration-200 hover:text-white"
+              >
+                Ver todas
                 <ArrowRight size={14} aria-hidden="true" />
               </Link>
             </div>
 
-            <ul className="grid grid-cols-2 gap-2 sm:grid-cols-3 sm:gap-3">
-              {ultimas.map((m) => (
-                <li key={m.id}>
-                  <Link
-                    href={`/galeria/${m.anio}/${m.id}`}
-                    className="group block cursor-pointer overflow-hidden rounded-lg bg-white/5"
-                  >
-                    <div className="relative aspect-square">
-                      <Image
-                        src={m.thumb_url || m.url}
-                        alt={m.descripcion || `Foto de las fiestas de ${m.anio}`}
-                        fill
-                        sizes="(max-width: 640px) 50vw, 33vw"
-                        className="object-cover transition-opacity duration-200 group-hover:opacity-85"
-                      />
-                    </div>
-                  </Link>
-                </li>
-              ))}
-            </ul>
+            <MusicaCompacta pistas={ultimasPistas as PistaListada[]} />
           </div>
         </section>
       )}
 
       {/* Dónde estamos */}
-      <section className="px-4 pb-14 sm:px-6">
+      <section id="donde" className="scroll-mt-16 px-4 pb-14 sm:px-6">
         <div className="mx-auto max-w-5xl">
-          <Link
-            href="/donde"
-            className="flex cursor-pointer items-center gap-4 rounded-xl border border-white/15 p-5 transition-colors duration-200 hover:border-white/30 hover:bg-white/5"
-          >
-            <span className="flex h-11 w-11 shrink-0 items-center justify-center rounded-full bg-white/10">
-              <MapPin size={20} className="text-white/70" aria-hidden="true" />
-            </span>
-            <div className="min-w-0 flex-1">
-              <p className="font-medium">Dónde está la peña</p>
-              <p className="truncate text-sm text-white/50">
-                C. Asturias, Fuente Álamo de Murcia · cómo llegar
-              </p>
-            </div>
-            <ArrowRight
-              size={18}
-              className="shrink-0 text-white/40"
-              aria-hidden="true"
+          <h2 className="text-lg font-semibold sm:text-xl">Dónde estamos</h2>
+
+          <div className="mt-4 flex items-start gap-3 text-white/70">
+            <MapPin size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <p>
+              {DIRECCION}
+              <br />
+              <span className="text-sm text-white/40 tabular-nums">
+                37°43&apos;02.5&quot;N 1°10&apos;26.1&quot;W
+              </span>
+            </p>
+          </div>
+
+          {/* Mapa real e interactivo, teñido en blanco y negro para encajar
+              con el resto de la web. */}
+          <div className="mt-5 overflow-hidden rounded-xl border border-white/15 bg-white/5">
+            <iframe
+              src={MAPA_EMBED}
+              title={`Mapa de la peña en ${DIRECCION}`}
+              loading="lazy"
+              className="h-[320px] w-full border-0 grayscale invert sm:h-[420px]"
             />
-          </Link>
+          </div>
+
+          <a
+            href={COMO_LLEGAR}
+            target="_blank"
+            rel="noopener noreferrer"
+            className="mt-4 inline-flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-6 font-medium text-black transition-opacity duration-200 hover:opacity-85 sm:w-auto"
+          >
+            <Navigation size={18} aria-hidden="true" />
+            Cómo llegar
+          </a>
+
+          <p className="mt-3 text-sm text-white/40">
+            El botón abre la ruta en Google Maps. En el móvil se abre
+            directamente la app.
+          </p>
         </div>
       </section>
 

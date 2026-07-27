@@ -191,12 +191,11 @@ cualquiera a subir cosas.
 
 | Ruta | Acceso | Contenido |
 |---|---|---|
-| `/` | público | Logo, próximas fiestas, últimas fotos, mapa, acceso a todo |
+| `/` | público | Logo, estadísticas, **carrusel de las últimas 10 fotos**, **últimas 5 pistas**, mapa y cómo llegar, invitación a unirse |
 | `/galeria` | público | Los años en fichas, del más reciente al más antiguo |
 | `/galeria/[anio]` | público | Cuadrícula de fotos y vídeos de ese año |
 | `/galeria/[anio]/[id]` | público | Foto o vídeo a pantalla completa + comentarios |
 | `/musica` | público | Sesiones y canciones, con el reproductor |
-| `/donde` | público | Mapa, dirección y botón "Cómo llegar" |
 | `/subir` | **miembros** | Hacer foto · grabar vídeo · elegir de la galería, y subida de música |
 | `/login` · `/registro` | público | Acceso y alta |
 | `/admin` | **directiva** | Participantes: pagado, importe, talla de camiseta, notas |
@@ -219,6 +218,11 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 ---
 
 ## 9. Mapa y cómo llegar
+
+> **Cambiado el 2026-07-27**: ya no es una página aparte (`/donde`). El señor pidió que ese
+> contenido, tal cual se veía, viviera directamente en la portada — así que ahora es la última
+> sección de `/` (con ancla `#donde`; el enlace "Dónde" del menú apunta a `/#donde`). La página
+> `/donde` se eliminó.
 
 - Dirección: **C. Asturias, 30320 Fuente Álamo, Murcia**
 - Coordenadas: **37.717352, -1.173910** (37°43'02.5"N 1°10'26.1"W)
@@ -357,6 +361,23 @@ El uso mayoritario será desde el móvil en la calle, así que la interfaz se di
 > centrado sobre negro) enlazada en `openGraph`/`twitter` de `layout.tsx`: sin ella, cualquier
 > vista previa del enlace (compartir, fijar como app de escritorio, etc.) caía en un icono pequeño
 > sobre una tarjeta en blanco — el efecto de "imagen que no cubre todo, con borde blanco".
+
+## 10-bis. Portada — segunda versión (2026-07-27)
+
+Las tarjetas de "acceso a Galería/Música/Chat" del primer rediseño se sustituyeron por vista previa
+real del contenido, y el mapa se trajo aquí desde `/donde` (sección anterior):
+
+- **Galería**: `CarruselFotos.tsx`, cinta horizontal con las **últimas 10 fotos/vídeos en bucle
+  infinito**, sin JavaScript — la lista se duplica una vez y una animación CSS (`@keyframes
+  carrusel` en `globals.css`) desplaza el conjunto exactamente el 50% de su ancho, así el final del
+  primer bloque enlaza sin costura con el principio del segundo. Se detiene sola con "reducir
+  movimiento" activado (regla global ya existente) y en pausa al pasar el cursor por encima.
+- **Música**: `MusicaCompacta.tsx`, las **últimas 5 pistas** con botón de play directo para las
+  propias (R2) y un icono de enlace externo para Mixcloud/SoundCloud — sin los iframes incrustados,
+  que se quedan en `/musica` para no cargar la portada.
+- **Chat**: sin tarjeta. Es la única parte privada de la web; no tiene sentido anunciarla en la
+  página pública.
+- Ambas secciones llevan su botón **"Ver todas"** hacia la página completa correspondiente.
 
 ---
 

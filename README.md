@@ -28,10 +28,9 @@ Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran
 
 | Ruta | Quién entra | Qué hay |
 |---|---|---|
-| `/` | Todos | Portada, últimas subidas, acceso al mapa |
+| `/` | Todos | Carrusel de las últimas 10 fotos, últimas 5 pistas, mapa y cómo llegar |
 | `/galeria` · `/galeria/[año]` · `/galeria/[año]/[id]` | Todos | Años, cuadrícula y detalle con comentarios |
 | `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar |
-| `/donde` | Todos | Mapa y botón "Cómo llegar" |
 | `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp |
 | `/subir` | **Miembros** | Fotos, vídeos y música |
 | `/cuenta` | Con sesión | Perfil, avisos push, cerrar sesión |

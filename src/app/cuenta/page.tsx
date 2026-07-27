@@ -65,7 +65,7 @@ export default async function CuentaPage() {
                 Chat de la peña
               </Link>
               <Link
-                href="/donde"
+                href="/#donde"
                 className="flex min-h-[56px] cursor-pointer items-center gap-3 rounded-lg border border-white/15 px-4 transition-colors duration-200 hover:bg-white/5"
               >
                 <MapPin size={18} className="text-white/60" aria-hidden="true" />

@@ -66,3 +66,15 @@ input[type="range"]::-moz-range-thumb {
   background: #ffffff;
   cursor: pointer;
 }
+
+/* Carrusel de la portada: la lista está duplicada, así que desplazar el 50%
+   del ancho total lleva exactamente al final del primer bloque = principio
+   del segundo, sin salto visible. */
+@keyframes carrusel {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(-50%);
+  }
+}

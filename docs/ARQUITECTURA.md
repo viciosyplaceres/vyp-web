@@ -27,11 +27,10 @@ Nada de esto corre en el VPS: son cuentas propias del señor.
 src/
   app/
     layout.tsx              Encabezado, navegación inferior, reproductor global, PWA
-    page.tsx                Portada
+    page.tsx                Portada: carrusel de fotos, música compacta, mapa ("#donde"), invitación
     galeria/                Años → cuadrícula → detalle con comentarios
     musica/                 Lista de pistas (R2 + embeds externos)
     chat/                   Chat interno de miembros
-    donde/                  Mapa y "cómo llegar"
     subir/                  Subida de fotos/vídeos y música (solo miembros)
     cuenta/                 Perfil, avisos push, cerrar sesión
     admin/                  Participantes · compras · miembros (solo directiva)
@@ -41,6 +40,8 @@ src/
   components/               Interfaz (los que llevan "use client" son interactivos)
     InstalarApp.tsx         Cartel de "instala la app" (nativo en Android, guiado en iPhone)
     ActivarAvisosAuto.tsx   Pide el permiso de avisos al abrir la app instalada
+    CarruselFotos.tsx       Cinta en bucle infinito (CSS puro) de la portada
+    MusicaCompacta.tsx      Últimas 5 pistas para la portada, sin iframes
   lib/
     auth.ts                 getSesion / exigirMiembro / exigirAdmin
     supabase/{client,server,admin}.ts

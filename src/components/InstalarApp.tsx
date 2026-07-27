@@ -58,13 +58,6 @@ export default function InstalarApp() {
 
     const enIOS = esIOS();
 
-    // Puede que el evento ya haya llegado antes de montar este componente
-    // (capturado por el script del <head>): si es así, no hay que esperar más.
-    if (window.__vypInstallEvent) {
-      setEvento(window.__vypInstallEvent);
-      setVisible(true);
-    }
-
     const alPoderInstalar = (e: Event) => {
       e.preventDefault();
       setEvento(e as EventoInstalacion);
@@ -80,6 +73,11 @@ export default function InstalarApp() {
 
     window.addEventListener("beforeinstallprompt", alPoderInstalar);
     window.addEventListener("vyp-install-ready", alEventoYaCapturado);
+
+    // Puede que el evento ya haya llegado antes de montar este componente
+    // (capturado por el script del <head>). Se comprueba en un microtask, no
+    // en el cuerpo del efecto, para no encadenar renders de forma síncrona.
+    queueMicrotask(alEventoYaCapturado);
 
     // En iPhone el evento anterior no existe nunca: se enseña la guía manual.
     let temporizador: ReturnType<typeof setTimeout> | undefined;

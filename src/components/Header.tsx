@@ -7,7 +7,7 @@ import { cerrarSesion } from "@/app/actions/auth";
 const ENLACES = [
   { href: "/galeria", texto: "Galería" },
   { href: "/musica", texto: "Música" },
-  { href: "/donde", texto: "Dónde" },
+  { href: "/#donde", texto: "Dónde" },
 ];
 
 export default async function Header() {
