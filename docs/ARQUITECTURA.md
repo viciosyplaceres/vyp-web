@@ -86,6 +86,36 @@ Ni Cloudinary ni R2 reciben ficheros del navegador sin permiso previo:
   comprueba que esa clave corresponde a una pista registrada, para que nadie use la ruta como
   visor del bucket entero.
 
+### CORS del bucket R2 — imprescindible, y no está en el código
+
+La música se sube **del navegador directamente a R2**, saltándose el servidor de Next (que tiene
+límite de tamaño de petición y no aguantaría una sesión de 200 MB). Al ser otro dominio, el
+navegador manda antes una petición `OPTIONS` de comprobación; si el bucket no tiene política CORS,
+R2 responde sin `Access-Control-Allow-Origin` y **el navegador cancela la subida**:
+
+```
+has been blocked by CORS policy: Response to preflight request doesn't pass
+access control check: No 'Access-Control-Allow-Origin' header is present
+```
+
+Esa política vive **en el bucket, no en el repositorio**. Para (re)aplicarla:
+
+```bash
+node --env-file=.env.local scripts/configurar-cors-r2.mjs
+```
+
+Permite `PUT`, `GET` y `HEAD` desde `viciosyplaceres.com`, `www.viciosyplaceres.com` y
+`localhost:3000`. Los dos primeros hacen falta por separado: para el navegador, con y sin `www` son
+sitios distintos. Tarda unos segundos en propagarse por el edge de Cloudflare — si justo después el
+preflight da 403, es eso; espera y reintenta.
+
+### Por qué `requestChecksumCalculation: "WHEN_REQUIRED"` en `lib/r2.ts`
+
+Las versiones recientes del SDK de AWS meten en la URL firmada un `x-amz-checksum-crc32` calculado
+sobre un cuerpo **vacío** (al firmar todavía no hay fichero). R2 lo tolera, pero obliga al navegador
+a reproducir exactamente lo que firmó el servidor. Desactivarlo deja una firma mínima y quita una
+fuente de fallos difícil de diagnosticar. **No quitar esta opción.**
+
 ---
 
 ## 4. Reproductor de música
@@ -129,6 +159,9 @@ npx tsc --noEmit            # comprobar tipos
 npx eslint src              # comprobar estilo y errores de React
 npm run build               # build de producción
 npx vercel deploy --prod --yes --token "$VERCEL_TOKEN"
+
+# Solo si se recrea el bucket o se añade un dominio nuevo:
+node --env-file=.env.local scripts/configurar-cors-r2.mjs
 ```
 
 **Cambios de esquema**: escribir un fichero nuevo en `supabase/migrations/` (numerado) y aplicarlo

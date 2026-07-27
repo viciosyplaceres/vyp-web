@@ -67,6 +67,14 @@ Reparto propuesto:
   pistas externas abren su propio mini-reproductor embebido (iframe oficial), porque Mixcloud y
   SoundCloud no permiten controlar su audio desde fuera de su embed.
 
+> **Corregido el 2026-07-27**: subir música fallaba en el navegador con un error de CORS. El bucket
+> de R2 no tenía política CORS, así que el navegador cancelaba la subida antes de empezar (el
+> servidor sí podía subir, por eso las pruebas anteriores pasaban: solo los navegadores hacen esa
+> comprobación previa). Se aplicó la política con `scripts/configurar-cors-r2.mjs` — que queda en el
+> repositorio porque esa configuración vive en el bucket y se perdería si se recreara. De paso se
+> desactivó el checksum automático del SDK, que metía en la URL firmada la huella de un fichero
+> vacío. Verificado de extremo a extremo contra producción: firma → preflight → subida → reproducción.
+
 ---
 
 ## 4. Compresión al subir
