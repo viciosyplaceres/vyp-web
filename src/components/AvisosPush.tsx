@@ -2,14 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { Bell, BellOff } from "lucide-react";
-
-/** Convierte la clave pública VAPID (base64url) al formato que espera el navegador. */
-function urlBase64ToUint8Array(base64: string) {
-  const padding = "=".repeat((4 - (base64.length % 4)) % 4);
-  const normal = (base64 + padding).replace(/-/g, "+").replace(/_/g, "/");
-  const raw = atob(normal);
-  return Uint8Array.from([...raw].map((c) => c.charCodeAt(0)));
-}
+import { urlBase64ToUint8Array } from "@/lib/push-cliente";
 
 export default function AvisosPush() {
   const [soportado, setSoportado] = useState(false);

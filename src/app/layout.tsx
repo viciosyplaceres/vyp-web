@@ -5,6 +5,8 @@ import BottomNav from "@/components/BottomNav";
 import ReproductorProvider from "@/components/ReproductorProvider";
 import BarraReproductor from "@/components/BarraReproductor";
 import RegistrarSW from "@/components/RegistrarSW";
+import InstalarApp from "@/components/InstalarApp";
+import ActivarAvisosAuto from "@/components/ActivarAvisosAuto";
 import { getSesion } from "@/lib/auth";
 import "./globals.css";
 
@@ -89,6 +91,8 @@ export default async function RootLayout({
           />
         </ReproductorProvider>
         <RegistrarSW />
+        <InstalarApp />
+        <ActivarAvisosAuto haySesion={Boolean(sesion)} />
       </body>
     </html>
   );

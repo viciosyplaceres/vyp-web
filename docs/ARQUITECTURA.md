@@ -39,12 +39,15 @@ src/
     actions/                Server actions (toda la escritura pasa por aquí)
     api/                    Rutas que el navegador llama directamente
   components/               Interfaz (los que llevan "use client" son interactivos)
+    InstalarApp.tsx         Cartel de "instala la app" (nativo en Android, guiado en iPhone)
+    ActivarAvisosAuto.tsx   Pide el permiso de avisos al abrir la app instalada
   lib/
     auth.ts                 getSesion / exigirMiembro / exigirAdmin
     supabase/{client,server,admin}.ts
     r2.ts                   Cliente S3 apuntando a R2
     embeds.ts               Mixcloud/SoundCloud + formato de duración
-    push.ts                 Envío de avisos con web-push
+    push.ts                 Envío de avisos con web-push (filtra por rol)
+    push-cliente.ts         Conversión de la clave VAPID en el navegador
   proxy.ts                  Refresco de sesión + protección de rutas
 supabase/migrations/        Historial del esquema (0001, 0002)
 public/                     manifest.webmanifest, sw.js, logos

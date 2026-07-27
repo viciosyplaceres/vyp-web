@@ -87,6 +87,17 @@ Se hace en dos capas, porque casi todo se sube desde el móvil en la calle y con
 **Música**
 - No se recomprime: ya viene en MP3/M4A comprimido. Solo se normaliza el nombre y se guarda.
 
+### Cómo se eligen las fotos: cámara o galería
+
+En `/subir` no hay un selector de archivos genérico, sino **tres botones grandes**: *Hacer foto*,
+*Grabar vídeo* y *De la galería*. Los dos primeros llevan el atributo `capture="environment"`, que
+es lo que hace que el móvil **abra la cámara directamente** en vez del explorador de archivos: se
+hace la foto en la caseta y se sube sin pasar por la galería del teléfono.
+
+Lo elegido se **acumula** en una lista con su tamaño y un botón para quitar cada cosa, así se pueden
+encadenar varias fotos seguidas sin perder las anteriores. En ordenador, `capture` se ignora y los
+tres botones abren el selector normal.
+
 ---
 
 ## 5. Modelo de datos (Supabase Postgres)
@@ -186,7 +197,7 @@ cualquiera a subir cosas.
 | `/galeria/[anio]/[id]` | público | Foto o vídeo a pantalla completa + comentarios |
 | `/musica` | público | Sesiones y canciones, con el reproductor |
 | `/donde` | público | Mapa, dirección y botón "Cómo llegar" |
-| `/subir` | **miembros** | Subida de fotos, vídeos y música con barra de progreso |
+| `/subir` | **miembros** | Hacer foto · grabar vídeo · elegir de la galería, y subida de música |
 | `/login` · `/registro` | público | Acceso y alta |
 | `/admin` | **directiva** | Participantes: pagado, importe, talla de camiseta, notas |
 | `/admin/compras` | **directiva** | Lista de la compra con casillas |
@@ -250,19 +261,66 @@ La estrategia de caché es deliberadamente conservadora — **la red manda siemp
 caché si no hay conexión. Con una caché agresiva, alguien vería fotos o mensajes viejos, que es peor
 que esperar un segundo. Nunca se cachean `/api/` ni audio/vídeo.
 
-**Avisos push** cuando llega un mensaje al chat, incluso con la app cerrada:
+### Instalación guiada (`InstalarApp.tsx`)
 
-- Claves VAPID propias (generadas con `web-push`, guardadas en `CREDENCIALES.md` y en Vercel).
-  No hace falta cuenta de Firebase ni ningún servicio de pago.
-- Cada dispositivo se registra en la tabla `push_subs` desde el botón "Activar avisos en este móvil"
-  (en `/chat` y en `/cuenta`).
-- Al enviar un mensaje se avisa a todos los miembros **menos al que escribe**.
-- Las suscripciones muertas se limpian solas: si el navegador responde 404/410, se borran.
-- Si el envío del aviso falla, **el mensaje se guarda igualmente** — el chat nunca depende de que
-  las notificaciones funcionen.
+La peña no es gente de tecnología, así que **no se puede esperar a que alguien encuentre "añadir a
+pantalla de inicio" en el menú del navegador**. Al abrir la web sale un cartel a pantalla completa
+con el icono, una frase de para qué sirve y un solo botón grande:
+
+- **Android/Chrome**: usa el instalador nativo del navegador (evento `beforeinstallprompt`). Un
+  toque y la app queda en el móvil.
+- **iPhone**: ese instalador no existe, así que se enseñan los **dos pasos con los iconos reales**
+  que verá (Compartir → Añadir a inicio), en vez de describirlos con palabras.
+- Si lo cierra, no se vuelve a mostrar en una semana (no dar la lata).
+- No aparece nunca si la app ya está instalada.
+
+### Permiso de avisos automático (`ActivarAvisosAuto.tsx`)
+
+Igual que arriba: nadie va a buscar un botón para activar notificaciones. **Al abrir la app ya
+instalada**, si el permiso todavía no se ha decidido, se pide directamente — en Android el teléfono
+muestra su ventana de permisos ahí mismo, sin que el usuario tenga que hacer nada.
+
+Safari en iPhone **exige un gesto del usuario** antes de poder pedir el permiso, así que en ese caso
+(y si el intento automático falla por lo que sea) aparece un cartel pequeño con un botón grande que
+hace exactamente lo mismo.
+
+Solo se intenta **una vez por dispositivo**: si alguien dice que no, no se vuelve a insistir — entre
+otras cosas porque el navegador ya no permitiría volver a preguntar, y machacar con el prompt es la
+forma más rápida de que lo bloqueen para siempre.
+
+Fuera de la app instalada no se molesta a nadie: para eso está el botón manual de `/cuenta`.
+
+### Qué se notifica (todo)
+
+| Cuándo | A quién |
+|---|---|
+| Mensaje nuevo en el chat | Miembros, menos quien escribe |
+| Fotos o vídeos subidos a la galería | Miembros, menos quien sube |
+| Sesión o canción nueva (subida o enlace) | Miembros, menos quien sube |
+| Comentario nuevo en una foto | Miembros, menos quien comenta |
+| Alguien se registra y espera aprobación | **Solo la directiva** |
+| Participante nuevo, pago marcado | **Solo la directiva** |
+| Apunte nuevo en la compra, algo comprado | **Solo la directiva** |
+| Te han aprobado como miembro | **Solo a esa persona** |
+| Miembro nuevo aprobado | Miembros |
+
+**Quién recibe qué se decide en el servidor** (`src/lib/push.ts`), cruzando `push_subs` con el rol
+del perfil. Registrar un dispositivo no da derecho a recibirlo todo: los pagos y las tallas solo
+salen hacia la directiva. Verificado con suscripciones de prueba de ambos roles.
+
+Detalles que importan en el uso real:
+
+- Subir 20 fotos manda **un solo aviso**, no veinte: el aviso va en una acción aparte
+  (`avisarSubidaGaleria`) que el cliente llama al terminar toda la tanda.
+- Cada tipo de aviso lleva su propia `tag`, así una tanda de fotos no entierra los mensajes del chat.
+- Claves VAPID propias (`web-push`), sin cuenta de Firebase ni servicios de pago.
+- Las suscripciones muertas se limpian solas (404/410 → se borran).
+- **Un fallo al notificar nunca tumba la acción**: si no se puede avisar, la foto ya está subida y el
+  mensaje ya está enviado. Todas las llamadas pasan por un envoltorio que traga el error.
 
 > Nota de alcance: Android y escritorio admiten push desde el navegador. En iPhone solo funciona si
-> la web se ha añadido antes a la pantalla de inicio (limitación de Apple, no del código).
+> la web se ha añadido antes a la pantalla de inicio (limitación de Apple, no del código) — otra
+> razón para el cartel de instalación.
 
 ## 9-quater. Móvil primero
 

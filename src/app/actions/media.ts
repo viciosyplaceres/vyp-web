@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro } from "@/lib/auth";
+import { avisarMiembros } from "@/lib/push";
 
 export type DatosMedia = {
   tipo: "foto" | "video";
@@ -38,6 +39,34 @@ export async function registrarMedia(datos: DatosMedia) {
 
   revalidatePath("/galeria");
   revalidatePath(`/galeria/${datos.anio}`);
+}
+
+/**
+ * Avisa UNA sola vez de que se ha subido tanda de fotos/vídeos.
+ *
+ * Va aparte de `registrarMedia` a propósito: subir 20 fotos de las fiestas es lo
+ * normal, y mandar 20 notificaciones sería insoportable. El cliente llama a esto
+ * al terminar todo el lote, con el total.
+ */
+export async function avisarSubidaGaleria(anio: number, cantidad: number) {
+  const sesion = await exigirMiembro();
+  if (cantidad < 1) return;
+
+  const quien = sesion.nombre ?? "Alguien";
+  const que =
+    cantidad === 1
+      ? "ha subido algo nuevo"
+      : `ha subido ${cantidad} archivos nuevos`;
+
+  await avisarMiembros(
+    {
+      titulo: "Nuevas fotos en la peña",
+      cuerpo: `${quien} ${que} de las fiestas de ${anio}.`,
+      url: `/galeria/${anio}`,
+      tag: "galeria",
+    },
+    sesion.userId,
+  );
 }
 
 export async function borrarMedia(id: string, anio: number) {

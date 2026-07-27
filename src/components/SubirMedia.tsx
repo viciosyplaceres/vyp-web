@@ -2,9 +2,9 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus } from "lucide-react";
+import { ImagePlus, Camera, Video, FolderOpen, X } from "lucide-react";
 import imageCompression from "browser-image-compression";
-import { registrarMedia } from "@/app/actions/media";
+import { registrarMedia, avisarSubidaGaleria } from "@/app/actions/media";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // tope real de la cuenta de Cloudinary
 
@@ -21,6 +21,21 @@ export default function SubirMedia() {
   const [progreso, setProgreso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hechos, setHechos] = useState(0);
+
+  /**
+   * Suma lo elegido a lo que ya había, en vez de reemplazarlo: así se pueden
+   * encadenar varias fotos de la cámara sin perder las anteriores. Se limpia
+   * el input para poder volver a elegir el mismo archivo si hiciera falta.
+   */
+  function anadirFicheros(e: React.ChangeEvent<HTMLInputElement>) {
+    const nuevos = [...(e.target.files ?? [])];
+    if (nuevos.length) setFicheros((prev) => [...prev, ...nuevos]);
+    e.target.value = "";
+  }
+
+  function quitarFichero(indice: number) {
+    setFicheros((prev) => prev.filter((_, i) => i !== indice));
+  }
 
   async function subir(e: React.FormEvent) {
     e.preventDefault();
@@ -113,6 +128,9 @@ export default function SubirMedia() {
       }
     }
 
+    // Un único aviso al terminar toda la tanda, no uno por foto.
+    await avisarSubidaGaleria(anio, ficheros.length).catch(() => undefined);
+
     setProgreso(null);
     setFicheros([]);
     setDescripcion("");
@@ -140,18 +158,80 @@ export default function SubirMedia() {
         </select>
       </div>
 
-      <div className="space-y-1.5">
-        <label htmlFor="ficheros" className="text-sm text-white/70">
-          Fotos o vídeos
-        </label>
-        <input
-          id="ficheros"
-          type="file"
-          accept="image/*,video/*"
-          multiple
-          onChange={(e) => setFicheros([...(e.target.files ?? [])])}
-          className="block w-full cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 py-3 text-sm file:mr-3 file:cursor-pointer file:rounded-full file:border-0 file:bg-white file:px-4 file:py-2 file:text-sm file:font-medium file:text-black"
-        />
+      <div className="space-y-2">
+        <p className="text-sm text-white/70">Fotos o vídeos</p>
+
+        {/* Tres entradas distintas apuntando al mismo estado. El atributo
+            `capture` es lo que hace que el móvil abra la cámara directamente
+            en vez del explorador de archivos. En un ordenador, `capture` se
+            ignora y los tres botones abren el selector normal. */}
+        <div className="grid grid-cols-3 gap-2">
+          <label className="flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-2 text-center text-xs font-medium transition-colors duration-200 hover:border-white/40 hover:bg-white/10">
+            <Camera size={22} aria-hidden="true" />
+            Hacer foto
+            <input
+              type="file"
+              accept="image/*"
+              capture="environment"
+              className="sr-only"
+              onChange={anadirFicheros}
+            />
+          </label>
+
+          <label className="flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-2 text-center text-xs font-medium transition-colors duration-200 hover:border-white/40 hover:bg-white/10">
+            <Video size={22} aria-hidden="true" />
+            Grabar vídeo
+            <input
+              type="file"
+              accept="video/*"
+              capture="environment"
+              className="sr-only"
+              onChange={anadirFicheros}
+            />
+          </label>
+
+          <label className="flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-2 text-center text-xs font-medium transition-colors duration-200 hover:border-white/40 hover:bg-white/10">
+            <FolderOpen size={22} aria-hidden="true" />
+            De la galería
+            <input
+              type="file"
+              accept="image/*,video/*"
+              multiple
+              className="sr-only"
+              onChange={anadirFicheros}
+            />
+          </label>
+        </div>
+
+        {ficheros.length > 0 && (
+          <ul className="space-y-1.5 pt-1">
+            {ficheros.map((f, i) => (
+              <li
+                key={`${f.name}-${i}`}
+                className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
+              >
+                {f.type.startsWith("video/") ? (
+                  <Video size={16} className="shrink-0 text-white/50" aria-hidden="true" />
+                ) : (
+                  <Camera size={16} className="shrink-0 text-white/50" aria-hidden="true" />
+                )}
+                <span className="min-w-0 flex-1 truncate">{f.name}</span>
+                <span className="shrink-0 text-xs text-white/40">
+                  {(f.size / (1024 * 1024)).toFixed(1)} MB
+                </span>
+                <button
+                  type="button"
+                  onClick={() => quitarFichero(i)}
+                  aria-label={`Quitar ${f.name}`}
+                  className="flex h-9 w-9 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/30 transition-colors duration-200 hover:text-red-400"
+                >
+                  <X size={16} aria-hidden="true" />
+                </button>
+              </li>
+            ))}
+          </ul>
+        )}
+
         <p className="text-xs text-white/40">
           Las fotos se comprimen en tu móvil antes de enviarse. Los vídeos
           admiten hasta 100 MB.

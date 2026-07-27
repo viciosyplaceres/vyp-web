@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/auth";
+import { avisarAdmins } from "@/lib/push";
 
 // ---------- Participantes (quién ha pagado, tallas) ----------
 
@@ -11,7 +12,7 @@ export async function crearParticipante(
   formData: FormData,
 ): Promise<{ error?: string } | null> {
   try {
-    await exigirAdmin();
+    const sesion = await exigirAdmin();
 
     const nombre = String(formData.get("nombre") ?? "").trim();
     const anio = Number(formData.get("anio"));
@@ -34,6 +35,18 @@ export async function crearParticipante(
 
     if (error) return { error: error.message };
     revalidatePath("/admin");
+
+    // Solo a la directiva: los pagos y las tallas no son asunto público.
+    await avisarAdmins(
+      {
+        titulo: "Nuevo participante",
+        cuerpo: `${sesion.nombre ?? "La directiva"} ha apuntado a ${nombre} en ${anio}.`,
+        url: "/admin",
+        tag: "gestion",
+      },
+      sesion.userId,
+    );
+
     return { error: undefined };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Error inesperado." };
@@ -41,14 +54,28 @@ export async function crearParticipante(
 }
 
 export async function alternarPago(id: string, pagado: boolean) {
-  await exigirAdmin();
+  const sesion = await exigirAdmin();
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("participantes")
     .update({ pagado })
-    .eq("id", id);
+    .eq("id", id)
+    .select("nombre")
+    .maybeSingle();
   if (error) throw new Error(error.message);
   revalidatePath("/admin");
+
+  if (data?.nombre) {
+    await avisarAdmins(
+      {
+        titulo: pagado ? "Pago recibido" : "Pago desmarcado",
+        cuerpo: `${data.nombre} figura ahora como ${pagado ? "pagado" : "pendiente"}.`,
+        url: "/admin",
+        tag: "gestion",
+      },
+      sesion.userId,
+    );
+  }
 }
 
 export async function borrarParticipante(id: string) {
@@ -66,7 +93,7 @@ export async function crearItemCompra(
   formData: FormData,
 ): Promise<{ error?: string } | null> {
   try {
-    await exigirAdmin();
+    const sesion = await exigirAdmin();
 
     const item = String(formData.get("item") ?? "").trim();
     const anio = Number(formData.get("anio"));
@@ -87,6 +114,17 @@ export async function crearItemCompra(
 
     if (error) return { error: error.message };
     revalidatePath("/admin/compras");
+
+    await avisarAdmins(
+      {
+        titulo: "Nuevo apunte en la compra",
+        cuerpo: `Hay que comprar: ${item}.`,
+        url: "/admin/compras",
+        tag: "compras",
+      },
+      sesion.userId,
+    );
+
     return { error: undefined };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Error inesperado." };
@@ -94,14 +132,28 @@ export async function crearItemCompra(
 }
 
 export async function alternarComprado(id: string, comprado: boolean) {
-  await exigirAdmin();
+  const sesion = await exigirAdmin();
   const supabase = await createClient();
-  const { error } = await supabase
+  const { data, error } = await supabase
     .from("lista_compra")
     .update({ comprado })
-    .eq("id", id);
+    .eq("id", id)
+    .select("item")
+    .maybeSingle();
   if (error) throw new Error(error.message);
   revalidatePath("/admin/compras");
+
+  if (data?.item && comprado) {
+    await avisarAdmins(
+      {
+        titulo: "Comprado",
+        cuerpo: `Ya está comprado: ${data.item}.`,
+        url: "/admin/compras",
+        tag: "compras",
+      },
+      sesion.userId,
+    );
+  }
 }
 
 export async function borrarItemCompra(id: string) {

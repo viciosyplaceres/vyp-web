@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro } from "@/lib/auth";
+import { avisarMiembros } from "@/lib/push";
 
 export async function comentarMedia(
   _prev: { error?: string } | null,
@@ -28,6 +29,17 @@ export async function comentarMedia(
     if (error) return { error: error.message };
 
     revalidatePath(`/galeria/${anio}/${mediaId}`);
+
+    await avisarMiembros(
+      {
+        titulo: `${sesion.nombre ?? "Alguien"} ha comentado`,
+        cuerpo: texto.slice(0, 120),
+        url: `/galeria/${anio}/${mediaId}`,
+        tag: `comentario-${mediaId}`,
+      },
+      sesion.userId,
+    );
+
     return { error: undefined };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Error inesperado." };

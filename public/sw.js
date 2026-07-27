@@ -2,7 +2,7 @@
 // Hace dos cosas: permitir instalar la web como app (PWA) y recibir los avisos
 // del chat cuando la app está cerrada.
 
-const CACHE = "vyp-v1";
+const CACHE = "vyp-v2";
 const ESENCIALES = ["/", "/manifest.webmanifest", "/logo/vyp-icon-192.png"];
 
 self.addEventListener("install", (event) => {
@@ -69,16 +69,19 @@ self.addEventListener("push", (event) => {
       body: datos.cuerpo,
       icon: "/logo/vyp-icon-192.png",
       badge: "/logo/vyp-icon-192.png",
-      tag: "vyp-chat",
+      // Cada tipo de aviso (chat, galería, música, gestión…) se agrupa por su
+      // cuenta: así una tanda de fotos no entierra los mensajes del chat.
+      tag: datos.tag || "vyp",
       renotify: true,
-      data: { url: datos.url || "/chat" },
+      vibrate: [80, 40, 80],
+      data: { url: datos.url || "/" },
     }),
   );
 });
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
-  const destino = event.notification.data?.url || "/chat";
+  const destino = event.notification.data?.url || "/";
 
   event.waitUntil(
     self.clients

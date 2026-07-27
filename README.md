@@ -47,7 +47,9 @@ Todo sobre capas gratuitas permanentes, alojado **fuera** del VPS propio:
   del servidor y solo firman los miembros aprobados
 - **Música y sesiones**: Cloudflare R2 (bucket `vyp`), 10 GB y **salida gratis**, con URLs
   prefirmadas; alternativa de enlazar Mixcloud/SoundCloud sin gastar espacio
-- **Avisos push**: `web-push` con claves VAPID propias — sin Firebase ni servicios de pago
+- **Avisos push**: `web-push` con claves VAPID propias — sin Firebase ni servicios de pago.
+  Se notifica **todo** (chat, fotos, música, comentarios, altas y gestión), con los avisos de
+  gestión y altas restringidos a la directiva
 - **Dominio**: `viciosyplaceres.com`, DNS en Cloudflare
 
 ## Móvil primero
@@ -55,6 +57,11 @@ Todo sobre capas gratuitas permanentes, alojado **fuera** del VPS propio:
 El uso mayoritario es desde el móvil, así que: barra de navegación inferior tipo app, objetivos
 táctiles de 44 px, texto de 16 px (evita el zoom automático al escribir), respeto de las zonas
 seguras del teléfono, y la web **se puede instalar como app** desde el propio navegador.
+
+Pensado para gente poco tecnológica: al entrar sale un **cartel de instalación con un solo botón**
+(instalador nativo en Android; los dos pasos ilustrados en iPhone), y al abrir la app ya instalada
+**el permiso de notificaciones se pide solo**, sin que nadie tenga que buscar un ajuste. Para subir
+fotos hay tres botones directos: *Hacer foto*, *Grabar vídeo* y *De la galería*.
 
 ## Configuración local
 

@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro } from "@/lib/auth";
 import { analizarEnlaceMusica } from "@/lib/embeds";
+import { avisarMiembros } from "@/lib/push";
 
 /** Registra una pista propia ya subida a R2. */
 export async function registrarPistaR2(datos: {
@@ -33,6 +34,16 @@ export async function registrarPistaR2(datos: {
 
   if (error) throw new Error(error.message);
   revalidatePath("/musica");
+
+  await avisarMiembros(
+    {
+      titulo: datos.tipo === "sesion" ? "Nueva sesión" : "Nueva canción",
+      cuerpo: `${sesion.nombre ?? "Alguien"} ha subido «${datos.titulo.trim()}».`,
+      url: "/musica",
+      tag: "musica",
+    },
+    sesion.userId,
+  );
 }
 
 /** Registra una sesión que ya está publicada en Mixcloud o SoundCloud. */
@@ -77,6 +88,17 @@ export async function registrarPistaEnlace(
     if (error) return { error: error.message };
 
     revalidatePath("/musica");
+
+    await avisarMiembros(
+      {
+        titulo: "Nueva sesión",
+        cuerpo: `${sesion.nombre ?? "Alguien"} ha añadido «${titulo}».`,
+        url: "/musica",
+        tag: "musica",
+      },
+      sesion.userId,
+    );
+
     return { error: undefined };
   } catch (e) {
     return { error: e instanceof Error ? e.message : "Error inesperado." };
