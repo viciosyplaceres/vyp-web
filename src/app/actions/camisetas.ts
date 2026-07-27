@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { exigirMiembro, exigirAdmin } from "@/lib/auth";
+import { exigirMiembro, exigirPagos } from "@/lib/auth";
 import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
 
 /**
@@ -141,9 +141,9 @@ export async function guardarPedidoCamiseta(
   revalidatePath("/perfil");
 }
 
-/** Marca o desmarca la cuota de un miembro. Solo la directiva: es quien cobra. */
+/** Marca o desmarca la cuota. Puede la directiva o el tesorero. */
 export async function marcarPago(perfilId: string, anio: number, pagado: boolean) {
-  await exigirAdmin();
+  await exigirPagos();
   const supabase = await createClient();
 
   const { error } = await supabase.from("pagos").upsert(

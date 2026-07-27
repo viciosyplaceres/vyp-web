@@ -18,17 +18,17 @@ export type PagoMiembro = {
  * lo lleva la peña.
  *
  * Lo ve cualquier miembro (saber quién va al día es parte de organizarse),
- * pero la casilla solo la mueve la directiva, que es quien cobra. La base de
- * datos lo vuelve a exigir por su cuenta.
+ * pero la casilla solo la mueve la directiva o el tesorero, que son quienes
+ * cobran. La base de datos lo vuelve a exigir por su cuenta.
  */
 export default function PanelPagos({
   anio,
   miembros,
-  esAdmin,
+  puedeMarcar,
 }: {
   anio: number;
   miembros: PagoMiembro[];
-  esAdmin: boolean;
+  puedeMarcar: boolean;
 }) {
   const [estado, setEstado] = useState<Record<string, boolean>>(() =>
     Object.fromEntries(miembros.map((m) => [m.id, m.pagado])),
@@ -36,7 +36,7 @@ export default function PanelPagos({
   const [, startTransition] = useTransition();
 
   function alternar(id: string) {
-    if (!esAdmin) return;
+    if (!puedeMarcar) return;
     const nuevo = !estado[id];
     setEstado((prev) => ({ ...prev, [id]: nuevo }));
     startTransition(() => {
@@ -74,7 +74,7 @@ export default function PanelPagos({
               <button
                 type="button"
                 onClick={() => alternar(m.id)}
-                disabled={!esAdmin}
+                disabled={!puedeMarcar}
                 aria-pressed={pagado}
                 aria-label={
                   pagado
@@ -85,7 +85,7 @@ export default function PanelPagos({
                   pagado
                     ? "border-white bg-white text-black"
                     : "border-white/30 text-transparent"
-                } ${esAdmin ? "cursor-pointer hover:border-white/60" : "cursor-default opacity-70"}`}
+                } ${puedeMarcar ? "cursor-pointer hover:border-white/60" : "cursor-default opacity-70"}`}
               >
                 <Check size={18} aria-hidden="true" />
               </button>
@@ -94,9 +94,9 @@ export default function PanelPagos({
         })}
       </ul>
 
-      {!esAdmin && (
+      {!puedeMarcar && (
         <p className="mt-4 text-xs text-white/40">
-          Solo la directiva puede marcar los pagos.
+          Solo la directiva o el tesorero pueden marcar los pagos.
         </p>
       )}
     </div>

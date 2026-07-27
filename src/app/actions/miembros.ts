@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { avisarUsuario, avisarMiembros } from "@/lib/push";
 
+type RolPerfil = "miembro" | "tesorero" | "admin";
+
 async function exigirAdmin() {
   const supabase = await createClient();
 
@@ -16,7 +18,7 @@ async function exigirAdmin() {
 
   const { data: miPerfil } = await supabase
     .from("perfiles")
-    .select("rol, aprobado")
+    .select("rol, aprobado, puede_asignar_roles")
     .eq("id", user.id)
     .single();
 
@@ -24,7 +26,7 @@ async function exigirAdmin() {
     throw new Error("No autorizado.");
   }
 
-  return supabase;
+  return { supabase, puedeAsignarRoles: miPerfil.puede_asignar_roles === true };
 }
 
 /**
@@ -46,13 +48,29 @@ async function exigirObjetivoNoAdmin(supabase: Awaited<ReturnType<typeof createC
   return objetivo;
 }
 
-export async function aprobarMiembro(id: string) {
+/**
+ * Aprueba una cuenta pendiente. `rol` deja elegir directamente si entra como
+ * tesorero o directiva, pero **solo si quien aprueba puede repartir roles**:
+ * si no, se ignora lo que se pida y entra como miembro normal (la base de
+ * datos lo reforzaría igual con el trigger `perfiles_before_update_rol`,
+ * pero así se avisa con un error claro en vez de aprobar en silencio con un
+ * rol distinto al pedido).
+ */
+export async function aprobarMiembro(id: string, rol: RolPerfil = "miembro") {
   // Chequeo explícito en el server action, ADEMÁS de la política RLS de "perfiles"
   // (que ya exige es_admin() para modificar el perfil de otro): defensa en profundidad.
-  const supabase = await exigirAdmin();
+  const { supabase, puedeAsignarRoles } = await exigirAdmin();
+
+  if (rol !== "miembro" && !puedeAsignarRoles) {
+    throw new Error("Solo quien puede repartir roles puede aprobar con ese rol.");
+  }
+
+  const cambios: { aprobado: boolean; rol?: RolPerfil } = { aprobado: true };
+  if (rol !== "miembro") cambios.rol = rol;
+
   const { data, error } = await supabase
     .from("perfiles")
-    .update({ aprobado: true })
+    .update(cambios)
     .eq("id", id)
     .select("nombre")
     .maybeSingle();
@@ -97,12 +115,36 @@ export async function aprobarMiembro(id: string) {
 }
 
 export async function revocarMiembro(id: string) {
-  const supabase = await exigirAdmin();
+  const { supabase } = await exigirAdmin();
   const { error } = await supabase
     .from("perfiles")
     .update({ aprobado: false })
     .eq("id", id);
 
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/miembros");
+}
+
+/**
+ * Cambia el rol de una cuenta ya aprobada (a miembro normal, tesorero o
+ * directiva). Solo quien puede repartir roles; la base de datos lo vuelve a
+ * exigir con el mismo trigger que usa `aprobarMiembro`.
+ */
+export async function cambiarRolMiembro(id: string, rol: RolPerfil) {
+  const { supabase, puedeAsignarRoles } = await exigirAdmin();
+
+  if (!puedeAsignarRoles) {
+    throw new Error("Solo quien puede repartir roles puede cambiar el de otra cuenta.");
+  }
+
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+  if (user?.id === id) {
+    throw new Error("No puedes cambiar tu propio rol.");
+  }
+
+  const { error } = await supabase.from("perfiles").update({ rol }).eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/miembros");
 }
@@ -128,7 +170,7 @@ function generarContrasenaTemporal(longitud = 10) {
  * cuenta es cosa de la API de administración de Auth, no de una tabla propia.
  */
 export async function resetearContrasena(id: string): Promise<string> {
-  const supabase = await exigirAdmin();
+  const { supabase } = await exigirAdmin();
   const objetivo = await exigirObjetivoNoAdmin(supabase, id);
 
   const nueva = generarContrasenaTemporal();

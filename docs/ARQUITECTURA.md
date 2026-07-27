@@ -846,6 +846,62 @@ versión de caché sube a `vyp-v4` para tirar la anterior.
 
 ---
 
+## 7quatervicies. Rol tesorero y "quién puede repartir roles" (migración `0016`)
+
+Hasta ahora `rol` solo tenía dos valores: `miembro` y `admin` (la directiva
+entera, con todos los permisos). Se pidió un tercer rol, **tesorero**, que
+pueda marcar quién ha pagado la cuota —lo único que le hace falta— sin las
+dos cosas de verdad delicadas: aprobar altas y tocar el almacenamiento.
+
+**El permiso de repartir roles va aparte del rol.** No basta con "ser admin"
+para poder ascender a alguien a tesorero o a la propia directiva: eso abriría
+la puerta a que cualquier nuevo admin fuera repartiendo el cargo a su vez, sin
+control. Se añadió `perfiles.puede_asignar_roles` (booleano, `false` por
+defecto), y la migración se lo dio solo a quien ya era admin en ese momento.
+Si esa persona asciende a alguien más —a tesorero o a la propia directiva—,
+el ascendido **no** hereda esa capacidad: solo la reparte quien ya la tenía
+antes. Así se puede tener más gente en la directiva sin que se multiplique
+sin control quién puede tocar los roles de los demás.
+
+**Por qué un trigger y no solo RLS.** La política de `perfiles` ya deja
+escribir el propio perfil, o el de cualquiera si eres admin (`perfiles_update`
+en la migración `0001`) — hace falta que alguien pueda cambiar su nombre o
+bio, o que la directiva apruebe altas, sin pasar por esto. RLS decide fila por
+fila, no columna por columna, así que para proteger *solo* `rol` y
+`puede_asignar_roles` (y dejar todo lo demás igual) hace falta un trigger,
+igual que ya se hacía con `compra_solo_marcar` en la lista de la compra: si
+quien escribe no tiene `puede_asignar_roles()`, esas dos columnas se
+revierten a su valor anterior en el propio trigger, pase lo que pase por
+encima (RLS, la API, o incluso una llamada directa con la clave
+`service_role`, que no lleva `auth.uid()` y por tanto tampoco pasa el
+permiso — comprobado a mano tirando de la Management API).
+
+**Aprobar con rol elegido.** `aprobarMiembro(id, rol)` deja fijar de una vez
+el rol al aprobar una cuenta pendiente, pero solo aparece el desplegable en
+la interfaz a quien tiene `puede_asignar_roles`; el resto de la directiva ve
+el botón sencillo de siempre y aprueba como miembro normal. Si alguien sin
+permiso intentara forzar un rol distinto igualmente (saltándose la interfaz),
+la propia acción lo rechaza con un error claro antes de llegar a la base de
+datos, que además lo bloquearía en el trigger.
+
+**Cambiar el rol después.** `cambiarRolMiembro(id, rol)` hace lo mismo para
+alguien ya aprobado (ascender, degradar, dar o quitar tesorero/directiva),
+con el mismo permiso exigido y bloqueando explícitamente cambiarse el rol a
+uno mismo (para no poder quitarse la directiva por error).
+
+**Pagos.** La política de escritura de `pagos` pasó de `es_admin()` a
+`es_admin() or es_tesorero()`; la de lectura no cambió (la ve cualquier
+miembro, y sigue sin poder tocarla).
+
+Verificado de extremo a extremo con cuentas desechables: un admin sin
+`puede_asignar_roles` no ve ningún desplegable de rol y una llamada directa a
+la API con su sesión para forzar `rol = 'admin'` en otra cuenta devuelve 200
+pero el trigger lo revierte (el rol se queda igual); un tesorero de prueba
+pudo marcar un pago pero no pudo entrar en `/admin/miembros` ni en
+`/admin/almacenamiento`.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

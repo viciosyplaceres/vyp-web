@@ -6,6 +6,8 @@ import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import { aprobarMiembro, revocarMiembro } from "@/app/actions/miembros";
 import AccionesMiembro from "@/components/AccionesMiembro";
+import AprobarConRol from "@/components/AprobarConRol";
+import SelectorRolMiembro from "@/components/SelectorRolMiembro";
 
 export const dynamic = "force-dynamic";
 
@@ -34,6 +36,10 @@ export default async function AdminMiembrosPage() {
     .select("id, nombre, rol, aprobado, created_at")
     .order("aprobado", { ascending: true })
     .order("created_at", { ascending: false });
+
+  // Solo quien puede repartir roles ve los desplegables de rol; el resto de
+  // la directiva sigue viendo el botón sencillo de aprobar/revocar de siempre.
+  const puedeAsignarRoles = sesion.puedeAsignarRoles;
 
   if (error) {
     return (
@@ -78,34 +84,51 @@ export default async function AdminMiembrosPage() {
                   {m.nombre || "(sin nombre)"}
                 </p>
                 <p className="text-xs text-white/50">
-                  {m.rol === "admin" ? "Directiva" : "Miembro"} ·{" "}
+                  {m.rol === "admin" ? "Directiva" : m.rol === "tesorero" ? "Tesorero" : "Miembro"}
+                  {" · "}
                   {m.aprobado ? "Aprobado" : "Pendiente"}
                 </p>
               </div>
 
-              {m.rol !== "admin" && (
-                <div className="flex flex-col items-end gap-2">
-                  <form
-                    action={
-                      m.aprobado
-                        ? revocarMiembro.bind(null, m.id)
-                        : aprobarMiembro.bind(null, m.id)
-                    }
-                  >
-                    <button
-                      type="submit"
-                      className={`min-h-[44px] cursor-pointer rounded-full px-4 text-sm font-medium transition-colors duration-200 ${
+              <div className="flex flex-col items-end gap-2">
+                {/* Aprobar (con selector de rol si se puede) o Revocar/Aprobar simple */}
+                {!m.aprobado && puedeAsignarRoles && m.id !== sesion.userId ? (
+                  <AprobarConRol id={m.id} />
+                ) : (
+                  m.rol !== "admin" && (
+                    <form
+                      action={
                         m.aprobado
-                          ? "border border-white/30 hover:bg-white/10"
-                          : "bg-white text-black hover:opacity-85"
-                      }`}
+                          ? revocarMiembro.bind(null, m.id)
+                          : aprobarMiembro.bind(null, m.id, "miembro")
+                      }
                     >
-                      {m.aprobado ? "Revocar" : "Aprobar"}
-                    </button>
-                  </form>
+                      <button
+                        type="submit"
+                        className={`min-h-[44px] cursor-pointer rounded-full px-4 text-sm font-medium transition-colors duration-200 ${
+                          m.aprobado
+                            ? "border border-white/30 hover:bg-white/10"
+                            : "bg-white text-black hover:opacity-85"
+                        }`}
+                      >
+                        {m.aprobado ? "Revocar" : "Aprobar"}
+                      </button>
+                    </form>
+                  )
+                )}
+
+                {/* Cambiar el rol de alguien ya aprobado */}
+                {m.aprobado && puedeAsignarRoles && m.id !== sesion.userId && (
+                  <SelectorRolMiembro
+                    id={m.id}
+                    rolActual={m.rol as "miembro" | "tesorero" | "admin"}
+                  />
+                )}
+
+                {m.rol !== "admin" && (
                   <AccionesMiembro id={m.id} nombre={m.nombre || "este miembro"} />
-                </div>
-              )}
+                )}
+              </div>
             </li>
           ))}
         </ul>

@@ -9,6 +9,10 @@ export type Sesion = {
   bio: string | null;
   esMiembro: boolean;
   esAdmin: boolean;
+  /** Tesorero: puede marcar pagos, como la directiva, pero no aprobar ni tocar el almacenamiento. */
+  esTesorero: boolean;
+  /** Solo quien tiene esto puede cambiar el rol de otra cuenta (dar o quitar directiva/tesorero). */
+  puedeAsignarRoles: boolean;
 };
 
 /**
@@ -40,9 +44,11 @@ export const getSesion = cache(async (): Promise<Sesion | null> => {
 
   const { data: perfil } = await supabase
     .from("perfiles")
-    .select("nombre, usuario, avatar_url, bio, rol, aprobado")
+    .select("nombre, usuario, avatar_url, bio, rol, aprobado, puede_asignar_roles")
     .eq("id", user.id)
     .single();
+
+  const aprobado = perfil?.aprobado === true;
 
   return {
     userId: user.id,
@@ -50,8 +56,10 @@ export const getSesion = cache(async (): Promise<Sesion | null> => {
     usuario: perfil?.usuario ?? null,
     avatarUrl: perfil?.avatar_url ?? null,
     bio: perfil?.bio ?? null,
-    esMiembro: perfil?.aprobado === true,
-    esAdmin: perfil?.rol === "admin" && perfil?.aprobado === true,
+    esMiembro: aprobado,
+    esAdmin: perfil?.rol === "admin" && aprobado,
+    esTesorero: perfil?.rol === "tesorero" && aprobado,
+    puedeAsignarRoles: perfil?.puede_asignar_roles === true && aprobado,
   };
 });
 
@@ -69,6 +77,15 @@ export async function exigirAdmin(): Promise<Sesion> {
   const sesion = await getSesion();
   if (!sesion?.esAdmin) {
     throw new Error("Solo la directiva puede hacer esto.");
+  }
+  return sesion;
+}
+
+/** Para marcar pagos: puede la directiva o el tesorero. */
+export async function exigirPagos(): Promise<Sesion> {
+  const sesion = await getSesion();
+  if (!sesion?.esAdmin && !sesion?.esTesorero) {
+    throw new Error("Solo la directiva o el tesorero pueden hacer esto.");
   }
   return sesion;
 }

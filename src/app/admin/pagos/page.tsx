@@ -67,7 +67,11 @@ export default async function PagosPage() {
           Cuota de las fiestas de {anio}
         </p>
 
-        <PanelPagos anio={anio} miembros={lista} esAdmin={sesion.esAdmin} />
+        <PanelPagos
+          anio={anio}
+          miembros={lista}
+          puedeMarcar={sesion.esAdmin || sesion.esTesorero}
+        />
       </div>
     </main>
   );
