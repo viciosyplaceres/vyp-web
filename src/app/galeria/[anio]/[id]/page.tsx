@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { autorDe } from "@/lib/relaciones";
 import Comentarios, { type Comentario } from "@/components/Comentarios";
 import Avatar from "@/components/Avatar";
 
@@ -24,36 +25,36 @@ export default async function DetalleMediaPage({ params }: Props) {
   const supabase = await createClient();
   const sesion = await getSesion();
 
-  const { data: media } = await supabase
-    .from("media")
-    .select(
-      "id, tipo, anio, url, ancho, alto, descripcion, created_at, autores(nombre, avatar_url)",
-    )
-    .eq("id", id)
-    .maybeSingle();
+  // Los comentarios se piden a la vez que la propia foto, no después: no
+  // dependen de ella (se filtran por el id que ya viene en la URL), así que
+  // encadenarlos solo sumaba una ida y vuelta a la espera.
+  const [{ data: media }, { data: filas }] = await Promise.all([
+    supabase
+      .from("media")
+      .select(
+        "id, tipo, anio, url, ancho, alto, descripcion, created_at, autores(nombre, avatar_url)",
+      )
+      .eq("id", id)
+      .maybeSingle(),
+    supabase
+      .from("comentarios")
+      .select("id, texto, created_at, autor_id, autores(nombre, avatar_url)")
+      .eq("media_id", id)
+      .order("created_at", { ascending: true }),
+  ]);
 
   if (!media) notFound();
 
-  type RelAutor = { nombre: string | null; avatar_url: string | null };
-  const relSubidoPor = media.autores as unknown as RelAutor | RelAutor[] | null;
-  const subidoPor = Array.isArray(relSubidoPor) ? relSubidoPor[0] : relSubidoPor;
-
-  const { data: filas } = await supabase
-    .from("comentarios")
-    .select("id, texto, created_at, autor_id, autores(nombre, avatar_url)")
-    .eq("media_id", id)
-    .order("created_at", { ascending: true });
+  const subidoPor = autorDe(media.autores);
 
   const comentarios: Comentario[] = (filas ?? []).map((c) => {
-    // La relación viene como objeto o array según la inferencia de PostgREST.
-    const rel = c.autores as unknown as RelAutor | RelAutor[] | null;
-    const info = Array.isArray(rel) ? rel[0] : rel;
+    const info = autorDe(c.autores);
     return {
       id: c.id,
       texto: c.texto,
       created_at: c.created_at,
-      autor: info?.nombre ?? null,
-      avatarUrl: info?.avatar_url ?? null,
+      autor: info.nombre,
+      avatarUrl: info.avatarUrl,
     };
   });
 
@@ -92,8 +93,8 @@ export default async function DetalleMediaPage({ params }: Props) {
 
         <div className="mt-3 flex items-center gap-2">
           <Avatar
-            nombre={subidoPor?.nombre ?? null}
-            avatarUrl={subidoPor?.avatar_url ?? null}
+            nombre={subidoPor.nombre}
+            avatarUrl={subidoPor.avatarUrl}
             tamano={28}
           />
           <p className="text-sm text-white/60">

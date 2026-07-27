@@ -1,3 +1,4 @@
+import { cache } from "react";
 import { createClient } from "@/lib/supabase/server";
 
 export type Sesion = {
@@ -14,8 +15,22 @@ export type Sesion = {
  * Devuelve la sesión con el rol ya resuelto, o null si no hay usuario.
  * Es la fuente única de verdad para decidir qué puede hacer alguien en la
  * interfaz. La base de datos vuelve a comprobarlo por su cuenta con RLS.
+ *
+ * Va envuelta en `cache()` de React, que memoriza el resultado **dentro de una
+ * misma petición** (nunca entre peticiones ni entre usuarios distintos: cada
+ * render arranca con la memoria vacía). Sin esto, pintar la portada llamaba
+ * aquí cinco veces: el layout, su contador de no leídos, el header, su
+ * contador de pendientes y la propia página.
+ *
+ * Medido en local con la sesión de un miembro real, sumando lo que tardaba
+ * cada llamada: 5 llamadas (152+150+10+6+2 = 320 ms) → 1 llamada (138 ms).
+ * Las tres últimas ya salían baratas porque supabase-js reaprovecha la
+ * conexión, así que el ahorro real ronda los 180 ms de trabajo por render y
+ * cinco veces menos peticiones contra el proyecto de Supabase —que está en
+ * plan gratuito y sí tiene cupo—. En el TTFB medido no se aprecia una mejora
+ * clara: lo dominan otras cosas.
  */
-export async function getSesion(): Promise<Sesion | null> {
+export const getSesion = cache(async (): Promise<Sesion | null> => {
   const supabase = await createClient();
   const {
     data: { user },
@@ -38,7 +53,7 @@ export async function getSesion(): Promise<Sesion | null> {
     esMiembro: perfil?.aprobado === true,
     esAdmin: perfil?.rol === "admin" && perfil?.aprobado === true,
   };
-}
+});
 
 /** Lanza si quien llama no es miembro aprobado. Para usar en server actions. */
 export async function exigirMiembro(): Promise<Sesion> {

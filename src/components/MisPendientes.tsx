@@ -2,6 +2,7 @@
 
 import { useTransition } from "react";
 import { Check, Paperclip } from "lucide-react";
+import { diaLegible } from "@/lib/formato";
 import { marcarTarea } from "@/app/actions/tareas";
 import { alternarComprado } from "@/app/actions/gestion";
 
@@ -88,9 +89,7 @@ export default function MisPendientes({
                   )}
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
                     {t.fecha && (
-                      <span className="tabular-nums">
-                        {Number(t.fecha.slice(8, 10))} de agosto
-                      </span>
+                      <span className="tabular-nums">{diaLegible(t.fecha)}</span>
                     )}
                     {t.documento_url && (
                       <a

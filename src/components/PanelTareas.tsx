@@ -10,6 +10,7 @@ import {
   Loader2,
   X,
 } from "lucide-react";
+import { diaLegible } from "@/lib/formato";
 import SelectorMiembros, { type MiembroSimple } from "./SelectorMiembros";
 import {
   crearTarea,
@@ -377,9 +378,7 @@ export default function PanelTareas({
 
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
                 {t.fecha && (
-                  <span className="tabular-nums">
-                    {Number(t.fecha.slice(8, 10))} de agosto
-                  </span>
+                  <span className="tabular-nums">{diaLegible(t.fecha)}</span>
                 )}
                 {t.asignados.length > 0 && (
                   <span>

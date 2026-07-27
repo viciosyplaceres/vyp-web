@@ -6,6 +6,8 @@ import { ArrowLeft, Play, Music, Check, ClipboardList, ShoppingCart } from "luci
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
+import { aplanarRelacion } from "@/lib/relaciones";
+import { diaLegible } from "@/lib/formato";
 import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
@@ -66,22 +68,13 @@ export default async function PerfilPublicoPage({
         .eq("perfil_id", id),
     ]);
 
-  function aplanar<T>(filas: unknown[] | null | undefined, campo: string): T[] {
-    return (filas ?? [])
-      .map((f) => {
-        const rel = (f as Record<string, unknown>)[campo];
-        return (Array.isArray(rel) ? rel[0] : rel) as T | undefined;
-      })
-      .filter(Boolean) as T[];
-  }
-
   type SuTarea = { id: string; titulo: string; fecha: string | null; hecha: boolean };
   type SuCompra = { id: string; item: string; cantidad: number; comprado: boolean; anio: number };
 
-  const tareas = aplanar<SuTarea>(filasTareas, "tareas").sort((a, b) =>
+  const tareas = aplanarRelacion<SuTarea>(filasTareas, "tareas").sort((a, b) =>
     (a.fecha ?? "9999").localeCompare(b.fecha ?? "9999"),
   );
-  const compras = aplanar<SuCompra>(filasCompra, "lista_compra");
+  const compras = aplanarRelacion<SuCompra>(filasCompra, "lista_compra");
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
@@ -145,7 +138,7 @@ export default async function PerfilPublicoPage({
                     </p>
                     {t.fecha && (
                       <p className="text-xs text-white/50 tabular-nums">
-                        {Number(t.fecha.slice(8, 10))} de agosto
+                        {diaLegible(t.fecha)}
                       </p>
                     )}
                   </div>

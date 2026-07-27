@@ -11,6 +11,7 @@ import {
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
+import { autorDe } from "@/lib/relaciones";
 import CarruselFotos, { type FotoCarrusel } from "@/components/CarruselFotos";
 import MusicaCompacta from "@/components/MusicaCompacta";
 import type { PistaListada } from "@/components/ListaMusica";
@@ -35,43 +36,57 @@ export default async function Home() {
   const supabase = await createClient();
   const sesion = await getSesion();
 
-  const [{ data: ultimasFotos }, { data: ultimasPistas }, { data: mediaAnios }, { count: miembros }] =
-    await Promise.all([
-      supabase
-        .from("media")
-        .select(
-          "id, anio, tipo, url, thumb_url, descripcion, autores(nombre, avatar_url)",
-        )
-        .order("created_at", { ascending: false })
-        .limit(10),
-      supabase
-        .from("pistas")
-        .select(
-          "id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s, autores(nombre, avatar_url)",
-        )
-        .order("created_at", { ascending: false })
-        .limit(5),
-      supabase.from("media").select("anio"),
-      // `perfiles` no es legible para `anon` (correcto: es donde vive el rol
-      // de cada uno), así que un visitante sin sesión nunca podría contar
-      // cuántos miembros hay. Es solo un número agregado, nada sensible, así
-      // que aquí se cuenta con el cliente de servicio en vez de dejar la
-      // estadística rota para todo el mundo salvo la directiva.
-      createAdminClient()
-        .from("perfiles")
-        .select("id", { count: "exact", head: true })
-        .eq("aprobado", true),
-    ]);
+  const [
+    { data: ultimasFotos },
+    { data: ultimasPistas },
+    { count: totalFotos },
+    { data: filaPrimerAnio },
+    { count: miembros },
+  ] = await Promise.all([
+    supabase
+      .from("media")
+      .select(
+        "id, anio, tipo, url, thumb_url, descripcion, autores(nombre, avatar_url)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(10),
+    supabase
+      .from("pistas")
+      .select(
+        "id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s, autores(nombre, avatar_url)",
+      )
+      .order("created_at", { ascending: false })
+      .limit(5),
+    // Las dos cifras de la portada (cuántas fotos hay y desde qué año) se
+    // sacan con un contador y con una sola fila. Antes se traía la columna
+    // `anio` de la tabla ENTERA para contar el largo del array y buscarle el
+    // mínimo en memoria: con 20 fotos apenas se nota, pero crece para siempre
+    // —cada verano de la peña suma— y la portada es justo la página que más
+    // gente abre.
+    supabase.from("media").select("id", { count: "exact", head: true }),
+    supabase
+      .from("media")
+      .select("anio")
+      .order("anio", { ascending: true })
+      .limit(1),
+    // `perfiles` no es legible para `anon` (correcto: es donde vive el rol
+    // de cada uno), así que un visitante sin sesión nunca podría contar
+    // cuántos miembros hay. Es solo un número agregado, nada sensible, así
+    // que aquí se cuenta con el cliente de servicio en vez de dejar la
+    // estadística rota para todo el mundo salvo la directiva.
+    createAdminClient()
+      .from("perfiles")
+      .select("id", { count: "exact", head: true })
+      .eq("aprobado", true),
+  ]);
 
-  const totalFotos = mediaAnios?.length ?? 0;
-  const anios = new Set((mediaAnios ?? []).map((m) => m.anio));
-  const primerAnio = anios.size ? Math.min(...anios) : 2010;
+  const primerAnio = filaPrimerAnio?.[0]?.anio ?? null;
   const anioActual = new Date().getFullYear();
-  const anioFiestas = anios.size ? anioActual - primerAnio + 1 : null;
+  const anioFiestas = primerAnio ? anioActual - primerAnio + 1 : null;
 
   const stats = [
     anioFiestas && { valor: `${anioFiestas}`, etiqueta: "años de fiestas" },
-    totalFotos > 0 && { valor: `${totalFotos}+`, etiqueta: "fotos y vídeos" },
+    totalFotos ? { valor: `${totalFotos}+`, etiqueta: "fotos y vídeos" } : null,
     miembros ? { valor: `${miembros}`, etiqueta: "miembros" } : null,
   ].filter(Boolean) as { valor: string; etiqueta: string }[];
 
@@ -157,13 +172,11 @@ export default async function Home() {
           <div className="px-4 sm:px-6">
             <CarruselFotos
               fotos={ultimasFotos.map((f) => {
-                type RelAutor = { nombre: string | null; avatar_url: string | null };
-                const rel = f.autores as unknown as RelAutor | RelAutor[] | null;
-                const autor = Array.isArray(rel) ? rel[0] : rel;
+                const autor = autorDe(f.autores);
                 return {
                   ...f,
-                  autorNombre: autor?.nombre ?? null,
-                  autorAvatar: autor?.avatar_url ?? null,
+                  autorNombre: autor.nombre,
+                  autorAvatar: autor.avatarUrl,
                 } as FotoCarrusel;
               })}
             />
@@ -188,13 +201,11 @@ export default async function Home() {
 
             <MusicaCompacta
               pistas={ultimasPistas.map((p) => {
-                type RelAutor = { nombre: string | null; avatar_url: string | null };
-                const rel = p.autores as unknown as RelAutor | RelAutor[] | null;
-                const autor = Array.isArray(rel) ? rel[0] : rel;
+                const autor = autorDe(p.autores);
                 return {
                   ...p,
-                  subidoPorNombre: autor?.nombre ?? null,
-                  subidoPorAvatar: autor?.avatar_url ?? null,
+                  subidoPorNombre: autor.nombre,
+                  subidoPorAvatar: autor.avatarUrl,
                 } as PistaListada;
               })}
             />

@@ -3,7 +3,6 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Camera, Video, FolderOpen, X } from "lucide-react";
-import imageCompression from "browser-image-compression";
 import { registrarMedia, finalizarSubidaGaleria } from "@/app/actions/media";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // tope real de la cuenta de Cloudinary
@@ -71,9 +70,18 @@ export default function SubirMedia({
 
         // Las fotos se encogen aquí mismo, en el móvil: subir 8 MB con mala
         // cobertura en el recinto es inviable, y 2400px sobra para verse bien.
+        //
+        // La biblioteca que comprime pesa 56 KB y se carga aquí, en el momento
+        // de usarla, no al abrir la galería: la inmensa mayoría de quien entra
+        // solo mira fotos, y no tiene por qué descargarse el compresor para
+        // eso. Al ser un `import()` dentro del bucle, el navegador la trae una
+        // sola vez y la reutiliza para el resto de la tanda.
         let fichero: File = original;
         if (!esVideo) {
           setProgreso(`Comprimiendo ${i + 1} de ${ficheros.length}…`);
+          const { default: imageCompression } = await import(
+            "browser-image-compression"
+          );
           fichero = await imageCompression(original, {
             maxWidthOrHeight: 2400,
             maxSizeMB: 2,

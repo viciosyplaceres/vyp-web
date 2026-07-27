@@ -3,6 +3,7 @@
 import { useTransition } from "react";
 import { Trash2, Image as ImageIcon, Video, Music } from "lucide-react";
 import { borrarMediaAdmin, borrarPistaAdmin } from "@/app/actions/almacenamiento";
+import { formatearBytes } from "@/lib/formato";
 
 export type MediaConTamano = {
   id: string;
@@ -20,12 +21,6 @@ export type PistaConTamano = {
   url: string;
   bytes: number | null;
 };
-
-function formatearBytes(bytes: number | null) {
-  if (!bytes) return "tamaño desconocido";
-  const mb = bytes / (1024 * 1024);
-  return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
-}
 
 function BarraProgreso({
   etiqueta,

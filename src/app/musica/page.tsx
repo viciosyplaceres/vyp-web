@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { autorDe } from "@/lib/relaciones";
 import ListaMusica, { type PistaListada } from "@/components/ListaMusica";
 import PanelSubirMusica from "@/components/PanelSubirMusica";
 
@@ -23,14 +24,12 @@ export default async function MusicaPage() {
     )
     .order("created_at", { ascending: false });
 
-  type RelAutor = { nombre: string | null; avatar_url: string | null };
   const conAutor: PistaListada[] = (pistas ?? []).map((p) => {
-    const rel = p.autores as unknown as RelAutor | RelAutor[] | null;
-    const autor = Array.isArray(rel) ? rel[0] : rel;
+    const autor = autorDe(p.autores);
     return {
       ...p,
-      subidoPorNombre: autor?.nombre ?? null,
-      subidoPorAvatar: autor?.avatar_url ?? null,
+      subidoPorNombre: autor.nombre,
+      subidoPorAvatar: autor.avatarUrl,
     } as PistaListada;
   });
 

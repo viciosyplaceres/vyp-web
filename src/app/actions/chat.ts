@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro } from "@/lib/auth";
 import { avisarMiembros } from "@/lib/push";
+import { autorDe } from "@/lib/relaciones";
 
 export type MensajeCreado = {
   id: string;
@@ -52,9 +53,7 @@ export async function enviarMensaje(
       .eq("id", respuestaA)
       .single();
     if (original) {
-      type RelAutor = { nombre: string | null };
-      const rel = original.autores as unknown as RelAutor | RelAutor[] | null;
-      const autor = Array.isArray(rel) ? rel[0] : rel;
+      const autor = autorDe(original.autores);
       respuestaTexto = original.borrado ? "Mensaje eliminado" : original.texto;
       respuestaAutor = autor?.nombre ?? null;
     }

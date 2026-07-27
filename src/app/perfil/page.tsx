@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ArrowRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { aplanarRelacion } from "@/lib/relaciones";
 import { cerrarSesion } from "@/app/actions/auth";
 import AvisosPush from "@/components/AvisosPush";
 import EditarPerfil from "@/components/EditarPerfil";
@@ -70,19 +71,10 @@ export default async function PerfilPage() {
         ])
       : [null, null, null, null, null, null];
 
-  function aplanar<T>(filas: unknown[] | null | undefined, campo: string): T[] {
-    return (filas ?? [])
-      .map((f) => {
-        const rel = (f as Record<string, unknown>)[campo];
-        return (Array.isArray(rel) ? rel[0] : rel) as T | undefined;
-      })
-      .filter(Boolean) as T[];
-  }
-
-  const tareas = aplanar<MiTarea>(misTareas?.data, "tareas").sort((a, b) =>
+  const tareas = aplanarRelacion<MiTarea>(misTareas?.data, "tareas").sort((a, b) =>
     (a.fecha ?? "9999").localeCompare(b.fecha ?? "9999"),
   );
-  const compras = aplanar<MiCompra>(misCompras?.data, "lista_compra");
+  const compras = aplanarRelacion<MiCompra>(misCompras?.data, "lista_compra");
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">

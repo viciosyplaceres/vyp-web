@@ -2,6 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { autorDe } from "@/lib/relaciones";
 import { marcarChatLeido } from "@/app/actions/chat";
 import Chat, { type Mensaje, type InfoAutor } from "@/components/Chat";
 
@@ -83,18 +84,15 @@ export default async function ChatPage() {
     console.error("Error al cargar mensajes del chat:", errorMensajes.message);
   }
 
-  type RelAutor = { nombre: string | null; avatar_url: string | null };
-
   const mensajes: Mensaje[] = (filas ?? []).map((m) => {
-    const rel = m.autores as unknown as RelAutor | RelAutor[] | null;
-    const info = Array.isArray(rel) ? rel[0] : rel;
+    const info = autorDe(m.autores);
     return {
       id: m.id,
       texto: m.texto,
       created_at: m.created_at,
       autor_id: m.autor_id,
-      autor: info?.nombre ?? null,
-      avatarUrl: info?.avatar_url ?? null,
+      autor: info.nombre,
+      avatarUrl: info.avatarUrl,
       respuestaA: m.respuesta_a,
       respuestaTexto: m.respuesta_texto,
       respuestaAutor: m.respuesta_autor,

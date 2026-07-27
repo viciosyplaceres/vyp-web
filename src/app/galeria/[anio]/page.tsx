@@ -5,6 +5,7 @@ import { ChevronLeft, Play } from "lucide-react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { autorDe } from "@/lib/relaciones";
 import PanelSubirGaleria from "@/components/PanelSubirGaleria";
 import Avatar from "@/components/Avatar";
 
@@ -65,9 +66,7 @@ export default async function AnioPage({ params }: Props) {
         ) : (
           <ul className="mt-6 grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
             {media.map((m) => {
-              type RelAutor = { nombre: string | null; avatar_url: string | null };
-              const rel = m.autores as unknown as RelAutor | RelAutor[] | null;
-              const autor = Array.isArray(rel) ? rel[0] : rel;
+              const autor = autorDe(m.autores);
 
               return (
                 <li key={m.id}>
@@ -84,8 +83,8 @@ export default async function AnioPage({ params }: Props) {
                     />
                     <span className="absolute bottom-1.5 left-1.5">
                       <Avatar
-                        nombre={autor?.nombre ?? null}
-                        avatarUrl={autor?.avatar_url ?? null}
+                        nombre={autor.nombre}
+                        avatarUrl={autor.avatarUrl}
                         tamano={22}
                         className="border-black/60"
                       />
