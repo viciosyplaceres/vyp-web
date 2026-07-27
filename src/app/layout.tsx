@@ -28,6 +28,9 @@ export const metadata: Metadata = {
   },
   description:
     "Peña Vicios & Placeres — Fuente Álamo de Murcia. Galería de las fiestas, música y gestión de la peña.",
+  // Nombre corto para el diálogo de instalación de escritorio y como respaldo
+  // en Android: el nombre largo de la pestaña del navegador no cabe bien ahí.
+  applicationName: "VYP",
   manifest: "/manifest.webmanifest",
   appleWebApp: {
     capable: true,
