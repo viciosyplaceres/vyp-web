@@ -28,8 +28,10 @@ export async function registrarCamiseta(datos: {
 
   const { error } = await supabase.from("camisetas").insert({
     anio: datos.anio,
-    titulo: datos.titulo?.trim() || null,
-    notas: datos.notas?.trim() || null,
+    titulo: datos.titulo?.trim().slice(0, 120) || null,
+    // El límite del formulario es de cliente (maxLength); esto es el mismo
+    // tope pero exigido en el servidor, por si alguien salta el navegador.
+    notas: datos.notas?.trim().slice(0, 500) || null,
     url: datos.url,
     storage_id: datos.storageId,
     bytes: datos.bytes,
