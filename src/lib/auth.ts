@@ -3,6 +3,8 @@ import { createClient } from "@/lib/supabase/server";
 export type Sesion = {
   userId: string;
   nombre: string | null;
+  usuario: string | null;
+  avatarUrl: string | null;
   esMiembro: boolean;
   esAdmin: boolean;
 };
@@ -22,13 +24,15 @@ export async function getSesion(): Promise<Sesion | null> {
 
   const { data: perfil } = await supabase
     .from("perfiles")
-    .select("nombre, rol, aprobado")
+    .select("nombre, usuario, avatar_url, rol, aprobado")
     .eq("id", user.id)
     .single();
 
   return {
     userId: user.id,
     nombre: perfil?.nombre ?? null,
+    usuario: perfil?.usuario ?? null,
+    avatarUrl: perfil?.avatar_url ?? null,
     esMiembro: perfil?.aprobado === true,
     esAdmin: perfil?.rol === "admin" && perfil?.aprobado === true,
   };

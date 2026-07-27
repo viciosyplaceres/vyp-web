@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { ShoppingCart, Users } from "lucide-react";
+import { ShoppingCart, Users, ListChecks } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import PanelParticipantes from "@/components/PanelParticipantes";
@@ -40,6 +40,13 @@ export default async function AdminPage() {
         <h1 className="text-2xl font-semibold sm:text-3xl">Gestión</h1>
 
         <div className="mt-4 flex flex-wrap gap-2">
+          <Link
+            href="/admin/tareas"
+            className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/25 px-4 text-sm transition-colors duration-200 hover:bg-white/10"
+          >
+            <ListChecks size={16} aria-hidden="true" />
+            Tareas
+          </Link>
           <Link
             href="/admin/compras"
             className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/25 px-4 text-sm transition-colors duration-200 hover:bg-white/10"

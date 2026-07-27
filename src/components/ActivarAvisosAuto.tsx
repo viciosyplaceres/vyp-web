@@ -79,7 +79,7 @@ export default function ActivarAvisosAuto({
       (window.navigator as unknown as { standalone?: boolean }).standalone ===
         true;
 
-    // Fuera de la app instalada no se molesta: ahí está el botón de /cuenta.
+    // Fuera de la app instalada no se molesta: ahí está el botón de /perfil.
     if (!enApp) return;
 
     (async () => {

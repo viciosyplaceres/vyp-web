@@ -32,8 +32,8 @@ Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran
 | `/galeria` · `/galeria/[año]` · `/galeria/[año]/[id]` | Todos | Años, cuadrícula y detalle con comentarios. **Miembros**: botón "Subir" arriba de la página |
 | `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar. **Miembros**: botón "Subir música" arriba de la página |
 | `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp |
-| `/cuenta` | Con sesión | Perfil, avisos push, cerrar sesión |
-| `/admin` · `/admin/compras` · `/admin/miembros` | **Directiva** | Pagos y tallas, lista de la compra, aprobar altas |
+| `/perfil` | Con sesión | Avatar y nombre de usuario, mis tareas, mi compra, mis fotos, mi música, ajustes y cerrar sesión |
+| `/admin` · `/admin/tareas` · `/admin/compras` · `/admin/miembros` | **Directiva** | Tareas de agosto con calendario, pagos y tallas, lista de la compra, aprobar altas |
 
 ## Arquitectura
 

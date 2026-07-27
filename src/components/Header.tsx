@@ -1,7 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { getSesion } from "@/lib/auth";
-import { cerrarSesion } from "@/app/actions/auth";
+import Avatar from "@/components/Avatar";
 
 /** Enlaces solo para pantallas grandes: en móvil manda la barra inferior. */
 const ENLACES = [
@@ -57,14 +57,20 @@ export default async function Header() {
 
         <div className="flex shrink-0 items-center gap-3 text-sm">
           {sesion ? (
-            <form action={cerrarSesion}>
-              <button
-                type="submit"
-                className="cursor-pointer text-white/60 transition-colors duration-200 hover:text-white"
-              >
-                Salir
-              </button>
-            </form>
+            <Link
+              href="/perfil"
+              aria-label="Mi perfil"
+              className="flex cursor-pointer items-center gap-2 rounded-full transition-opacity duration-200 hover:opacity-80"
+            >
+              <span className="hidden text-white/60 sm:block">
+                {sesion.usuario ?? sesion.nombre ?? "Mi perfil"}
+              </span>
+              <Avatar
+                nombre={sesion.nombre}
+                avatarUrl={sesion.avatarUrl}
+                tamano={32}
+              />
+            </Link>
           ) : (
             <Link
               href="/login"

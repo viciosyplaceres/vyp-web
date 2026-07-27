@@ -31,7 +31,8 @@ export async function proxy(request: NextRequest) {
   const user = data?.claims;
 
   const path = request.nextUrl.pathname;
-  const rutaProtegida = path.startsWith("/admin");
+  const rutaProtegida =
+    path.startsWith("/admin") || path.startsWith("/perfil");
 
   if (!user && rutaProtegida) {
     const url = request.nextUrl.clone();

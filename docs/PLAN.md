@@ -116,7 +116,8 @@ encadenar varias fotos seguidas sin volver a abrir el selector.
 ## 5. Modelo de datos (Supabase Postgres)
 
 ```
-perfiles          id (→ auth.users), nombre, rol ('miembro'|'admin'), aprobado, created_at
+perfiles          id (→ auth.users), nombre, usuario (único), avatar_url,
+                  rol ('miembro'|'admin'), aprobado, created_at
 media             id, tipo ('foto'|'video'), anio, storage_id, url, thumb_url,
                   ancho, alto, duracion_s, descripcion, subido_por, created_at
 pistas            id, titulo, artista, tipo ('sesion'|'cancion'), anio,
@@ -126,6 +127,10 @@ comentarios       id, media_id (nullable), pista_id (nullable), autor_id, texto,
 participantes     id, nombre, pagado, importe, talla_camiseta, notas, anio
 lista_compra      id, item, cantidad, comprado, anio, notas
 mensajes          id, autor_id, texto, created_at            (chat interno, solo miembros)
+tareas            id, titulo, descripcion, fecha, hecha, hecha_por, hecha_en,
+                  documento_url, documento_nombre, creado_por, created_at
+tareas_miembros   tarea_id + perfil_id   (quién se encarga; puede ser más de uno)
+compra_miembros   item_id  + perfil_id   (quién compra cada cosa)
 push_subs         id, user_id, endpoint (único), p256dh, auth, created_at
 autores (vista)   id, nombre                                  (solo esas dos columnas)
 ```
@@ -251,6 +256,50 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 > endpoint interno que responde con `X-Frame-Options: SAMEORIGIN`, así que el navegador bloquea
 > el iframe en cualquier dominio que no sea `google.com` — el recuadro se quedaba en blanco para
 > todo el mundo. Verificado con cabeceras HTTP reales antes y después del cambio.
+
+---
+
+## 9-pre. Tareas de agosto y perfil personal (2026-07-27)
+
+### Tareas (`/admin/tareas`)
+
+Reparto del trabajo de las fiestas, con **calendario de agosto de 2026**: los 31 días en cuadrícula,
+cada uno con un punto si tiene tareas (apagado si ya están todas hechas). Al tocar un día se filtra
+la lista; se vuelve a tocar y se ven todas otra vez.
+
+Cada tarea tiene **nombre, descripción, día, uno o varios encargados y un documento adjunto**
+opcional (PDF, imagen, Word, Excel o texto, hasta 20 MB, guardado en R2 bajo `documentos/`).
+
+Quién puede qué:
+
+| | Ver | Crear/editar/borrar | Marcar hecha |
+|---|---|---|---|
+| Visitante | no | no | no |
+| Miembro | sí | no | **solo las suyas** |
+| Directiva | sí | sí | sí |
+
+Lo de "solo las suyas" tiene truco: el RLS de Postgres decide por **filas**, no por columnas, así
+que dejar a un encargado actualizar su tarea le permitiría también cambiarle el título o la fecha.
+Por eso hay un **trigger** (`tareas_solo_marcar`) que revierte cualquier campo que no sea el estado
+si quien edita no es admin — el mismo patrón que ya protegía `rol`/`aprobado` en `perfiles`.
+Verificado en vivo: un miembro intentó renombrar su tarea y el título se quedó como estaba.
+
+### Lista de la compra: ahora con encargados
+
+`lista_compra` pasa de ser **solo-admin** a que **los miembros la vean** (necesitan saber qué les
+toca) y puedan marcar comprado **lo que tienen asignado**, con el mismo trigger de protección.
+Crear y borrar sigue siendo de la directiva. **`participantes` (pagos y tallas) no cambia: sigue
+siendo solo-admin.**
+
+### Perfil (`/perfil`)
+
+Sustituye a la antigua `/cuenta`. Cada miembro pone su **foto de avatar y su nombre de usuario**
+(único, en minúsculas, 3–20 caracteres). El avatar sale **en el encabezado** y al pulsarlo se llega
+aquí. Dentro: sus tareas, lo que le toca comprar (ambas marcables), sus fotos, su música, y los
+**ajustes** — notificaciones (vienen activadas; aquí se apagan) y cerrar sesión.
+
+La vista `autores` se amplía con `usuario` y `avatar_url`: son datos públicos (quién comenta, quién
+sube), y sigue sin exponer `rol` ni `aprobado`.
 
 ---
 

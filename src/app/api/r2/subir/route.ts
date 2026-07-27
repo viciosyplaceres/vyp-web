@@ -17,49 +17,81 @@ const TIPOS_AUDIO = [
   "audio/flac",
 ];
 
-/** 500 MB: una sesión de DJ larga cabe de sobra y sigue siendo un tope sano. */
-const MAX_BYTES = 500 * 1024 * 1024;
+const TIPOS_DOCUMENTO = [
+  "application/pdf",
+  "image/jpeg",
+  "image/png",
+  "image/webp",
+  "application/msword",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "application/vnd.ms-excel",
+  "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet",
+  "text/plain",
+  "text/csv",
+];
+
+/** 500 MB para música (una sesión larga cabe de sobra); 20 MB para documentos. */
+const MAX_AUDIO = 500 * 1024 * 1024;
+const MAX_DOCUMENTO = 20 * 1024 * 1024;
 
 /**
- * Devuelve una URL prefirmada para subir un audio directamente a R2 desde el
- * navegador, sin que el fichero pase por el servidor de Next (que tiene límite
- * de tamaño de petición). Solo para miembros aprobados.
+ * Devuelve una URL prefirmada para subir directamente a R2 desde el navegador,
+ * sin que el fichero pase por el servidor de Next (que tiene límite de tamaño
+ * de petición). Solo para miembros aprobados.
+ *
+ * `destino` decide qué se admite y dónde cae:
+ *  - "musica"     → audio, hasta 500 MB, prefijo musica/
+ *  - "documento"  → PDF/imagen/ofimática, hasta 20 MB, prefijo documentos/
  */
 export async function POST(request: Request) {
   const sesion = await getSesion();
   if (!sesion?.esMiembro) {
     return NextResponse.json(
-      { error: "Solo los miembros de la peña pueden subir música." },
+      { error: "Solo los miembros de la peña pueden subir." },
       { status: 403 },
     );
   }
 
-  const { nombre, contentType, tamano } = await request
+  const { nombre, contentType, tamano, destino } = await request
     .json()
     .catch(() => ({}));
 
   if (typeof nombre !== "string" || !nombre.trim()) {
     return NextResponse.json({ error: "Falta el nombre." }, { status: 400 });
   }
-  if (!TIPOS_AUDIO.includes(String(contentType))) {
+
+  const esDocumento = destino === "documento";
+  const tiposOk = esDocumento ? TIPOS_DOCUMENTO : TIPOS_AUDIO;
+  const maxBytes = esDocumento ? MAX_DOCUMENTO : MAX_AUDIO;
+  const prefijo = esDocumento ? "documentos" : "musica";
+  const extPorDefecto = esDocumento ? "pdf" : "mp3";
+
+  if (!tiposOk.includes(String(contentType))) {
     return NextResponse.json(
-      { error: "Solo se admiten ficheros de audio." },
+      {
+        error: esDocumento
+          ? "Formato no admitido. Vale PDF, imagen, Word, Excel o texto."
+          : "Solo se admiten ficheros de audio.",
+      },
       { status: 400 },
     );
   }
-  if (!Number.isFinite(tamano) || tamano <= 0 || tamano > MAX_BYTES) {
+
+  if (!Number.isFinite(tamano) || tamano <= 0 || tamano > maxBytes) {
     return NextResponse.json(
-      { error: "El fichero supera el máximo de 500 MB." },
+      {
+        error: `El fichero supera el máximo de ${Math.round(maxBytes / (1024 * 1024))} MB.`,
+      },
       { status: 400 },
     );
   }
 
   // La clave la decide el servidor: el cliente no elige dónde escribe.
-  const extension = (nombre.split(".").pop() ?? "mp3")
+  const extension = (nombre.split(".").pop() ?? extPorDefecto)
     .toLowerCase()
     .replace(/[^a-z0-9]/g, "")
     .slice(0, 5);
-  const clave = `musica/${crypto.randomUUID()}.${extension || "mp3"}`;
+  const clave = `${prefijo}/${crypto.randomUUID()}.${extension || extPorDefecto}`;
 
   const url = await getSignedUrl(
     r2,

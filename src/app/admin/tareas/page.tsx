@@ -4,19 +4,19 @@ import type { Metadata } from "next";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
-import PanelCompras, { type ItemCompra } from "@/components/PanelCompras";
+import PanelTareas, { type TareaListada } from "@/components/PanelTareas";
 import type { MiembroSimple } from "@/components/SelectorMiembros";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Lista de la compra",
+  title: "Tareas",
   robots: { index: false, follow: false },
 };
 
-export default async function ComprasPage() {
+export default async function AdminTareasPage() {
   const sesion = await getSesion();
-  if (!sesion) redirect("/login?next=/admin/compras");
+  if (!sesion) redirect("/login?next=/admin/tareas");
 
   if (!sesion.esAdmin) {
     return (
@@ -30,16 +30,18 @@ export default async function ComprasPage() {
 
   const supabase = await createClient();
 
-  const [{ data: items }, { data: asignaciones }, { data: miembros }] =
+  const [{ data: tareas }, { data: asignaciones }, { data: miembros }] =
     await Promise.all([
       supabase
-        .from("lista_compra")
-        .select("id, item, cantidad, comprado, anio, notas")
-        .order("anio", { ascending: false })
-        .order("comprado", { ascending: true }),
+        .from("tareas")
+        .select(
+          "id, titulo, descripcion, fecha, hecha, documento_url, documento_nombre",
+        )
+        .order("fecha", { ascending: true, nullsFirst: false })
+        .order("created_at", { ascending: true }),
       supabase
-        .from("compra_miembros")
-        .select("item_id, perfiles(id, nombre, usuario)"),
+        .from("tareas_miembros")
+        .select("tarea_id, perfiles(id, nombre, usuario)"),
       supabase
         .from("perfiles")
         .select("id, nombre, usuario")
@@ -47,17 +49,19 @@ export default async function ComprasPage() {
         .order("nombre", { ascending: true }),
     ]);
 
-  const porItem = new Map<string, MiembroSimple[]>();
+  // Se cruzan aquí en vez de con un join anidado: PostgREST devuelve la
+  // relación con forma variable y así el tipo queda claro.
+  const porTarea = new Map<string, MiembroSimple[]>();
   for (const a of asignaciones ?? []) {
     const rel = a.perfiles as unknown as MiembroSimple | MiembroSimple[] | null;
     const perfil = Array.isArray(rel) ? rel[0] : rel;
     if (!perfil) continue;
-    porItem.set(a.item_id, [...(porItem.get(a.item_id) ?? []), perfil]);
+    porTarea.set(a.tarea_id, [...(porTarea.get(a.tarea_id) ?? []), perfil]);
   }
 
-  const lista: ItemCompra[] = (items ?? []).map((i) => ({
-    ...i,
-    asignados: porItem.get(i.id) ?? [],
+  const lista: TareaListada[] = (tareas ?? []).map((t) => ({
+    ...t,
+    asignados: porTarea.get(t.id) ?? [],
   }));
 
   return (
@@ -72,11 +76,15 @@ export default async function ComprasPage() {
         </Link>
 
         <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">
-          Lista de la compra
+          Tareas de las fiestas
         </h1>
+        <p className="mt-1 text-sm text-white/50">
+          Reparte el trabajo de agosto entre la peña. Cada uno ve lo suyo en su
+          perfil.
+        </p>
 
-        <PanelCompras
-          items={lista}
+        <PanelTareas
+          tareas={lista}
           miembros={(miembros ?? []) as MiembroSimple[]}
         />
       </div>

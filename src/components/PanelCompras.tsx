@@ -1,12 +1,14 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useTransition } from "react";
-import { Check, Trash2, Plus } from "lucide-react";
+import { useActionState, useEffect, useRef, useState, useTransition } from "react";
+import { Check, Trash2, Plus, Users } from "lucide-react";
 import {
   crearItemCompra,
   alternarComprado,
   borrarItemCompra,
 } from "@/app/actions/gestion";
+import { asignarCompra } from "@/app/actions/tareas";
+import SelectorMiembros, { type MiembroSimple } from "./SelectorMiembros";
 
 export type ItemCompra = {
   id: string;
@@ -15,6 +17,7 @@ export type ItemCompra = {
   comprado: boolean;
   anio: number;
   notas: string | null;
+  asignados: MiembroSimple[];
 };
 
 const ANIOS = Array.from(
@@ -22,10 +25,18 @@ const ANIOS = Array.from(
   (_, i) => new Date().getFullYear() - i,
 );
 
-export default function PanelCompras({ items }: { items: ItemCompra[] }) {
+export default function PanelCompras({
+  items,
+  miembros,
+}: {
+  items: ItemCompra[];
+  miembros: MiembroSimple[];
+}) {
   const [estado, accion, pendiente] = useActionState(crearItemCompra, null);
   const [, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
+  // Qué artículo tiene abierto el panel de reparto.
+  const [repartiendo, setRepartiendo] = useState<string | null>(null);
 
   useEffect(() => {
     if (estado && !estado.error) formRef.current?.reset();
@@ -126,57 +137,97 @@ export default function PanelCompras({ items }: { items: ItemCompra[] }) {
             {lista.map((i) => (
               <li
                 key={i.id}
-                className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2.5"
+                className="rounded-lg border border-white/10 px-3 py-2.5"
               >
-                <button
-                  type="button"
-                  aria-label={
-                    i.comprado
-                      ? `Marcar ${i.item} como no comprado`
-                      : `Marcar ${i.item} como comprado`
-                  }
-                  aria-pressed={i.comprado}
-                  onClick={() =>
-                    startTransition(() => {
-                      void alternarComprado(i.id, !i.comprado);
-                    })
-                  }
-                  className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors duration-200 ${
-                    i.comprado
-                      ? "border-white bg-white text-black"
-                      : "border-white/30 text-transparent hover:border-white/60"
-                  }`}
-                >
-                  <Check size={18} aria-hidden="true" />
-                </button>
-
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={`truncate font-medium ${
-                      i.comprado ? "text-white/40 line-through" : ""
+                <div className="flex items-center gap-3">
+                  <button
+                    type="button"
+                    aria-label={
+                      i.comprado
+                        ? `Marcar ${i.item} como no comprado`
+                        : `Marcar ${i.item} como comprado`
+                    }
+                    aria-pressed={i.comprado}
+                    onClick={() =>
+                      startTransition(() => {
+                        void alternarComprado(i.id, !i.comprado);
+                      })
+                    }
+                    className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors duration-200 ${
+                      i.comprado
+                        ? "border-white bg-white text-black"
+                        : "border-white/30 text-transparent hover:border-white/60"
                     }`}
                   >
-                    {i.item}
-                  </p>
-                  {i.cantidad > 1 && (
-                    <p className="text-xs text-white/50">
-                      Cantidad: {i.cantidad}
+                    <Check size={18} aria-hidden="true" />
+                  </button>
+
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className={`truncate font-medium ${
+                        i.comprado ? "text-white/40 line-through" : ""
+                      }`}
+                    >
+                      {i.item}
                     </p>
-                  )}
+                    <p className="truncate text-xs text-white/50">
+                      {[
+                        i.cantidad > 1 && `Cantidad: ${i.cantidad}`,
+                        i.asignados.length
+                          ? i.asignados
+                              .map((a) => a.nombre || a.usuario)
+                              .join(", ")
+                          : "Sin asignar",
+                      ]
+                        .filter(Boolean)
+                        .join(" · ")}
+                    </p>
+                  </div>
+
+                  <button
+                    type="button"
+                    aria-label={`Repartir ${i.item}`}
+                    aria-expanded={repartiendo === i.id}
+                    onClick={() =>
+                      setRepartiendo(repartiendo === i.id ? null : i.id)
+                    }
+                    className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full transition-colors duration-200 ${
+                      repartiendo === i.id
+                        ? "text-white"
+                        : "text-white/30 hover:text-white"
+                    }`}
+                  >
+                    <Users size={16} aria-hidden="true" />
+                  </button>
+
+                  <button
+                    type="button"
+                    aria-label={`Borrar ${i.item}`}
+                    onClick={() =>
+                      startTransition(() => {
+                        void borrarItemCompra(i.id);
+                      })
+                    }
+                    className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/30 transition-colors duration-200 hover:text-red-400"
+                  >
+                    <Trash2 size={16} aria-hidden="true" />
+                  </button>
                 </div>
 
-                <button
-                  type="button"
-                  aria-label={`Borrar ${i.item}`}
-                  onClick={() =>
-                    startTransition(() => {
-                      void borrarItemCompra(i.id);
-                    })
-                  }
-                  className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/30 transition-colors duration-200 hover:text-red-400"
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                </button>
+                {repartiendo === i.id && (
+                  <div className="mt-3 border-t border-white/10 pt-3">
+                    <SelectorMiembros
+                      etiqueta="Quién lo compra"
+                      miembros={miembros}
+                      seleccionados={i.asignados.map((a) => a.id)}
+                      onCambio={(ids) =>
+                        startTransition(() => {
+                          void asignarCompra(i.id, ids);
+                        })
+                      }
+                    />
+                  </div>
+                )}
               </li>
             ))}
           </ul>

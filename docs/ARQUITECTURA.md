@@ -31,7 +31,7 @@ src/
     galeria/                Años → cuadrícula → detalle con comentarios. Botón "Subir" propio (miembros)
     musica/                 Lista de pistas (R2 + embeds externos). Botón "Subir música" propio (miembros)
     chat/                   Chat interno de miembros
-    cuenta/                 Perfil, avisos push, cerrar sesión
+    perfil/                 Avatar, usuario, mis tareas/compra/fotos/música, ajustes, salir
     admin/                  Participantes · compras · miembros (solo directiva)
     login/ registro/        Acceso y alta
     actions/                Server actions (toda la escritura pasa por aquí)

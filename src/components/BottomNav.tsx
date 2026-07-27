@@ -40,13 +40,13 @@ export default function BottomNav({
 
   if (esAdmin) {
     items.push({ href: "/admin", etiqueta: "Gestión", Icono: Settings });
-  } else {
-    items.push({
-      href: haySesion ? "/cuenta" : "/login",
-      etiqueta: haySesion ? "Cuenta" : "Acceder",
-      Icono: User,
-    });
   }
+
+  items.push({
+    href: haySesion ? "/perfil" : "/login",
+    etiqueta: haySesion ? "Perfil" : "Acceder",
+    Icono: User,
+  });
 
   return (
     <nav
