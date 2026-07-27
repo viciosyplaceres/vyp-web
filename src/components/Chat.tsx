@@ -18,7 +18,6 @@ import {
   marcarChatLeido,
 } from "@/app/actions/chat";
 import Avatar from "./Avatar";
-import AvisosPush from "./AvisosPush";
 
 export type Mensaje = {
   id: string;
@@ -377,8 +376,6 @@ export default function Chat({
 
   return (
     <div className="flex flex-1 flex-col">
-      <AvisosPush />
-
       <ol className="flex-1 space-y-2 py-4">
         {optimistas.length === 0 && (
           <li className="py-10 text-center text-sm text-white/40">

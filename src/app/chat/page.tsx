@@ -52,12 +52,23 @@ export default async function ChatPage() {
 
   const supabase = await createClient();
 
-  const [{ data: filas }, { data: todosAutores }, { data: reaccionesFilas }, { data: lecturasFilas }] =
-    await Promise.all([
+  const [
+    { data: filas, error: errorMensajes },
+    { data: todosAutores },
+    { data: reaccionesFilas },
+    { data: lecturasFilas },
+  ] = await Promise.all([
       supabase
         .from("mensajes")
+        // La relación se nombra explícitamente ("!mensajes_autor_id_fkey"):
+        // desde que existe `mensaje_reacciones` (también enlazada a
+        // `mensajes` y a `perfiles`), PostgREST encuentra DOS caminos
+        // posibles hasta `autores` y, sin desambiguar, rechaza la consulta
+        // entera con un error. Aquí no se comprobaba ese error, así que el
+        // chat se quedaba en silencio mostrando "Aún no hay mensajes" aunque
+        // la conversación seguía intacta en la base de datos.
         .select(
-          "id, texto, created_at, autor_id, respuesta_a, respuesta_texto, respuesta_autor, editado_at, borrado, autores(nombre, avatar_url)",
+          "id, texto, created_at, autor_id, respuesta_a, respuesta_texto, respuesta_autor, editado_at, borrado, autores!mensajes_autor_id_fkey(nombre, avatar_url)",
         )
         .order("created_at", { ascending: true })
         .limit(200),
@@ -65,6 +76,12 @@ export default async function ChatPage() {
       supabase.from("mensaje_reacciones").select("mensaje_id, perfil_id, emoji"),
       supabase.from("chat_lecturas").select("perfil_id, ultimo_leido_at"),
     ]);
+
+  // Si la consulta falla, que quede constancia en los logs en vez de fingir
+  // silenciosamente que la conversación está vacía (justo lo que pasó aquí).
+  if (errorMensajes) {
+    console.error("Error al cargar mensajes del chat:", errorMensajes.message);
+  }
 
   type RelAutor = { nombre: string | null; avatar_url: string | null };
 

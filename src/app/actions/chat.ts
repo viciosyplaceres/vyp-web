@@ -45,7 +45,10 @@ export async function enviarMensaje(
   if (respuestaA) {
     const { data: original } = await supabase
       .from("mensajes")
-      .select("texto, borrado, autores(nombre)")
+      // Mismo motivo que en chat/page.tsx: hay que nombrar la relación a
+      // propósito porque `mensaje_reacciones` crea un segundo camino hasta
+      // `autores` y PostgREST, si no se desambigua, rechaza la consulta.
+      .select("texto, borrado, autores!mensajes_autor_id_fkey(nombre)")
       .eq("id", respuestaA)
       .single();
     if (original) {

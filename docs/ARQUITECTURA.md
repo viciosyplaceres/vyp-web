@@ -333,6 +333,31 @@ entrar.
 
 ---
 
+## 7octies. Bug real: el chat "perdía" el historial al reabrir la app
+
+No era un problema de persistencia — los mensajes siempre estuvieron a salvo en `mensajes` — sino de
+**lectura**: desde que la migración del chat pro (`0008_chat_pro.sql`) añadió `mensaje_reacciones`
+(con FKs a `mensajes` Y a `perfiles`), PostgREST encuentra **dos caminos** distintos desde `mensajes`
+hasta `autores` (uno directo por `autor_id`, otro atravesando `mensaje_reacciones`). Un embed
+`autores(nombre, avatar_url)` sin desambiguar, en ese contexto, no es un error de RLS ni de datos:
+PostgREST **rechaza la consulta entera** con `PGRST201`. `app/chat/page.tsx` no comprobaba el
+`error` de esa consulta en concreto, así que cada vez que se abría `/chat` la petición fallaba en
+silencio y la interfaz mostraba "Aún no hay mensajes" — pareciendo que la conversación se había
+borrado, cuando en realidad ni siquiera había llegado a leerse.
+
+Arreglo: nombrar la relación a propósito, `autores!mensajes_autor_id_fkey(...)`, en las dos
+consultas afectadas (`app/chat/page.tsx` y la cita de respuesta en `app/actions/chat.ts`). Se añadió
+además un `console.error` si esa consulta vuelve a fallar alguna vez, para que un fallo así no vuelva
+a pasar desapercibido. Verificado contra producción real con sesión de admin: antes del arreglo la
+consulta devolvía `PGRST201` y el HTML no traía ningún mensaje; después, los 9 mensajes reales de la
+conversación aparecen todos.
+
+De paso: el botón de activar/desactivar avisos (`AvisosPush`) estaba montado dos veces — en `/perfil`
+y dentro del propio `Chat.tsx` — así que aparecía en dos sitios distintos de la app. Se ha quitado
+del chat: vive solo en `/perfil`, que es donde tiene sentido como ajuste de la cuenta.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
