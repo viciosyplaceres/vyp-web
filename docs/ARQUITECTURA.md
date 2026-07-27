@@ -32,7 +32,8 @@ src/
     musica/                 Lista de pistas (R2 + embeds externos). Botón "Subir música" propio (miembros)
     chat/                   Chat interno de miembros
     perfil/                 Avatar, usuario, mis tareas/compra/fotos/música, ajustes, salir
-    admin/                  Participantes · deudas · tareas · compras · miembros · almacenamiento
+    admin/                  Año de gestión activo · participantes · deudas · tareas · compras ·
+                            miembros · almacenamiento
     login/ registro/        Acceso y alta
     actions/                Server actions (toda la escritura pasa por aquí)
     api/                    Rutas que el navegador llama directamente

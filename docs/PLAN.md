@@ -134,6 +134,7 @@ tareas            id, titulo, descripcion, fecha, hecha, hecha_por, hecha_en,
 tareas_miembros   tarea_id + perfil_id   (quién se encarga; puede ser más de uno)
 compra_miembros   item_id  + perfil_id   (quién compra cada cosa)
 push_subs         id, user_id, endpoint (único), p256dh, auth, created_at
+configuracion     id (siempre true, fila única), anio_activo
 autores (vista)   id, nombre                                  (solo esas dos columnas)
 ```
 
@@ -258,6 +259,30 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 > endpoint interno que responde con `X-Frame-Options: SAMEORIGIN`, así que el navegador bloquea
 > el iframe en cualquier dominio que no sea `google.com` — el recuadro se quedaba en blanco para
 > todo el mundo. Verificado con cabeceras HTTP reales antes y después del cambio.
+
+---
+
+## 9-pre-quater. Año de gestión activo (2026-07-27)
+
+Antes había que elegir el año cada vez que se entraba a Tareas o a Participantes. Ahora la
+directiva lo fija **una vez** desde `/admin` ("Año de gestión") y todo lo hereda:
+
+- **Tareas**: el calendario de agosto ya no está fijo a 2026 — usa siempre el año activo, y la
+  lista solo muestra las tareas de ese año (más las que no tienen día puesto, que no son de ningún
+  año en concreto).
+- **Participantes**: si no hay `?anio=` en la URL, se usa el año activo. El selector de la propia
+  página se mantiene, para poder mirar otro año puntualmente sin cambiar el activo.
+- **Lista de la compra**: el año por defecto al añadir algo nuevo es el activo (el listado en sí
+  sigue mostrando todos los años agrupados, como ya hacía).
+
+Guardado en una tabla `configuracion` de una sola fila (`id boolean primary key default true`: la
+propia clave primaria impide que exista una segunda fila). Cualquier miembro con sesión puede
+**leerlo** — hace falta para que un miembro vea correctamente "sus tareas" en el perfil —, pero
+**solo la directiva puede cambiarlo**, verificado insertando directo contra la API con la sesión de
+un miembro normal: la fila no se movió.
+
+Verificado también en caliente: cambiar el año activo a 2027 (sin tocar nada más) hizo que Tareas,
+Participantes y la Compra lo reflejaran los tres a la vez, sin haber pasado por ningún selector.
 
 ---
 

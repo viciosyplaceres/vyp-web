@@ -7,6 +7,7 @@ import { getSesion } from "@/lib/auth";
 import PanelParticipantes, {
   type FichaParticipante,
 } from "@/components/PanelParticipantes";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
 
 export const dynamic = "force-dynamic";
 
@@ -36,12 +37,15 @@ export default async function ParticipantesPage({
     );
   }
 
+  // Sin año en la URL, se usa el que la directiva haya fijado como activo
+  // (en /admin): así no hay que elegirlo cada vez que se entra aquí. El
+  // selector de la propia página sigue permitiendo mirar otro año concreto.
   const { anio: anioTexto } = await searchParams;
   const anioNum = Number(anioTexto);
   const anio =
     Number.isInteger(anioNum) && anioNum >= PRIMER_ANIO && anioNum <= ULTIMO_ANIO
       ? anioNum
-      : PRIMER_ANIO;
+      : await obtenerAnioActivo();
 
   const supabase = await createClient();
 

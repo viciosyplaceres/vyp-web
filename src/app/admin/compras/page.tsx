@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import PanelCompras, { type ItemCompra } from "@/components/PanelCompras";
 import type { MiembroSimple } from "@/components/SelectorMiembros";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function ComprasPage() {
   }
 
   const supabase = await createClient();
+  const anioActivo = await obtenerAnioActivo();
 
   const [{ data: items }, { data: asignaciones }, { data: miembros }] =
     await Promise.all([
@@ -78,6 +80,7 @@ export default async function ComprasPage() {
         <PanelCompras
           items={lista}
           miembros={(miembros ?? []) as MiembroSimple[]}
+          anioActivo={anioActivo}
         />
       </div>
     </main>

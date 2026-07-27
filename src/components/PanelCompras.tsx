@@ -20,17 +20,18 @@ export type ItemCompra = {
   asignados: MiembroSimple[];
 };
 
-const ANIOS = Array.from(
-  { length: new Date().getFullYear() - 2010 + 1 },
-  (_, i) => new Date().getFullYear() - i,
-);
+// Hasta 2040, igual que en Participantes: para poder anotar la compra de una
+// fiesta que se prepara con tiempo, no solo la del año en curso.
+const ANIOS = Array.from({ length: 2040 - 2010 + 1 }, (_, i) => 2010 + i).reverse();
 
 export default function PanelCompras({
   items,
   miembros,
+  anioActivo,
 }: {
   items: ItemCompra[];
   miembros: MiembroSimple[];
+  anioActivo: number;
 }) {
   const [estado, accion, pendiente] = useActionState(crearItemCompra, null);
   const [, startTransition] = useTransition();
@@ -100,7 +101,7 @@ export default function PanelCompras({
             <select
               id="anioC"
               name="anio"
-              defaultValue={ANIOS[0]}
+              defaultValue={anioActivo}
               className="min-h-[48px] w-full cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
             >
               {ANIOS.map((a) => (

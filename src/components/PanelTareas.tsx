@@ -28,26 +28,27 @@ export type TareaListada = {
   asignados: MiembroSimple[];
 };
 
-/** Agosto de 2026: las fiestas del pueblo. 31 días, del 1 al 31. */
-const ANIO = 2026;
+/** Las fiestas son siempre en agosto: 31 días, del 1 al 31. */
 const MES = 8;
 const DIAS_AGOSTO = 31;
 
-function claveDia(dia: number) {
-  return `${ANIO}-${String(MES).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
+function claveDia(anio: number, dia: number) {
+  return `${anio}-${String(MES).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
 
 /** Lunes = 0. Se usa para cuadrar la primera fila del calendario. */
-function diaSemana(dia: number) {
-  return (new Date(ANIO, MES - 1, dia).getDay() + 6) % 7;
+function diaSemana(anio: number, dia: number) {
+  return (new Date(anio, MES - 1, dia).getDay() + 6) % 7;
 }
 
 const NOMBRES_DIA = ["L", "M", "X", "J", "V", "S", "D"];
 
 export default function PanelTareas({
+  anio,
   tareas,
   miembros,
 }: {
+  anio: number;
   tareas: TareaListada[];
   miembros: MiembroSimple[];
 }) {
@@ -75,8 +76,8 @@ export default function PanelTareas({
 
   const visibles = useMemo(() => {
     if (diaActivo === null) return tareas;
-    return porDia.get(claveDia(diaActivo)) ?? [];
-  }, [diaActivo, porDia, tareas]);
+    return porDia.get(claveDia(anio, diaActivo)) ?? [];
+  }, [diaActivo, porDia, tareas, anio]);
 
   const sinFecha = porDia.get("sin-fecha") ?? [];
   const hechas = tareas.filter((t) => t.hecha).length;
@@ -145,7 +146,7 @@ export default function PanelTareas({
     <div className="mt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Tareas de agosto 2026</h2>
+          <h2 className="text-lg font-semibold">Tareas de agosto {anio}</h2>
           {tareas.length > 0 && (
             <p className="text-sm text-white/50">
               {hechas} de {tareas.length} hechas
@@ -208,8 +209,8 @@ export default function PanelTareas({
                 Sin día concreto
               </option>
               {Array.from({ length: DIAS_AGOSTO }, (_, i) => i + 1).map((d) => (
-                <option key={d} value={claveDia(d)} className="bg-black">
-                  {d} de agosto de {ANIO}
+                <option key={d} value={claveDia(anio, d)} className="bg-black">
+                  {d} de agosto de {anio}
                 </option>
               ))}
             </select>
@@ -267,7 +268,7 @@ export default function PanelTareas({
       <div className="mt-8">
         <div className="mb-2 flex items-center gap-2 text-sm text-white/50">
           <CalendarDays size={16} aria-hidden="true" />
-          Agosto {ANIO}
+          Agosto {anio}
         </div>
 
         <div className="grid grid-cols-7 gap-1 text-center">
@@ -277,12 +278,12 @@ export default function PanelTareas({
             </div>
           ))}
 
-          {Array.from({ length: diaSemana(1) }, (_, i) => (
+          {Array.from({ length: diaSemana(anio, 1) }, (_, i) => (
             <div key={`hueco-${i}`} />
           ))}
 
           {Array.from({ length: DIAS_AGOSTO }, (_, i) => i + 1).map((d) => {
-            const delDia = porDia.get(claveDia(d)) ?? [];
+            const delDia = porDia.get(claveDia(anio, d)) ?? [];
             const activo = diaActivo === d;
             const todasHechas =
               delDia.length > 0 && delDia.every((t) => t.hecha);

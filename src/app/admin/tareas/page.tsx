@@ -6,6 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import PanelTareas, { type TareaListada } from "@/components/PanelTareas";
 import type { MiembroSimple } from "@/components/SelectorMiembros";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
 
 export const dynamic = "force-dynamic";
 
@@ -29,6 +30,7 @@ export default async function AdminTareasPage() {
   }
 
   const supabase = await createClient();
+  const anio = await obtenerAnioActivo();
 
   const [{ data: tareas }, { data: asignaciones }, { data: miembros }] =
     await Promise.all([
@@ -37,6 +39,9 @@ export default async function AdminTareasPage() {
         .select(
           "id, titulo, descripcion, fecha, hecha, documento_url, documento_nombre",
         )
+        // Solo las del año que se está gestionando ahora, más las que no
+        // tienen día fijado todavía (no pertenecen a ningún año en concreto).
+        .or(`fecha.is.null,and(fecha.gte.${anio}-01-01,fecha.lte.${anio}-12-31)`)
         .order("fecha", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true }),
       supabase
@@ -84,6 +89,7 @@ export default async function AdminTareasPage() {
         </p>
 
         <PanelTareas
+          anio={anio}
           tareas={lista}
           miembros={(miembros ?? []) as MiembroSimple[]}
         />

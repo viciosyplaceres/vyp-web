@@ -3,6 +3,8 @@ import { redirect } from "next/navigation";
 import type { Metadata } from "next";
 import { ShoppingCart, Users, ListChecks, UserRound, Coins, HardDrive } from "lucide-react";
 import { getSesion } from "@/lib/auth";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
+import SelectorAnioActivo from "@/components/SelectorAnioActivo";
 
 export const dynamic = "force-dynamic";
 
@@ -34,12 +36,18 @@ export default async function AdminPage() {
     );
   }
 
+  const anioActivo = await obtenerAnioActivo();
+
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-2xl font-semibold sm:text-3xl">Gestión</h1>
 
-        <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+        <div className="mt-6">
+          <SelectorAnioActivo anioActivo={anioActivo} />
+        </div>
+
+        <ul className="grid gap-2 sm:grid-cols-2">
           {SECCIONES.map(({ href, texto, Icono }) => (
             <li key={href}>
               <Link
