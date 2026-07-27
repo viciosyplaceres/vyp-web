@@ -88,3 +88,47 @@ export function tirarPorMiembro(
 
   throw new Error("No se pudo tirar el dado. Inténtalo otra vez.");
 }
+
+export type TiradaMiembroLibre = TiradaSimple & {
+  miembro?: number;
+  motivo?: "sin-miembro" | "ya-elegido";
+};
+
+/**
+ * Igual que `tirarPorMiembro`, pero además repite la tirada si sale alguien
+ * que ya estaba elegido de antes. Para repartir una tarea o una compra a
+ * dados: la primera tirada elige a quien se encarga, y si hace falta un
+ * segundo o tercero, cada tirada nueva vuelve a repetirse hasta que le toque
+ * a alguien que todavía no estaba.
+ */
+export function tirarMiembroLibre(
+  numMiembros: number,
+  excluidos: number[],
+  aleatorio: () => number = Math.random,
+): { tiradas: TiradaMiembroLibre[]; miembro: number; caras: number } {
+  if (excluidos.length >= numMiembros) {
+    throw new Error("Ya están todos elegidos.");
+  }
+
+  const caras = carasDado(numMiembros);
+  const tiradas: TiradaMiembroLibre[] = [];
+
+  for (let giro = 0; giro < 5000; giro++) {
+    const cara = Math.floor(aleatorio() * caras) + 1;
+    const miembro = cara - 1;
+
+    if (miembro >= numMiembros) {
+      tiradas.push({ cara, valida: false, motivo: "sin-miembro" });
+      continue;
+    }
+    if (excluidos.includes(miembro)) {
+      tiradas.push({ cara, valida: false, motivo: "ya-elegido" });
+      continue;
+    }
+
+    tiradas.push({ cara, valida: true, miembro });
+    return { tiradas, miembro, caras };
+  }
+
+  throw new Error("No se pudo tirar el dado. Inténtalo otra vez.");
+}

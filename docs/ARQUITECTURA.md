@@ -793,6 +793,17 @@ Como no persiste nada, la lista de miembros llega del servidor en el orden
 alfabético de siempre (`listarMiembros()`) y así se queda mientras dura la
 página.
 
+**El mismo dado, dentro de `SelectorMiembros`.** Repartir una tarea o un
+artículo de la compra a dados no necesitaba página propia: el botón "Tirar
+dados" vive directamente en `SelectorMiembros.tsx` (`permitirDados`, activado
+por defecto), así que sale solo en los tres sitios donde ya se elegía gente a
+mano — crear/editar tarea, apuntar la compra y repartirla después—. Usa
+`tirarMiembroLibre()` (`lib/dados.ts`), que es `tirarPorMiembro` con un
+extra: si el dado saca a alguien que **ya estaba elegido**, también se repite
+la tirada. Así cada tirada nueva añade a alguien distinto —tiene sentido
+tirar dos o tres veces para repartir entre varios— y si a quien le toca no
+quiere o no puede, se le quita tocando su chip, como a cualquier otro.
+
 ---
 
 ## 8. Pendiente / ideas para más adelante
