@@ -47,7 +47,15 @@ export const metadata: Metadata = {
       "Peña Vicios & Placeres — Fuente Álamo de Murcia. Galería de las fiestas, música y gestión de la peña.",
     url: "https://viciosyplaceres.com",
     siteName: "Vicios & Placeres",
-    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    images: [
+      {
+        url: "/og-image.png",
+        width: 1200,
+        height: 630,
+        type: "image/png",
+        alt: "Vicios & Placeres — Fuente Álamo, Murcia",
+      },
+    ],
     locale: "es_ES",
     type: "website",
   },
