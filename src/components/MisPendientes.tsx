@@ -5,6 +5,14 @@ import { Check, Paperclip } from "lucide-react";
 import { diaLegible } from "@/lib/formato";
 import { marcarTarea } from "@/app/actions/tareas";
 import { alternarComprado } from "@/app/actions/gestion";
+import Avatar from "./Avatar";
+
+export type EncargadoTarea = {
+  id: string;
+  nombre: string | null;
+  usuario: string | null;
+  avatarUrl: string | null;
+};
 
 export type MiTarea = {
   id: string;
@@ -14,6 +22,8 @@ export type MiTarea = {
   hecha: boolean;
   documento_url: string | null;
   documento_nombre: string | null;
+  /** Con quién más se comparte, para saber quién es cada uno. */
+  asignados: EncargadoTarea[];
 };
 
 export type MiCompra = {
@@ -22,7 +32,23 @@ export type MiCompra = {
   cantidad: number;
   comprado: boolean;
   anio: number;
+  asignados: EncargadoTarea[];
 };
+
+/** Lista de avatares + nombres de quien tiene esto asignado, marcando "(tú)". */
+function Encargados({ lista, userId }: { lista: EncargadoTarea[]; userId: string }) {
+  if (lista.length === 0) return null;
+  return (
+    <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+      {lista.map((a) => (
+        <span key={a.id} className="inline-flex items-center gap-1">
+          <Avatar nombre={a.nombre} avatarUrl={a.avatarUrl} tamano={18} />
+          {a.id === userId ? "Tú" : a.nombre || a.usuario || "Miembro"}
+        </span>
+      ))}
+    </span>
+  );
+}
 
 /**
  * Lo que le toca a cada uno, con la casilla para marcarlo hecho. La base de
@@ -32,9 +58,12 @@ export type MiCompra = {
 export default function MisPendientes({
   tareas,
   compras,
+  userId,
 }: {
   tareas: MiTarea[];
   compras: MiCompra[];
+  /** Para poder marcar cuál de los encargados eres tú, en vez de tu propio nombre. */
+  userId: string;
 }) {
   const [pendiente, startTransition] = useTransition();
 
@@ -90,6 +119,11 @@ export default function MisPendientes({
                   <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
                     {t.fecha && (
                       <span className="tabular-nums">{diaLegible(t.fecha)}</span>
+                    )}
+                    {/* Solo cuando la comparte con alguien más: ver "Tú" solo
+                        en cada tarea sería ruido, no información. */}
+                    {t.asignados.length > 1 && (
+                      <Encargados lista={t.asignados} userId={userId} />
                     )}
                     {t.documento_url && (
                       <a
@@ -152,10 +186,15 @@ export default function MisPendientes({
                   >
                     {c.item}
                   </p>
-                  <p className="text-xs text-white/50">
-                    {c.cantidad > 1 && `Cantidad: ${c.cantidad} · `}
-                    <span className="tabular-nums">{c.anio}</span>
-                  </p>
+                  <div className="flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
+                    <p>
+                      {c.cantidad > 1 && `Cantidad: ${c.cantidad} · `}
+                      <span className="tabular-nums">{c.anio}</span>
+                    </p>
+                    {c.asignados.length > 1 && (
+                      <Encargados lista={c.asignados} userId={userId} />
+                    )}
+                  </div>
                 </div>
               </li>
             ))}

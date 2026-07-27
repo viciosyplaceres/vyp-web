@@ -104,10 +104,59 @@ export default async function PerfilPage() {
         ])
       : [null, null, null, null, null, null, null, null, null, null];
 
-  const tareas = aplanarRelacion<MiTarea>(misTareas?.data, "tareas").sort((a, b) =>
-    (a.fecha ?? "9999").localeCompare(b.fecha ?? "9999"),
+  const tareasSinEncargados = aplanarRelacion<Omit<MiTarea, "asignados">>(
+    misTareas?.data,
+    "tareas",
+  ).sort((a, b) => (a.fecha ?? "9999").localeCompare(b.fecha ?? "9999"));
+  const comprasSinEncargados = aplanarRelacion<Omit<MiCompra, "asignados">>(
+    misCompras?.data,
+    "lista_compra",
   );
-  const compras = aplanarRelacion<MiCompra>(misCompras?.data, "lista_compra");
+
+  // Con quién más se comparte cada tarea o compra: sin esto, alguien veía su
+  // tarea en su perfil pero nunca sabía si la llevaba solo o acompañado, ni
+  // con quién. Se piden en un segundo viaje porque hasta aquí no se conocían
+  // los ids (vienen del embed de arriba).
+  const idsTareas = tareasSinEncargados.map((t) => t.id);
+  const idsCompras = comprasSinEncargados.map((c) => c.id);
+
+  const [{ data: coTareas }, { data: coCompras }] = sesion.esMiembro
+    ? await Promise.all([
+        idsTareas.length
+          ? supabase.from("tareas_miembros").select("tarea_id, perfil_id").in("tarea_id", idsTareas)
+          : Promise.resolve({ data: [] }),
+        idsCompras.length
+          ? supabase.from("compra_miembros").select("item_id, perfil_id").in("item_id", idsCompras)
+          : Promise.resolve({ data: [] }),
+      ])
+    : [{ data: [] }, { data: [] }];
+
+  function encargadosDe(perfilId: string) {
+    const m = indice?.get(perfilId);
+    return m ? { id: m.id, nombre: m.nombre, usuario: m.usuario, avatarUrl: m.avatarUrl } : null;
+  }
+
+  const encargadosPorTarea = new Map<string, MiTarea["asignados"]>();
+  for (const a of coTareas ?? []) {
+    const m = encargadosDe(a.perfil_id);
+    if (!m) continue;
+    encargadosPorTarea.set(a.tarea_id, [...(encargadosPorTarea.get(a.tarea_id) ?? []), m]);
+  }
+  const encargadosPorCompra = new Map<string, MiCompra["asignados"]>();
+  for (const a of coCompras ?? []) {
+    const m = encargadosDe(a.perfil_id);
+    if (!m) continue;
+    encargadosPorCompra.set(a.item_id, [...(encargadosPorCompra.get(a.item_id) ?? []), m]);
+  }
+
+  const tareas: MiTarea[] = tareasSinEncargados.map((t) => ({
+    ...t,
+    asignados: encargadosPorTarea.get(t.id) ?? [],
+  }));
+  const compras: MiCompra[] = comprasSinEncargados.map((c) => ({
+    ...c,
+    asignados: encargadosPorCompra.get(c.id) ?? [],
+  }));
 
   const deudasResumen: DeudaResumen[] = (misDeudas?.data ?? []).map((d) => {
     const loDeboYo = d.deudor_id === sesion.userId;
@@ -163,7 +212,7 @@ export default async function PerfilPage() {
             </section>
 
             <section className="border-t border-white/10 pt-8">
-              <MisPendientes tareas={tareas} compras={compras} />
+              <MisPendientes tareas={tareas} compras={compras} userId={sesion.userId} />
             </section>
 
             <section className="border-t border-white/10 pt-8">

@@ -539,6 +539,26 @@ pantalla completa, el botón de cerrar funciona, Escape también. Datos de prueb
 
 ---
 
+## 7quaterdecies. "Mis tareas" no decía con quién se compartía la tarea
+
+`/admin/tareas` (la gestión) siempre mostró el avatar y nombre de cada encargado — eso ya
+funcionaba. El hueco estaba en `/perfil` ("Mis tareas" y "Lo que me toca comprar"): el tipo
+`MiTarea` ni siquiera tenía un campo `asignados`, así que si una tarea o un artículo de la compra
+se repartía entre varias personas, cada una veía la suya sin ninguna pista de con quién la
+compartía.
+
+Arreglo: `perfil/page.tsx` pide en un segundo viaje (los ids solo se conocen tras el primero) las
+filas de `tareas_miembros`/`compra_miembros` de esas tareas/artículos concretos, las cruza con
+`indiceMiembros()` (ya se usaba para las deudas) y `MisPendientes.tsx` pinta avatar + nombre de
+cada encargado — marcando "Tú" en vez de tu propio nombre. Solo se muestra cuando de verdad hay
+más de una persona: ver "Tú" en solitario en cada tarea sería ruido, no información.
+
+Verificado con una tarea real compartida entre dos miembros (admin + un miembro sin foto de
+avatar): en el perfil del admin aparece "Tú" con su foto y el nombre del otro miembro con su
+avatar por iniciales, tal cual llegan de la base de datos. Datos de prueba limpiados.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
