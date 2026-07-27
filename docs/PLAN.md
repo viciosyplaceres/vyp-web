@@ -52,14 +52,20 @@ Reparto propuesto:
 |---|---|---|
 | Fotos | Cloudinary | Compresión y miniaturas automáticas, que es justo lo que se pide |
 | Vídeos | Cloudinary | Transcodificación automática. Tope de 100 MB por fichero |
-| **Música y sesiones** | **R2 (almacenamiento de objetos)** | 10 GB gratis y **tráfico de salida gratuito**: ideal para escuchar en bucle |
+| **Música y sesiones subidas por la peña** | **R2 (almacenamiento de objetos)** | 10 GB gratis y **tráfico de salida gratuito**: ideal para escuchar en bucle |
+| **Sesiones ya publicadas fuera** (DJ que ya la subió a Mixcloud/SoundCloud) | **Enlace incrustado**, sin copiar el fichero | No gasta cuota propia, y respeta el sitio original si ya existe |
 | Datos (miembros, pagos, comentarios) | Supabase Postgres | 500 MB, de sobra para texto |
 
-**Requiere una acción tuya**: R2 no está activado en la cuenta (la API responde *"Please enable R2
-through the dashboard"*). Activarlo suele pedir una tarjeta en el perfil aunque el uso siga siendo
-gratuito dentro de los 10 GB. Si prefieres no darla, la alternativa es limitar la música a
-canciones sueltas en Supabase Storage (1 GB) y enlazar las sesiones largas desde Mixcloud o
-SoundCloud incrustadas.
+**R2 ya está activado** en la cuenta de Cloudflare. Modelo híbrido definitivo para `/musica`:
+- **Subida directa a R2**: para canciones y sesiones propias que un miembro sube desde el móvil.
+  Sirve tanto para MP3 sueltos como para sesiones de 1–2 horas, sin tocar los créditos de Cloudinary.
+- **Enlace externo (Mixcloud/SoundCloud)**: un miembro pega la URL de una sesión ya subida a esas
+  plataformas y la pista se guarda como tipo `externa`, embebiendo el reproductor oficial de
+  Mixcloud/SoundCloud dentro de `/musica` en vez de un fichero propio. Útil para sesiones que el DJ
+  ya subió por su cuenta, o como respaldo si algún día se quiere dejar de pagar/gestionar R2.
+- El reproductor global de la web solo controla la reproducción de las pistas propias (R2); las
+  pistas externas abren su propio mini-reproductor embebido (iframe oficial), porque Mixcloud y
+  SoundCloud no permiten controlar su audio desde fuera de su embed.
 
 ---
 
@@ -89,12 +95,19 @@ Se hace en dos capas, porque casi todo se sube desde el móvil en la calle y con
 perfiles          id (→ auth.users), nombre, rol ('miembro'|'admin'), aprobado, created_at
 media             id, tipo ('foto'|'video'), anio, storage_id, url, thumb_url,
                   ancho, alto, duracion_s, descripcion, subido_por, created_at
-pistas            id, titulo, artista, tipo ('sesion'|'cancion'), anio, url,
+pistas            id, titulo, artista, tipo ('sesion'|'cancion'), anio,
+                  origen ('r2'|'mixcloud'|'soundcloud'), url, embed_url,
                   duracion_s, subido_por, created_at
 comentarios       id, media_id (nullable), pista_id (nullable), autor_id, texto, created_at
 participantes     id, nombre, pagado, importe, talla_camiseta, notas, anio
 lista_compra      id, item, cantidad, comprado, anio, notas
 ```
+
+`pistas.origen` distingue si `url` apunta a un objeto propio en R2 (reproducible desde el
+reproductor global) o es una pista `mixcloud`/`soundcloud`: en ese caso `url` guarda el enlace que
+pegó el miembro y `embed_url` la URL de embed ya calculada (p. ej.
+`https://www.mixcloud.com/widget/iframe/?feed=<url-codificada>` o
+`https://w.soundcloud.com/player/?url=<url-codificada>`), para no recalcularla en cada render.
 
 `comentarios` lleva dos claves ajenas anulables con una restricción que obliga a que solo una esté
 rellena: así vale igual para comentar una foto que una sesión de música, sin duplicar tablas.
@@ -149,7 +162,11 @@ cualquiera a subir cosas.
 Un único reproductor **que no se corta al navegar**: vive en el layout raíz, con el estado en un
 contexto de React, así que se puede ir a la galería mientras suena una sesión. Barra fija abajo con
 portada, título, play/pausa, anterior/siguiente, barra de progreso y volumen. Cola de reproducción
-a partir de la lista de `/musica`.
+a partir de la lista de `/musica`, solo para pistas `origen = 'r2'`.
+
+Las pistas `origen = 'mixcloud'` o `'soundcloud'` se listan en `/musica` con su propio reproductor
+embebido (iframe oficial de la plataforma) en vez de sumarse a la cola global: cada una de esas
+pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixcloud/SoundCloud.
 
 ---
 
@@ -194,9 +211,10 @@ a partir de la lista de `/musica`.
 
 ## 12. Decisiones que hacen falta antes de seguir
 
-1. **Qué logo** de los cuatro candidatos.
-2. **Dónde va la música**: activar R2 (mejor opción, 10 GB y tráfico gratis) o quedarse en
-   Supabase Storage (1 GB) y enlazar las sesiones largas desde fuera.
+1. ~~Qué logo de los cuatro candidatos.~~ **Cerrado** (sección 10).
+2. ~~Dónde va la música.~~ **Cerrado**: R2 activado para subidas propias + enlaces Mixcloud/SoundCloud
+   incrustados para sesiones ya publicadas fuera (sección 3). Falta que el señor indique el
+   **nombre del bucket R2** creado en el dashboard de Cloudflare para poder cablearlo en el código.
 3. **Años con contenido**: ¿de qué años hay fotos para sembrar la galería?
 
 ---
