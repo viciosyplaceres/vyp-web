@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro, exigirAdmin } from "@/lib/auth";
+import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
 
 /**
  * Guarda un diseño de camiseta que alguien acaba de subir a Cloudinary, para
@@ -16,6 +17,12 @@ export async function registrarCamiseta(datos: {
   bytes: number | null;
 }) {
   const sesion = await exigirMiembro();
+
+  // Misma cautela que con los tickets: la URL la manda el navegador.
+  if (!esUrlDeCloudinary(datos.url)) {
+    throw new Error("La imagen del diseño no es válida.");
+  }
+
   const supabase = await createClient();
 
   const { error } = await supabase.from("camisetas").insert({

@@ -452,6 +452,15 @@ rol ni la aprobación—, cacheado por petición.
 perfil pero al tachar su compra le saltaba "Solo la directiva puede hacer esto". Ahora pide ser
 miembro y decide la base de datos, como debía.
 
+**URLs de imagen que llegan del navegador.** El archivo se sube directo a Cloudinary y al servidor
+solo viaja la URL resultante, así que es un dato de fuera. Importa sobre todo en el ticket de una
+deuda, que se pinta como `<a href>` y ahora lo ve **toda la peña**: una `javascript:...` ahí sería
+un enlace malicioso para todos. `lib/cloudinary-url.ts` (sin `"use client"`, porque lo usan los dos
+lados) exige `https` y el host exacto `res.cloudinary.com` con `new URL()`, que compara el host ya
+normalizado y no se deja engañar por `https://res.cloudinary.com.otrositio.com/`. Se aplica en
+`crearDeuda` y en `registrarCamiseta`. Comprobado con los ocho casos habituales
+(`javascript:`, `JavaScript:`, `data:`, `http:`, host suplantado, protocolo relativo y vacío).
+
 **Verificado en producción con la sesión real de un miembro normal (Paco):** entra en gestión,
 camisetas, pagos, tareas, compra y deudas; se topa con "solo para la directiva" en miembros y
 almacenamiento; ve a los tres miembros en Pagos pero sin poder marcar la casilla; y contra la base

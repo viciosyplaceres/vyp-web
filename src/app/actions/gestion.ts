@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirMiembro } from "@/lib/auth";
 import { avisarAdmins } from "@/lib/push";
+import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
 
 // `participantes` (talla + pago + importe en una sola ficha) se retiró: se
 // partió en `Camisetas` y `Pagos`, que es como se usa de verdad. Sus acciones
@@ -38,6 +39,12 @@ export async function crearDeuda(
     }
     if (!Number.isFinite(cantidad) || cantidad <= 0) {
       return { error: "Pon una cantidad válida." };
+    }
+    // La URL del ticket viene del navegador, así que se comprueba que de
+    // verdad apunte a nuestro Cloudinary antes de guardarla: luego se pinta
+    // como enlace y las deudas las ve toda la peña.
+    if (ticketUrl && !esUrlDeCloudinary(ticketUrl)) {
+      return { error: "La foto del ticket no es válida." };
     }
 
     const supabase = await createClient();
