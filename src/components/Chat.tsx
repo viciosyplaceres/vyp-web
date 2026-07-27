@@ -10,6 +10,7 @@ import {
 import { diaRelativo } from "@/lib/formato";
 import BurbujaMensaje from "./chat/BurbujaMensaje";
 import HojaAcciones from "./chat/HojaAcciones";
+import PanelInfoLectura from "./chat/PanelInfoLectura";
 import BarraEscritura from "./chat/BarraEscritura";
 import { useRealtimeChat } from "./chat/useRealtimeChat";
 import type { InfoAutor, Mensaje, Reaccion } from "./chat/tipos";
@@ -38,6 +39,8 @@ export default function Chat({
   const [editandoId, setEditandoId] = useState<string | null>(null);
   // Qué mensaje tiene abierto el menú de acciones (responder, editar, borrar…).
   const [menuMensaje, setMenuMensaje] = useState<Mensaje | null>(null);
+  // Qué mensaje tiene abierto el panel de "quién lo ha visto".
+  const [infoMensaje, setInfoMensaje] = useState<Mensaje | null>(null);
   const [pedirFoco, setPedirFoco] = useState(0);
   const [, startTransition] = useTransition();
   const finRef = useRef<HTMLDivElement>(null);
@@ -154,6 +157,8 @@ export default function Chat({
 
   const abrirMenu = useCallback((m: Mensaje) => setMenuMensaje(m), []);
   const cerrarMenu = useCallback(() => setMenuMensaje(null), []);
+  const verInfo = useCallback((m: Mensaje) => setInfoMensaje(m), []);
+  const cerrarInfo = useCallback(() => setInfoMensaje(null), []);
 
   // "Leído" cuando algún otro miembro tiene marcado como leído hasta una
   // fecha igual o posterior a la del mensaje. Se calcula la marca más
@@ -223,6 +228,16 @@ export default function Chat({
           onResponder={responder}
           onEditar={empezarEdicion}
           onEliminar={eliminar}
+          onVerInfo={verInfo}
+        />
+      )}
+
+      {infoMensaje && (
+        <PanelInfoLectura
+          mensaje={infoMensaje}
+          autores={autores}
+          lecturas={lecturas}
+          onCerrar={cerrarInfo}
         />
       )}
 

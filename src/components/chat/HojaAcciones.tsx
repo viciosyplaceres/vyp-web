@@ -1,7 +1,7 @@
 "use client";
 
 import { useEffect } from "react";
-import { Reply, Pencil, Trash2, Copy, X } from "lucide-react";
+import { Reply, Pencil, Trash2, Copy, Info, X } from "lucide-react";
 import { EMOJIS_RAPIDOS, type Mensaje } from "./tipos";
 
 /**
@@ -24,6 +24,7 @@ export default function HojaAcciones({
   onResponder,
   onEditar,
   onEliminar,
+  onVerInfo,
 }: {
   mensaje: Mensaje;
   mio: boolean;
@@ -34,6 +35,7 @@ export default function HojaAcciones({
   onResponder: (m: Mensaje) => void;
   onEditar: (m: Mensaje) => void;
   onEliminar: (id: string) => void;
+  onVerInfo: (m: Mensaje) => void;
 }) {
   // Escape cierra, como cualquier ventana modal.
   useEffect(() => {
@@ -113,6 +115,23 @@ export default function HojaAcciones({
               <Copy size={18} className="text-white/60" aria-hidden="true" />
               Copiar texto
             </button>
+
+            {/* Un mensaje que aún no ha confirmado el servidor (el envío
+                optimista, con id "temp-...") todavía no existe de verdad para
+                nadie más: no tiene sentido preguntar quién lo ha visto. */}
+            {!mensaje.id.startsWith("temp-") && (
+              <button
+                type="button"
+                onClick={() => {
+                  onVerInfo(mensaje);
+                  onCerrar();
+                }}
+                className={accion}
+              >
+                <Info size={18} className="text-white/60" aria-hidden="true" />
+                Info del mensaje
+              </button>
+            )}
 
             {mio && (
               <>

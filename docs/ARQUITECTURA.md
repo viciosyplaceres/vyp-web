@@ -646,6 +646,31 @@ apruebe a mano. Cuenta de prueba borrada después.
 
 ---
 
+## 7octodecies. "Info del mensaje": quién lo ha visto y quién no
+
+Nuevo botón "Info del mensaje" dentro de `HojaAcciones.tsx` (el menú de los tres puntos), disponible
+para cualquier mensaje que ya exista de verdad en el servidor (no para el envío optimista con id
+`temp-...`, que todavía no existe para nadie más). Abre `PanelInfoLectura.tsx`, con dos listas:
+"Visto por" y "Todavía no lo ha visto".
+
+**No hace falta ninguna consulta ni tabla nueva**: `chat_lecturas` ya guardaba, desde el chat con
+reacciones (7octies), "hasta qué momento ha leído cada uno" —el mismo dato que mueve el doble check
+azul—, y esos datos ya viajaban completos a `Chat.tsx` (`autores` con todos los miembros,
+`lecturas` con la última marca de cada uno) y se mantienen al día en vivo por Realtime. Alguien
+cuenta como "visto" si su última lectura es igual o posterior al instante del mensaje; la hora que
+se enseña es esa última lectura, no el momento exacto en que pasó por ESE mensaje en concreto —
+`chat_lecturas` no guarda una marca por mensaje, así que es la aproximación más fiel que hay sin
+añadir una fila por persona y por mensaje (que para un chat de peña sería mucho para poco).
+
+Verificado de extremo a extremo con dos cuentas de miembro desechables (creadas, usadas y borradas
+en la misma prueba, no las cuentas reales de la peña): la cuenta A manda un mensaje real, la cuenta
+B visita `/chat` (lo que marca su lectura en el servidor, como siempre), y al abrir "Info del
+mensaje" desde A aparece B en "Visto por 1" con su avatar y hora, y el resto de miembros reales
+—que no visitaron el chat durante la prueba— en "Todavía no lo ha visto". Captura de pantalla
+revisada a mano. Datos y cuentas de prueba borrados después.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
