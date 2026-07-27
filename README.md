@@ -1,7 +1,11 @@
 # VYP — Peña Vicios y Placeres
 
-Web de la peña de las fiestas del pueblo: galería de fotos compartida + panel interno de gestión
-(cuotas pagadas, tallas de camiseta, lista de la compra).
+Web de las fiestas de **Fuente Álamo de Murcia**: galería por años, música y sesiones,
+mapa de la peña y panel interno de gestión (cuotas, tallas de camiseta, lista de la compra).
+
+Público: todo el mundo ve y escucha. Solo los miembros suben y comentan.
+
+**El plan completo del proyecto está en [`docs/PLAN.md`](docs/PLAN.md).**
 
 ## Estado
 
@@ -9,8 +13,10 @@ Web de la peña de las fiestas del pueblo: galería de fotos compartida + panel 
 |---|---|
 | Cuentas de servicios creadas | Hecho |
 | Credenciales verificadas | Hecho (ver `CREDENCIALES.md`, fichero local no versionado) |
-| Preset de subida de fotos | Hecho — `vyp_galeria` (sin firmar) |
-| Repositorio GitHub | Creado, vacío — **pendiente el primer push** (token actual sin permiso de escritura) |
+| Preset de subida de fotos | Hecho — `vyp_galeria`, **modo firmado** (solo miembros) |
+| Plan del proyecto | **Hecho** — `docs/PLAN.md` |
+| Logo | Candidatos generados en `design/logo-candidatos/`; falta elegir |
+| Repositorio GitHub | **Hecho** — código subido a `viciosyplaceres/vyp-web`, rama `main` |
 | Código de la aplicación | Portada de bienvenida desplegada; falta galería y panel de gestión |
 | Esquema de base de datos | Pendiente |
 | Despliegue | **Hecho** — proyecto `vyp-web` en Vercel (equipo `vyp1`) |
@@ -22,26 +28,12 @@ Todo sobre capas gratuitas permanentes, alojado **fuera** del VPS propio:
 
 - **Hosting**: Vercel (plan Hobby) — Next.js App Router + TypeScript + Tailwind
 - **Base de datos y auth**: Supabase (Postgres 500 MB, free tier)
-- **Fotos**: Cloudinary (free tier, 25 créditos) — subida directa desde el navegador con
-  preset sin firmar, así el API Secret nunca sale del servidor
+- **Fotos y vídeos**: Cloudinary (free tier, 25 créditos) — subida **firmada en el servidor**,
+  así el API Secret nunca sale del servidor y solo firman los miembros aprobados
+- **Música y sesiones**: almacenamiento de objetos aparte (no caben en Cloudinary: tope 100 MB)
 - **Dominio**: `viciosyplaceres.com`, DNS gestionado en el panel de la zona
 
-## Páginas previstas
-
-| Ruta | Acceso | Contenido |
-|---|---|---|
-| `/` | público | Portada de la peña |
-| `/galeria` | miembros | Fotos de las fiestas, subida desde el móvil |
-| `/login` | público | Acceso de la directiva |
-| `/admin` | directiva | Participantes: pagado, importe, talla de camiseta, notas |
-| `/admin/compras` | directiva | Lista de la compra con checklist |
-
-## Modelo de datos (previsto)
-
-- `participantes` — nombre, pagado, importe, talla_camiseta, notas
-- `lista_compra` — item, cantidad, comprado
-
-Ambas tablas con RLS: solo la cuenta de la directiva puede leerlas o escribirlas.
+Ver `docs/PLAN.md` para el detalle de páginas, modelo de datos, roles y fases.
 
 ## Configuración local
 
@@ -60,7 +52,7 @@ npm run dev
 
 ## Pendiente
 
-- Regenerar el token de GitHub con permiso "Contents: Read and write" para poder hacer el
-  primer `git push` (el actual solo tiene lectura).
+- Rotar el token de GitHub: el actual funciona pero tiene permisos de administrador de toda la
+  cuenta, muy por encima de lo necesario (ver aviso en `CREDENCIALES.md`).
 - Escribir la galería, el login de directiva y el panel `/admin`.
 - Crear las tablas `participantes` y `lista_compra` en Supabase con RLS.
