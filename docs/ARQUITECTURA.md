@@ -503,6 +503,24 @@ abre y Escape cierra. Sin errores de consola. Datos de prueba limpiados.
 
 ---
 
+## 7duodecies. Cierre de brecha: avisos directos sin comprobar "aprobado" en el envío
+
+El señor pidió confirmar que quien no esté registrado y aprobado no reciba ni un solo aviso.
+`/api/push/suscribir` ya exigía `esMiembro` para poder suscribirse, así que alguien sin aprobar
+nunca podía tener una fila en `push_subs` — ese caso ya estaba cerrado. Pero `avisarUsuario()`
+(usada para "ya eres de la peña", tarea asignada, contraseña reseteada…) filtraba por `user_id` sin
+volver a comprobar `aprobado` en el momento del envío, a diferencia de `avisarMiembros`/
+`avisarAdmins`, que sí lo hacían. Si a alguien se le revocaba la cuenta **después** de haberse
+suscrito, seguía siendo alcanzable por avisos dirigidos a su id.
+
+Arreglo en `lib/push.ts`: el filtro `perfiles.aprobado = true` se aplica ahora a los tres tipos de
+destinatario desde el principio de la consulta, no solo a "miembros"/"admins". Verificado contra la
+base de datos real (sin enviar ningún push de verdad): con la cuenta de un miembro aprobada, la
+consulta que usa `avisarUsuario` devuelve su suscripción; revocando `aprobado` a mano, la misma
+consulta deja de devolver nada; restaurado el estado original después.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

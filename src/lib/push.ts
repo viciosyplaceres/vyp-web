@@ -43,13 +43,16 @@ async function enviar(aviso: Aviso, destinatarios: Destinatarios) {
 
   let consulta = supabase
     .from("push_subs")
-    .select("endpoint, p256dh, auth, user_id, perfiles!inner(rol, aprobado)");
+    .select("endpoint, p256dh, auth, user_id, perfiles!inner(rol, aprobado)")
+    // Aprobado es la condición de fondo para CUALQUIER aviso, también el
+    // dirigido a una persona concreta: suscribirse ya exige ser miembro
+    // (`/api/push/suscribir`), pero si a alguien le revocan la cuenta después
+    // de suscribirse, no debe seguir recibiendo avisos por su id. Ni uno.
+    .eq("perfiles.aprobado", true);
 
   if (destinatarios.tipo === "usuario") {
     consulta = consulta.eq("user_id", destinatarios.userId);
   } else {
-    // Miembros y admins tienen que estar aprobados en ambos casos.
-    consulta = consulta.eq("perfiles.aprobado", true);
     if (destinatarios.tipo === "admins") {
       consulta = consulta.eq("perfiles.rol", "admin");
     }
