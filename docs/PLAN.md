@@ -318,6 +318,31 @@ Un único grupo, estilo WhatsApp, **invisible para quien no sea miembro aprobado
   ("Hoy", "Ayer", fecha) y hora en cada mensaje.
 - Enviar con Enter; Mayús+Enter hace salto de línea.
 
+> **Corregido el 2026-07-27 — "Invalid Date" al escribir.** Cada mensaje enviado aparecía como una
+> burbuja rota: sin texto, con autor "Miembro" y fecha "Invalid Date". La causa se vio espiando el
+> WebSocket desde un navegador real, no leyendo el código:
+>
+> ```json
+> {"table":"mensajes","type":"INSERT","record":{},"columns":[],
+>  "errors":["Error 401: Unauthorized"]}
+> ```
+>
+> El canal de Realtime se conecta con la **clave pública**, y `mensajes` solo la pueden leer los
+> miembros aprobados. Al no llevar el token del usuario, Supabase entregaba el evento con el
+> registro **vacío** (`record: {}`), y ese `{}` se pintaba tal cual. Nótese que la Data API sí
+> funcionaba: el fallo era exclusivo del canal en vivo, por eso las pruebas con `curl` lo pasaban.
+>
+> Tres arreglos, de causa a síntoma:
+> 1. **`supabase.realtime.setAuth(token)`** antes de suscribirse. `createBrowserClient` restaura la
+>    sesión de la cookie, pero no se la pasa al socket por su cuenta.
+> 2. `enviarMensaje` **devuelve la fila creada** y el cliente la añade él mismo: el mensaje propio ya
+>    no depende de que el tiempo real llegue.
+> 3. Se descartan los registros sin `id` o sin fecha, y las funciones de fecha devuelven cadena vacía
+>    ante una fecha inválida. Nunca más una burbuja rota en pantalla.
+>
+> El índice de nombres pasó a una `ref`: era dependencia del efecto y, al ser un objeto nuevo en cada
+> render del servidor, reabría el canal continuamente.
+
 ## 9-ter. PWA y avisos push (Android)
 
 **Instalable como app**: `public/manifest.webmanifest` (modo `standalone`, iconos 192/512 y uno

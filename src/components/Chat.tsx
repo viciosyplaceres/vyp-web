@@ -15,7 +15,9 @@ export type Mensaje = {
 };
 
 function hora(iso: string) {
-  return new Date(iso).toLocaleTimeString("es-ES", {
+  const f = new Date(iso);
+  if (Number.isNaN(f.getTime())) return "";
+  return f.toLocaleTimeString("es-ES", {
     hour: "2-digit",
     minute: "2-digit",
   });
@@ -23,6 +25,7 @@ function hora(iso: string) {
 
 function diaLegible(iso: string) {
   const f = new Date(iso);
+  if (Number.isNaN(f.getTime())) return "";
   const hoy = new Date();
   const ayer = new Date();
   ayer.setDate(hoy.getDate() - 1);
@@ -60,37 +63,67 @@ export default function Chat({
     (estado, nuevo: Mensaje) => [...estado, nuevo],
   );
 
+  // El índice de nombres cambia de identidad en cada render del servidor. Si
+  // fuera dependencia del efecto, el canal se cerraría y reabriría sin parar.
+  const nombresRef = useRef(nombres);
+  useEffect(() => {
+    nombresRef.current = nombres;
+  }, [nombres]);
+
   // Escucha en vivo: los mensajes de los demás aparecen sin recargar.
   useEffect(() => {
     const supabase = createClient();
-    const canal = supabase
-      .channel("chat-vyp")
-      .on(
-        "postgres_changes",
-        { event: "INSERT", schema: "public", table: "mensajes" },
-        (payload) => {
-          const m = payload.new as {
-            id: string;
-            texto: string;
-            created_at: string;
-            autor_id: string;
-          };
-          setMensajes((prev) =>
-            prev.some((x) => x.id === m.id)
-              ? prev
-              : [
-                  ...prev,
-                  { ...m, autor: nombres[m.autor_id] ?? null },
-                ],
-          );
-        },
-      )
-      .subscribe();
+    let canal: ReturnType<typeof supabase.channel> | null = null;
+    let cancelado = false;
+
+    (async () => {
+      // IMPRESCINDIBLE: el canal se conecta con la clave pública, y la tabla
+      // `mensajes` solo la pueden leer los miembros. Sin pasarle el token del
+      // usuario, Supabase entrega el evento con el registro VACÍO y un
+      // "Error 401: Unauthorized" — que es justo lo que salía en pantalla como
+      // "Invalid Date" y autor "Miembro".
+      const { data } = await supabase.auth.getSession();
+      if (data.session) {
+        await supabase.realtime.setAuth(data.session.access_token);
+      }
+      if (cancelado) return;
+
+      canal = supabase
+        .channel("chat-vyp")
+        .on(
+          "postgres_changes",
+          { event: "INSERT", schema: "public", table: "mensajes" },
+          (payload) => {
+            const m = payload.new as Partial<Mensaje> | null;
+
+            // Cinturón y tirantes: si por lo que sea el registro llega vacío,
+            // se descarta en vez de pintar una burbuja rota.
+            if (!m?.id || !m.created_at) return;
+
+            setMensajes((prev) =>
+              prev.some((x) => x.id === m.id)
+                ? prev
+                : [
+                    ...prev,
+                    {
+                      id: m.id!,
+                      texto: m.texto ?? "",
+                      created_at: m.created_at!,
+                      autor_id: m.autor_id ?? "",
+                      autor: nombresRef.current[m.autor_id ?? ""] ?? null,
+                    },
+                  ],
+            );
+          },
+        )
+        .subscribe();
+    })();
 
     return () => {
-      void supabase.removeChannel(canal);
+      cancelado = true;
+      if (canal) void supabase.removeChannel(canal);
     };
-  }, [nombres]);
+  }, []);
 
   // Siempre abajo, como en cualquier app de mensajería.
   useEffect(() => {
@@ -111,7 +144,15 @@ export default function Chat({
         autor_id: userId,
         autor: null,
       });
-      await enviarMensaje(limpio);
+
+      // Se añade la fila devuelta por el servidor en vez de esperar al canal
+      // en vivo: el mensaje propio nunca depende de que el tiempo real llegue.
+      const creado = await enviarMensaje(limpio);
+      if (creado) {
+        setMensajes((prev) =>
+          prev.some((x) => x.id === creado.id) ? prev : [...prev, creado],
+        );
+      }
     });
   }
 
