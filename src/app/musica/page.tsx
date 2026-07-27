@@ -20,7 +20,7 @@ export default async function MusicaPage() {
   const { data: pistas } = await supabase
     .from("pistas")
     .select(
-      "id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s, autores(nombre, avatar_url)",
+      "id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s, subido_por, autores(nombre, avatar_url)",
     )
     .order("created_at", { ascending: false });
 
@@ -28,6 +28,7 @@ export default async function MusicaPage() {
     const autor = autorDe(p.autores);
     return {
       ...p,
+      subidoPorId: p.subido_por,
       subidoPorNombre: autor.nombre,
       subidoPorAvatar: autor.avatarUrl,
     } as PistaListada;

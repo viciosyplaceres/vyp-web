@@ -133,6 +133,12 @@ audio desde fuera de su reproductor.
 Está enganchado a la **Media Session API**, así que se controla desde la pantalla de bloqueo y los
 auriculares.
 
+**Filtro por miembro y "Reproducir todo"** (`ListaMusica.tsx`): un desplegable con quien ha subido
+algo filtra la lista a solo su música. La cola que se pasa a `reproducir()` se calcula siempre a
+partir de la lista **ya filtrada**, así que da igual si arrancas con "Reproducir todo" o tocas una
+canción suelta: "siguiente" se mueve dentro de esa persona mientras el filtro siga puesto, porque
+la cola nunca llega a incluir canciones de nadie más.
+
 ---
 
 ## 5. Variables de entorno

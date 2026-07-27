@@ -30,7 +30,7 @@ Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran
 |---|---|---|
 | `/` | Todos | Carrusel de las últimas 10 fotos, últimas 5 pistas, mapa y cómo llegar |
 | `/galeria` · `/galeria/[año]` · `/galeria/[año]/[id]` | Todos | Años, cuadrícula y detalle con comentarios. **Miembros**: botón "Subir" arriba de la página |
-| `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar. **Miembros**: botón "Subir música" arriba de la página |
+| `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar, filtro por miembro que sube la música y botón "Reproducir todo" que respeta ese filtro (la cola de "siguiente" también). **Miembros**: botón "Subir música" arriba de la página |
 | `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp: responder citando, editar y eliminar los propios mensajes, reacciones con emoji, doble check azul de leído y burbuja de no leídos en tiempo real en el menú inferior. Sin subida de multimedia, a propósito, para no disparar el consumo de Cloudinary/R2 |
 | `/perfil` | Con sesión | Avatar, nombre de usuario y **bio**, mis tareas, mi compra, mis fotos, mi música, ajustes y cerrar sesión. El avatar del header lleva una **burbuja en tiempo real** con el total de tareas y artículos de la compra que tienes pendientes. La galería y la música muestran solo las **últimas 9** con un botón "Ver todas" (evita que la página crezca sin límite), y cada foto/pista propia se puede **borrar** desde ahí |
 | `/perfil/galeria` · `/perfil/musica` | Con sesión (miembro) | Todo lo que ha subido esa persona, sin límite, cada cosa con su botón de borrar |

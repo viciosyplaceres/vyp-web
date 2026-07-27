@@ -1,6 +1,7 @@
 "use client";
 
-import { Play, Pause, ExternalLink } from "lucide-react";
+import { useMemo, useState } from "react";
+import { Play, Pause, ExternalLink, ListMusic } from "lucide-react";
 import { useReproductor, type PistaReproducible } from "./ReproductorProvider";
 import { formatearDuracion } from "@/lib/embeds";
 import Avatar from "./Avatar";
@@ -15,21 +16,48 @@ export type PistaListada = {
   url: string;
   embed_url: string | null;
   duracion_s: number | null;
+  subidoPorId: string | null;
   subidoPorNombre: string | null;
   subidoPorAvatar: string | null;
 };
 
+function aReproducible(p: PistaListada): PistaReproducible {
+  return { id: p.id, titulo: p.titulo, artista: p.artista, clave: p.url };
+}
+
 export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
   const { actual, sonando, reproducir, alternar } = useReproductor();
+  const [filtroId, setFiltroId] = useState<string | null>(null);
 
-  const propias: PistaReproducible[] = pistas
+  // Quién ha subido algo, para el desplegable del filtro. Solo la gente que
+  // realmente aparece en la lista, sin duplicados.
+  const autores = useMemo(() => {
+    const vistos = new Map<string, { id: string; nombre: string }>();
+    for (const p of pistas) {
+      if (p.subidoPorId && !vistos.has(p.subidoPorId)) {
+        vistos.set(p.subidoPorId, {
+          id: p.subidoPorId,
+          nombre: p.subidoPorNombre || "Miembro",
+        });
+      }
+    }
+    return [...vistos.values()].sort((a, b) => a.nombre.localeCompare(b.nombre, "es"));
+  }, [pistas]);
+
+  const pistasFiltradas = filtroId
+    ? pistas.filter((p) => p.subidoPorId === filtroId)
+    : pistas;
+
+  // La cola respeta el filtro: si hay uno puesto, "siguiente" solo se mueve
+  // dentro de la música de esa persona, elijas la canción que elijas.
+  const cola: PistaReproducible[] = pistasFiltradas
     .filter((p) => p.origen === "r2")
-    .map((p) => ({
-      id: p.id,
-      titulo: p.titulo,
-      artista: p.artista,
-      clave: p.url,
-    }));
+    .map(aReproducible);
+
+  const reproducirTodo = () => {
+    const primera = cola[0];
+    if (primera) reproducir(primera, cola);
+  };
 
   if (pistas.length === 0) {
     return (
@@ -42,8 +70,40 @@ export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
   }
 
   return (
-    <ul className="mt-6 space-y-3">
-      {pistas.map((p) => {
+    <>
+      <div className="mt-6 flex flex-wrap items-center gap-3">
+        <select
+          value={filtroId ?? ""}
+          onChange={(e) => setFiltroId(e.target.value || null)}
+          className="min-h-[44px] cursor-pointer rounded-full border border-white/20 bg-transparent px-4 text-sm text-white [color-scheme:dark]"
+        >
+          <option value="">Todos los miembros</option>
+          {autores.map((a) => (
+            <option key={a.id} value={a.id}>
+              {a.nombre}
+            </option>
+          ))}
+        </select>
+
+        {cola.length > 0 && (
+          <button
+            type="button"
+            onClick={reproducirTodo}
+            className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/20 px-4 text-sm transition-colors duration-200 hover:bg-white/10"
+          >
+            <ListMusic size={16} aria-hidden="true" />
+            Reproducir todo
+          </button>
+        )}
+      </div>
+
+      {pistasFiltradas.length === 0 ? (
+        <p className="mt-6 text-white/50">
+          Esta persona todavía no ha subido música.
+        </p>
+      ) : (
+        <ul className="mt-6 space-y-3">
+          {pistasFiltradas.map((p) => {
         const esActual = actual?.id === p.id;
 
         if (p.origen === "r2") {
@@ -61,16 +121,7 @@ export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
                 }
                 onClick={() => {
                   if (esActual) alternar();
-                  else
-                    reproducir(
-                      {
-                        id: p.id,
-                        titulo: p.titulo,
-                        artista: p.artista,
-                        clave: p.url,
-                      },
-                      propias,
-                    );
+                  else reproducir(aReproducible(p), cola);
                 }}
                 className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full bg-white text-black transition-opacity duration-200 hover:opacity-85"
               >
@@ -150,7 +201,9 @@ export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
             )}
           </li>
         );
-      })}
-    </ul>
+          })}
+        </ul>
+      )}
+    </>
   );
 }
