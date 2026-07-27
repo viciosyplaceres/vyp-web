@@ -328,7 +328,9 @@ salen hacia la directiva. Verificado con suscripciones de prueba de ambos roles.
 Detalles que importan en el uso real:
 
 - Subir 20 fotos manda **un solo aviso**, no veinte: el aviso va en una acción aparte
-  (`avisarSubidaGaleria`) que el cliente llama al terminar toda la tanda.
+  (`finalizarSubidaGaleria`) que el cliente llama al terminar toda la tanda. Esa misma acción es la
+  que revalida la ruta de la galería — y solo esa, nunca las llamadas intermedias (ver el porqué
+  justo debajo).
 - Cada tipo de aviso lleva su propia `tag`, así una tanda de fotos no entierra los mensajes del chat.
 - Claves VAPID propias (`web-push`), sin cuenta de Firebase ni servicios de pago.
 - Las suscripciones muertas se limpian solas (404/410 → se borran).

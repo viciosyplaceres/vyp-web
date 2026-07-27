@@ -4,7 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { ImagePlus, Camera, Video, X } from "lucide-react";
 import imageCompression from "browser-image-compression";
-import { registrarMedia, avisarSubidaGaleria } from "@/app/actions/media";
+import { registrarMedia, finalizarSubidaGaleria } from "@/app/actions/media";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // tope real de la cuenta de Cloudinary
 
@@ -135,8 +135,9 @@ export default function SubirMedia({
       }
     }
 
-    // Un único aviso al terminar toda la tanda, no uno por foto.
-    await avisarSubidaGaleria(anio, ficheros.length).catch(() => undefined);
+    // Revalidar la ruta y avisar UNA sola vez al terminar toda la tanda, no
+    // en cada foto (ver el porqué en el comentario de la propia acción).
+    await finalizarSubidaGaleria(anio, ficheros.length).catch(() => undefined);
 
     setProgreso(null);
     setFicheros([]);
