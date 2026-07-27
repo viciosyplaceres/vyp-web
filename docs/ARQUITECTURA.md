@@ -364,6 +364,31 @@ del chat: vive solo en `/perfil`, que es donde tiene sentido como ajuste de la c
 
 ---
 
+## 7nonies. Bug real: el service worker podía dejar a un miembro "sin acceso a nada"
+
+Un miembro real (`juaniyo`, ya aprobado y con el email confirmado) reportó no poder entrar a
+ninguna sección aunque el inicio de sesión funcionaba. Servidor, RLS y páginas se comprobaron uno
+por uno con su sesión real (curl con su cookie de verdad) y **todo respondía 200 correctamente** —
+la app no tenía ningún bloqueo de verdad para un miembro normal.
+
+La causa estaba en `public/sw.js`: la estrategia de caché guardaba **cualquier** respuesta GET
+exitosa, incluidas las páginas HTML, que dependen de quién ha iniciado sesión (aprobado o no, admin
+o no). Si alguien visitaba `/chat`, `/galeria`, etc. **antes** de que la directiva le aprobara, esa
+página con el mensaje de "cuenta pendiente" se guardaba en caché; más tarde, con un fallo de red de
+un instante (típico en móvil), el service worker podía servir esa respuesta vieja en vez de ir a la
+red — aunque la cuenta llevara ya aprobada un buen rato. Es un fallo de diseño real: el Cache API
+guarda por URL, no por sesión, así que cachear documentos autenticados es intrínsecamente
+arriesgado (hasta podría servir el HTML de una sesión a otra distinta).
+
+Arreglo: las peticiones de documento (`req.mode === "navigate"` o `destination === "document"`) ya
+NUNCA se cachean ni tienen respaldo de caché — van siempre a la red, y si no hay conexión, que el
+navegador muestre su aviso de siempre en vez de arriesgarse a enseñar la página de otra sesión. Solo
+se siguen cacheando los recursos estáticos (JS, CSS, iconos), que son iguales para todo el mundo.
+Se subió además la versión de caché (`vyp-v2` → `vyp-v3`) para que el `activate` del service worker
+borre cualquier caché vieja ya guardada en los móviles de la gente.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

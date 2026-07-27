@@ -2,8 +2,8 @@
 // Hace dos cosas: permitir instalar la web como app (PWA) y recibir los avisos
 // del chat cuando la app está cerrada.
 
-const CACHE = "vyp-v2";
-const ESENCIALES = ["/", "/manifest.webmanifest", "/logo/vyp-icon-192.png"];
+const CACHE = "vyp-v3";
+const ESENCIALES = ["/manifest.webmanifest", "/logo/vyp-icon-192.png"];
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -39,6 +39,23 @@ self.addEventListener("fetch", (event) => {
   // Nunca cachear API ni audio: siempre en vivo.
   if (url.pathname.startsWith("/api/")) return;
 
+  // Las páginas (HTML y las peticiones RSC de la navegación de Next.js) no se
+  // cachean NUNCA: su contenido depende de quién ha iniciado sesión (aprobado
+  // o no, admin o no...). Si se guardara una y luego la red fallara un
+  // instante, el service worker podía servírsela después a otra sesión, o a
+  // la misma persona ya aprobada la respuesta vieja de "cuenta pendiente" que
+  // vio antes de que se le aprobara — justo lo que le pasó de verdad a un
+  // miembro real. Solo se cachean los recursos estáticos (JS, CSS, iconos),
+  // que son iguales para todo el mundo.
+  const esDocumento = req.mode === "navigate" || req.destination === "document";
+  if (esDocumento) {
+    // Sin caché de respaldo a propósito: sin conexión, que el navegador
+    // muestre su aviso de "sin conexión" de siempre antes que arriesgarse a
+    // enseñar la página de otra sesión.
+    event.respondWith(fetch(req));
+    return;
+  }
+
   event.respondWith(
     fetch(req)
       .then((res) => {
@@ -48,9 +65,7 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       })
-      .catch(() =>
-        caches.match(req).then((cacheada) => cacheada ?? caches.match("/")),
-      ),
+      .catch(() => caches.match(req)),
   );
 });
 
