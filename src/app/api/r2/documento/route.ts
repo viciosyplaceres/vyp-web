@@ -6,12 +6,13 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
 
 /**
- * Redirige a una URL prefirmada de lectura de un documento adjunto de tarea.
+ * Redirige a una URL prefirmada de lectura de un documento adjunto de tarea o
+ * de un artículo de la lista de la compra.
  *
  * A diferencia de la música (que es pública), esto es organización interna:
  * hay que ser miembro aprobado. Además se comprueba que la clave pedida
- * corresponde de verdad a una tarea existente, para que nadie use la ruta como
- * visor del resto del bucket.
+ * corresponde de verdad a una tarea o un artículo existente, para que nadie
+ * use la ruta como visor del resto del bucket.
  */
 export async function GET(request: Request) {
   const sesion = await getSesion();
@@ -25,13 +26,12 @@ export async function GET(request: Request) {
   }
 
   const supabase = createAdminClient();
-  const { data: tarea } = await supabase
-    .from("tareas")
-    .select("id")
-    .eq("documento_url", clave)
-    .maybeSingle();
+  const [{ data: tarea }, { data: compra }] = await Promise.all([
+    supabase.from("tareas").select("id").eq("documento_url", clave).maybeSingle(),
+    supabase.from("lista_compra").select("id").eq("documento_url", clave).maybeSingle(),
+  ]);
 
-  if (!tarea) {
+  if (!tarea && !compra) {
     return NextResponse.json(
       { error: "Documento no encontrado." },
       { status: 404 },

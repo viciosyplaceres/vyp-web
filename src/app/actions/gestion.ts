@@ -104,6 +104,10 @@ export async function crearItemCompra(
       .split(",")
       .map((x) => x.trim())
       .filter(Boolean);
+    // El documento (si se adjuntó) ya está subido a R2 cuando llega aquí:
+    // el formulario solo trae su clave y su nombre, igual que en tareas.
+    const documentoClave = String(formData.get("documentoClave") ?? "").trim();
+    const documentoNombre = String(formData.get("documentoNombre") ?? "").trim();
 
     if (!item) return { error: "Pon qué hay que comprar." };
     if (!Number.isInteger(anio) || anio < 2010 || anio > 2100) {
@@ -118,6 +122,8 @@ export async function crearItemCompra(
         anio,
         cantidad: Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 1,
         comprado: false,
+        documento_url: documentoClave || null,
+        documento_nombre: documentoNombre || null,
       })
       .select("id")
       .single();
@@ -189,6 +195,26 @@ export async function borrarItemCompra(id: string) {
   await exigirAdmin();
   const supabase = await createClient();
   const { error } = await supabase.from("lista_compra").delete().eq("id", id);
+  if (error) throw new Error(error.message);
+  revalidatePath("/admin/compras");
+}
+
+/**
+ * Adjunta, sustituye o quita el documento de un artículo ya creado. Pasa
+ * `null` en ambos campos para quitarlo. Solo la directiva: el trigger
+ * `compra_solo_marcar` ya bloquearía el intento igualmente.
+ */
+export async function adjuntarDocumentoCompra(
+  id: string,
+  documentoClave: string | null,
+  documentoNombre: string | null,
+) {
+  await exigirAdmin();
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("lista_compra")
+    .update({ documento_url: documentoClave, documento_nombre: documentoNombre })
+    .eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/admin/compras");
 }

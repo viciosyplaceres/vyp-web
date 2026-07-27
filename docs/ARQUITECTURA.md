@@ -88,6 +88,9 @@ Ni Cloudinary ni R2 reciben ficheros del navegador sin permiso previo:
 - **Escuchar**: `/api/r2/reproducir?clave=…` redirige a una URL prefirmada de lectura. Antes
   comprueba que esa clave corresponde a una pista registrada, para que nadie use la ruta como
   visor del bucket entero.
+- **Documentos de tareas y de la compra**: `/api/r2/documento?clave=…` hace lo mismo pero
+  comprobando que la clave está en `tareas.documento_url` **o** en `lista_compra.documento_url`
+  (una sola ruta para las dos, añadido al meter documentos en la compra).
 
 ### CORS del bucket R2 — imprescindible, y no está en el código
 

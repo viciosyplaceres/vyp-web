@@ -37,7 +37,7 @@ export default async function ComprasPage() {
     await Promise.all([
       supabase
         .from("lista_compra")
-        .select("id, item, cantidad, comprado, anio, notas")
+        .select("id, item, cantidad, comprado, anio, notas, documento_url, documento_nombre")
         .order("anio", { ascending: false })
         .order("comprado", { ascending: true }),
       // Solo los ids: el perfil se cruza contra el índice, porque un join
