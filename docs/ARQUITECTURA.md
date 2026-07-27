@@ -775,7 +775,7 @@ personas con 2 turnos y 3 con 3 —las del desmontaje—. Datos de prueba elimin
 
 ---
 
-## 7octodecies. Dados: decidir algo al momento (`/admin/dados`)
+## 7duovicies. Dados: decidir algo al momento (`/admin/dados`)
 
 Aprovecha el mismo mecanismo de la limpieza (un dado con más caras que
 opciones, repitiendo la tirada si sale una que no cuenta) pero para una
@@ -806,6 +806,43 @@ extra: si el dado saca a alguien que **ya estaba elegido**, también se repite
 la tirada. Así cada tirada nueva añade a alguien distinto —tiene sentido
 tirar dos o tres veces para repartir entre varios— y si a quien le toca no
 quiere o no puede, se le quita tocando su chip, como a cualquier otro.
+
+---
+
+## 7tervicies. Bug real: el service worker convertía un fallo puntual en la app rota
+
+Síntoma que llegó desde el móvil: al abrir `/admin/limpieza` salía un 500 del
+servidor y, detrás, estos dos errores en consola:
+
+```
+The FetchEvent for ".../admin/limpieza" resulted in a network error response:
+  the promise was rejected.
+sw.js:1 Uncaught (in promise) TypeError: Failed to convert value to 'Response'.
+```
+
+El 500 fue **transitorio** (una ventana en la que el despliegue vigente aún no
+traía esa ruta, porque los deploys de ese rato se quedaron bloqueados por el
+tope de 100 despliegues/24 h del plan gratuito de Vercel). Lo que no era
+transitorio era la reacción del service worker, que tenía dos fallos y
+convertía cualquier tropiezo de red en una pantalla en blanco:
+
+1. **Navegaciones**: `event.respondWith(fetch(req))`, sin `catch`. Si el
+   `fetch` rechaza, a `respondWith` le llega una promesa rota y el navegador
+   tumba la petición entera ("the promise was rejected") — ni siquiera se ve
+   el aviso de "sin conexión" del propio navegador.
+2. **Recursos estáticos**: el respaldo era `.catch(() => caches.match(req))`, y
+   `caches.match` devuelve `undefined` cuando ese recurso nunca se guardó.
+   `respondWith(undefined)` revienta con "Failed to convert value to
+   'Response'" — que es, literalmente, el segundo error de la consola.
+
+Arreglado dejando que **las dos ramas acaben siempre en una `Response` real**:
+las navegaciones caen en una página "Sin conexión" generada al vuelo por el
+propio service worker (no cacheada: el contenido de las páginas depende de la
+sesión y no se guarda nunca, ver arriba), y los estáticos en `Response.error()`,
+que es un fallo de red normal y corriente que el navegador ya sabe manejar.
+Comprobado en navegador con la red cortada: antes rompía, ahora sale el aviso
+con su botón de "Reintentar" y al volver la conexión se recupera solo. La
+versión de caché sube a `vyp-v4` para tirar la anterior.
 
 ---
 

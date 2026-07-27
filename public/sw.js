@@ -2,8 +2,35 @@
 // Hace dos cosas: permitir instalar la web como app (PWA) y recibir los avisos
 // del chat cuando la app está cerrada.
 
-const CACHE = "vyp-v3";
+const CACHE = "vyp-v4";
 const ESENCIALES = ["/manifest.webmanifest", "/logo/vyp-icon-192.png"];
+
+/**
+ * Página de respaldo cuando una navegación no llega al servidor.
+ *
+ * Se genera aquí mismo, sin tocar la caché: el contenido de las páginas
+ * depende de la sesión y nunca se guarda (ver más abajo), así que lo único
+ * que se puede enseñar sin riesgo es un aviso genérico.
+ */
+function paginaSinConexion() {
+  return new Response(
+    `<!doctype html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>Sin conexión · Vicios & Placeres</title>
+<style>
+ body{margin:0;min-height:100vh;display:flex;align-items:center;justify-content:center;
+ background:#000;color:#fff;font-family:system-ui,sans-serif;text-align:center;padding:24px}
+ p{color:rgba(255,255,255,.6);margin:8px 0 24px}
+ button{min-height:48px;padding:0 24px;border-radius:999px;border:0;background:#fff;
+ color:#000;font:inherit;font-weight:500;cursor:pointer}
+</style></head><body><div>
+<h1>Sin conexión</h1>
+<p>No hemos podido cargar la página. Comprueba la conexión y vuelve a intentarlo.</p>
+<button onclick="location.reload()">Reintentar</button>
+</div></body></html>`,
+    { status: 503, headers: { "Content-Type": "text/html; charset=utf-8" } },
+  );
+}
 
 self.addEventListener("install", (event) => {
   event.waitUntil(
@@ -49,10 +76,15 @@ self.addEventListener("fetch", (event) => {
   // que son iguales para todo el mundo.
   const esDocumento = req.mode === "navigate" || req.destination === "document";
   if (esDocumento) {
-    // Sin caché de respaldo a propósito: sin conexión, que el navegador
-    // muestre su aviso de "sin conexión" de siempre antes que arriesgarse a
-    // enseñar la página de otra sesión.
-    event.respondWith(fetch(req));
+    // Sin caché de respaldo a propósito: sin conexión, que se vea un aviso
+    // genérico antes que arriesgarse a enseñar la página de otra sesión.
+    //
+    // El `catch` no es opcional: si `fetch` rechaza y se le pasa esa promesa
+    // rota a `respondWith`, el navegador tira el fetch entero con "the promise
+    // was rejected" y la pestaña se queda en blanco, sin siquiera el aviso de
+    // "sin conexión" del propio navegador. Pasó de verdad: un fallo puntual
+    // del servidor dejó la app rota con ese error en consola.
+    event.respondWith(fetch(req).catch(() => paginaSinConexion()));
     return;
   }
 
@@ -65,7 +97,12 @@ self.addEventListener("fetch", (event) => {
         }
         return res;
       })
-      .catch(() => caches.match(req)),
+      // `caches.match` devuelve `undefined` cuando ese recurso no estaba
+      // guardado, y `respondWith(undefined)` revienta con "Failed to convert
+      // value to 'Response'". Hay que acabar siempre en una Response de
+      // verdad: `Response.error()` es un fallo de red normal, que el navegador
+      // ya sabe manejar.
+      .catch(() => caches.match(req).then((guardada) => guardada ?? Response.error())),
   );
 });
 
