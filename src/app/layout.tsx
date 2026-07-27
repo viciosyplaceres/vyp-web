@@ -36,6 +36,23 @@ export const metadata: Metadata = {
     icon: "/logo/vyp-icon-192.png",
     apple: "/logo/vyp-icon-192.png",
   },
+  openGraph: {
+    title: "Vicios & Placeres (VYP)",
+    description:
+      "Peña Vicios & Placeres — Fuente Álamo de Murcia. Galería de las fiestas, música y gestión de la peña.",
+    url: "https://viciosyplaceres.com",
+    siteName: "Vicios & Placeres",
+    images: [{ url: "/og-image.png", width: 1200, height: 630 }],
+    locale: "es_ES",
+    type: "website",
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "Vicios & Placeres (VYP)",
+    description:
+      "Peña Vicios & Placeres — Fuente Álamo de Murcia. Galería de las fiestas, música y gestión de la peña.",
+    images: ["/og-image.png"],
+  },
 };
 
 export const viewport: Viewport = {

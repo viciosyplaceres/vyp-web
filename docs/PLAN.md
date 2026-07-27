@@ -211,11 +211,18 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 
 - Dirección: **C. Asturias, 30320 Fuente Álamo, Murcia**
 - Coordenadas: **37.717352, -1.173910** (37°43'02.5"N 1°10'26.1"W)
-- Mapa incrustado sin necesidad de clave de API.
-- Botón grande **"Cómo llegar"** y mapa entero pulsable, que abren Google Maps con la ruta ya
-  puesta hacia la peña:
+- **Mapa incrustado con OpenStreetMap** (`openstreetmap.org/export/embed.html`), interactivo de
+  verdad (se puede mover y hacer zoom), teñido en blanco y negro con un filtro CSS
+  (`grayscale invert`) para que encaje con el resto de la web. Sin clave de API.
+- Botón grande **"Cómo llegar"** que abre Google Maps con la ruta ya puesta hacia la peña:
   `https://www.google.com/maps/dir/?api=1&destination=37.717352,-1.173910`
 - En móvil abre directamente la app de Google Maps.
+
+> **Corregido el 2026-07-27**: el primer intento usaba el embed de Google Maps sin clave
+> (`/maps?q=...&output=embed`). Google cambió su comportamiento y esa URL ahora redirige a un
+> endpoint interno que responde con `X-Frame-Options: SAMEORIGIN`, así que el navegador bloquea
+> el iframe en cualquier dominio que no sea `google.com` — el recuadro se quedaba en blanco para
+> todo el mundo. Verificado con cabeceras HTTP reales antes y después del cambio.
 
 ---
 
@@ -281,6 +288,17 @@ El uso mayoritario será desde el móvil en la calle, así que la interfaz se di
   descartes en `design/logo-candidatos/`.
 - **Paleta**: negro puro de fondo, blanco de texto. Sin modo claro — serio y sobrio, no festivo.
 - Tipografía de sistema (Geist) para que cargue rápido con mala cobertura en el recinto.
+
+> **Corregido el 2026-07-27**: el PNG exportado del wordmark (`vyp-wordmark.png`) tenía el texto
+> ocupando solo el 24% superior del lienzo, con un bloque negro vacío debajo (2000×647 real vs.
+> 1886×182 de contenido). Al usarlo en el header con una altura fija, esa proporción incorrecta
+> hacía que el texto se viera diminuto. Se recortó a su contenido real; el header ya no necesita
+> compensar el hueco muerto.
+>
+> También se añadió una **imagen para compartir** (`public/og-image.png`, 1200×630, wordmark
+> centrado sobre negro) enlazada en `openGraph`/`twitter` de `layout.tsx`: sin ella, cualquier
+> vista previa del enlace (compartir, fijar como app de escritorio, etc.) caía en un icono pequeño
+> sobre una tarjeta en blanco — el efecto de "imagen que no cubre todo, con borde blanco".
 
 ---
 

@@ -11,7 +11,16 @@ const LAT = 37.717352;
 const LON = -1.17391;
 const DIRECCION = "C. Asturias, 30320 Fuente Álamo, Murcia";
 const COMO_LLEGAR = `https://www.google.com/maps/dir/?api=1&destination=${LAT},${LON}`;
-const MAPA_EMBED = `https://www.google.com/maps?q=${LAT},${LON}&hl=es&z=17&output=embed`;
+
+// El embed de Google Maps sin clave de API ("output=embed") ya no se puede
+// incrustar: su respuesta llega con "X-Frame-Options: SAMEORIGIN" y el
+// navegador la bloquea en cualquier dominio que no sea google.com (deja el
+// recuadro en blanco). OpenStreetMap no impone esa restricción y no pide
+// clave, así que es el que se ve de verdad.
+const DELTA_LON = 0.004;
+const DELTA_LAT = 0.003;
+const BBOX = [LON - DELTA_LON, LAT - DELTA_LAT, LON + DELTA_LON, LAT + DELTA_LAT].join(",");
+const MAPA_EMBED = `https://www.openstreetmap.org/export/embed.html?bbox=${BBOX}&marker=${LAT}%2C${LON}&layer=mapnik`;
 
 export default function DondePage() {
   return (
@@ -30,22 +39,16 @@ export default function DondePage() {
           </p>
         </div>
 
-        {/* El mapa entero es pulsable, no solo el botón */}
-        <a
-          href={COMO_LLEGAR}
-          target="_blank"
-          rel="noopener noreferrer"
-          aria-label="Abrir la ubicación de la peña en Google Maps"
-          className="mt-5 block cursor-pointer overflow-hidden rounded-xl border border-white/15 transition-colors duration-200 hover:border-white/35"
-        >
+        {/* Mapa real e interactivo (se puede mover/hacer zoom), teñido en
+            monocromo oscuro para encajar con el resto de la web. */}
+        <div className="mt-5 overflow-hidden rounded-xl border border-white/15 bg-white/5">
           <iframe
             src={MAPA_EMBED}
             title={`Mapa de la peña en ${DIRECCION}`}
             loading="lazy"
-            referrerPolicy="no-referrer-when-downgrade"
-            className="pointer-events-none h-[320px] w-full border-0 sm:h-[420px]"
+            className="h-[320px] w-full border-0 grayscale invert sm:h-[420px]"
           />
-        </a>
+        </div>
 
         <a
           href={COMO_LLEGAR}
@@ -58,8 +61,8 @@ export default function DondePage() {
         </a>
 
         <p className="mt-3 text-sm text-white/40">
-          En el móvil se abre directamente la app de Google Maps con la ruta
-          puesta.
+          El botón abre la ruta en Google Maps. En el móvil se abre
+          directamente la app.
         </p>
       </div>
     </main>

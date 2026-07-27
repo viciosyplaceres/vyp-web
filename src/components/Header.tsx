@@ -20,10 +20,10 @@ export default async function Header() {
           <Image
             src="/logo/vyp-wordmark.png"
             alt="Vicios & Placeres"
-            width={220}
-            height={71}
+            width={1886}
+            height={182}
             priority
-            className="h-7 w-auto sm:h-9"
+            className="h-5 w-auto sm:h-6"
           />
         </Link>
 
