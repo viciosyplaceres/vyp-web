@@ -12,8 +12,13 @@ export async function iniciarSesion(
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const next = String(formData.get("next") ?? "/");
-  // Solo rutas relativas de un slash: evita open redirect vía "next" (p. ej. "//evil.com" o "https://evil.com").
-  const destino = next.startsWith("/") && !next.startsWith("//") ? next : "/";
+  // Solo rutas relativas de un único slash: evita open redirect vía "next"
+  // (p. ej. "//evil.com", "https://evil.com" o "/\evil.com", que algunos navegadores
+  // interpretan como protocol-relative igual que "//").
+  const destino =
+    next.startsWith("/") && !next.startsWith("//") && !next.startsWith("/\\")
+      ? next
+      : "/";
 
   const supabase = await createClient();
   const { error } = await supabase.auth.signInWithPassword({ email, password });
