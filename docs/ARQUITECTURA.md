@@ -693,6 +693,38 @@ miembro de prueba en el directorio. Captura de pantalla revisada a mano.
 
 ---
 
+## 7vicies. Editar una tarea: no había forma de arreglar un reparto olvidado
+
+El señor reportó una tarea real ("Chuparse un pie", con descripción, día y un documento adjunto)
+sin avatares en `/admin/tareas`. Comprobado contra la base de datos real: la tarea existía, pero
+`tareas_miembros` estaba vacía para ella — la asignación nunca llegó a guardarse, no era un
+problema de visualización.
+
+Causa raíz: **no había ningún botón de editar**. `PanelTareas.tsx` solo permitía crear, marcar
+hecha o borrar. `editarTarea()` ya existía en `actions/tareas.ts` desde hacía tiempo, pero
+huérfano, sin ningún componente que lo llamara. Si al crear una tarea se te olvidaba marcar a
+alguien —fácil, "Crear tarea" no obliga a elegir a nadie— la única forma de arreglarlo era borrar
+la tarea entera y escribirla de nuevo desde cero, perdiendo la descripción y el documento.
+
+Arreglo: `FormularioTarea.tsx` pasa a servir para las dos cosas. Con una prop `tareaExistente`
+llega precargado (título, descripción, día, encargados y documento) y guarda con `editarTarea` en
+vez de `crearTarea`; el documento adjunto se puede mantener, quitar o sustituir por otro sin tocar
+el resto. Nuevo botón "Editar" (lápiz) junto al de borrar en `PanelTareas.tsx`. De paso, una tarea
+sin nadie asignado ahora dice explícitamente **"Sin asignar todavía"** en ámbar, en vez de no
+mostrar nada — así el hueco se ve a la primera, no hay que fijarse en que falta algo.
+
+**Verificado contra la tarea real** (con cuidado de dejarla tal como estaba, no es una tarea de
+prueba): antes de editar mostraba "Sin asignar todavía"; el formulario de edición cargó
+correctamente su título, su documento existente ("ChatGPT Image…") y ofreció "Guardar cambios"; al
+marcar un miembro y guardar, `tareas_miembros` pasó a tener la fila real y la lista mostró su
+avatar. Deshecho ese cambio de prueba después (vuelto a dejar sin asignar) para que el señor la
+reparta él mismo a quien corresponda. También se descartó un posible bug de interacción
+documento+miembro simultáneos: el único fallo al probarlo en local fue un CORS del bucket R2, que
+solo permite el puerto 3000 y el dominio real —no 3111, donde corría el servidor de prueba—, nada
+que ver con la aplicación.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

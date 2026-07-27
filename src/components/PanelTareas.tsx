@@ -1,7 +1,7 @@
 "use client";
 
 import { useMemo, useState, useTransition } from "react";
-import { Check, Trash2, Plus, Paperclip } from "lucide-react";
+import { Check, Trash2, Pencil, Plus, Paperclip } from "lucide-react";
 import { diaLegible } from "@/lib/formato";
 import Avatar from "./Avatar";
 import type { MiembroSimple } from "./SelectorMiembros";
@@ -11,6 +11,9 @@ import type { TareaListada } from "./tareas/tipos";
 import { marcarTarea, borrarTarea } from "@/app/actions/tareas";
 
 export type { TareaListada } from "./tareas/tipos";
+
+/** El formulario está cerrado, abierto para una nueva, o editando una existente. */
+type EstadoFormulario = "cerrado" | "nueva" | TareaListada;
 
 export default function PanelTareas({
   anio,
@@ -23,7 +26,7 @@ export default function PanelTareas({
 }) {
   const [pendiente, startTransition] = useTransition();
   const [diaActivo, setDiaActivo] = useState<number | null>(null);
-  const [mostrarForm, setMostrarForm] = useState(false);
+  const [formulario, setFormulario] = useState<EstadoFormulario>("cerrado");
 
   const porDia = useMemo(() => {
     const mapa = new Map<string, TareaListada[]>();
@@ -41,6 +44,7 @@ export default function PanelTareas({
 
   const sinFecha = porDia.get("sin-fecha") ?? [];
   const hechas = tareas.filter((t) => t.hecha).length;
+  const tareaEditando = formulario !== "cerrado" && formulario !== "nueva" ? formulario : null;
 
   return (
     <div className="mt-6">
@@ -55,7 +59,7 @@ export default function PanelTareas({
         </div>
         <button
           type="button"
-          onClick={() => setMostrarForm((v) => !v)}
+          onClick={() => setFormulario((f) => (f === "nueva" ? "cerrado" : "nueva"))}
           className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full bg-white px-5 text-sm font-medium text-black transition-opacity duration-200 hover:opacity-85"
         >
           <Plus size={16} aria-hidden="true" />
@@ -63,11 +67,14 @@ export default function PanelTareas({
         </button>
       </div>
 
-      {mostrarForm && (
+      {formulario !== "cerrado" && (
         <FormularioTarea
+          key={tareaEditando?.id ?? "nueva"}
           anio={anio}
           miembros={miembros}
-          onCreada={() => setMostrarForm(false)}
+          tareaExistente={tareaEditando}
+          onGuardada={() => setFormulario("cerrado")}
+          onCancelar={() => setFormulario("cerrado")}
         />
       )}
 
@@ -124,7 +131,7 @@ export default function PanelTareas({
 
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
                 {t.fecha && <span className="tabular-nums">{diaLegible(t.fecha)}</span>}
-                {t.asignados.length > 0 && (
+                {t.asignados.length > 0 ? (
                   <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
                     {t.asignados.map((a) => (
                       <span key={a.id} className="inline-flex items-center gap-1">
@@ -133,6 +140,10 @@ export default function PanelTareas({
                       </span>
                     ))}
                   </span>
+                ) : (
+                  // A propósito bien visible: es justo el hueco que antes
+                  // no había forma de rellenar sin borrar la tarea entera.
+                  <span className="text-amber-400/70">Sin asignar todavía</span>
                 )}
                 {t.documento_url && (
                   <a
@@ -147,6 +158,16 @@ export default function PanelTareas({
                 )}
               </div>
             </div>
+
+            <button
+              type="button"
+              aria-label={`Editar ${t.titulo}`}
+              disabled={pendiente}
+              onClick={() => setFormulario(t)}
+              className="flex h-10 w-10 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/40 transition-colors duration-200 hover:bg-white/10 hover:text-white"
+            >
+              <Pencil size={15} aria-hidden="true" />
+            </button>
 
             <button
               type="button"

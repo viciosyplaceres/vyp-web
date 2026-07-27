@@ -1,9 +1,10 @@
 "use client";
 
 import { useState } from "react";
-import { Paperclip, Loader2 } from "lucide-react";
+import { Paperclip, Loader2, X } from "lucide-react";
 import SelectorMiembros, { type MiembroSimple } from "../SelectorMiembros";
-import { crearTarea } from "@/app/actions/tareas";
+import { crearTarea, editarTarea } from "@/app/actions/tareas";
+import type { TareaListada } from "./tipos";
 
 /** Las fiestas son siempre en agosto: 31 días, del 1 al 31. */
 export const MES = 8;
@@ -13,23 +14,49 @@ export function claveDia(anio: number, dia: number) {
   return `${anio}-${String(MES).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
 }
 
-/** El formulario de tarea nueva, con su subida de documento a R2. */
+/**
+ * El formulario de tarea, con su subida de documento a R2. Sirve tanto para
+ * crear una nueva como para editar una existente: pasando `tareaExistente`
+ * llega precargado (título, descripción, día, encargados y documento) y
+ * guarda con `editarTarea` en vez de `crearTarea`.
+ *
+ * Hacía falta de verdad: antes solo se podía repartir una tarea en el
+ * momento de crearla. Si se te olvidaba marcar a alguien —fácil, "Crear
+ * tarea" no obliga a elegir a nadie— no había manera de arreglarlo salvo
+ * borrar la tarea entera y volver a escribirla de cero.
+ */
 export default function FormularioTarea({
   anio,
   miembros,
-  onCreada,
+  tareaExistente,
+  onGuardada,
+  onCancelar,
 }: {
   anio: number;
   miembros: MiembroSimple[];
-  onCreada: () => void;
+  tareaExistente?: TareaListada | null;
+  onGuardada: () => void;
+  onCancelar?: () => void;
 }) {
-  const [titulo, setTitulo] = useState("");
-  const [descripcion, setDescripcion] = useState("");
-  const [fecha, setFecha] = useState("");
-  const [asignados, setAsignados] = useState<string[]>([]);
-  const [documento, setDocumento] = useState<File | null>(null);
+  const editando = Boolean(tareaExistente);
+
+  const [titulo, setTitulo] = useState(tareaExistente?.titulo ?? "");
+  const [descripcion, setDescripcion] = useState(tareaExistente?.descripcion ?? "");
+  const [fecha, setFecha] = useState(tareaExistente?.fecha ?? "");
+  const [asignados, setAsignados] = useState<string[]>(
+    tareaExistente?.asignados.map((a) => a.id) ?? [],
+  );
+  const [documentoNuevo, setDocumentoNuevo] = useState<File | null>(null);
+  // Si ya había un documento adjunto y se pulsa "Quitar", se borra al guardar
+  // sin necesidad de subir uno nuevo en su lugar.
+  const [quitarDocumento, setQuitarDocumento] = useState(false);
   const [guardando, setGuardando] = useState(false);
   const [error, setError] = useState<string | null>(null);
+
+  const documentoActual =
+    !quitarDocumento && tareaExistente?.documento_url
+      ? { nombre: tareaExistente.documento_nombre ?? "Documento" }
+      : null;
 
   async function enviar(e: React.FormEvent) {
     e.preventDefault();
@@ -38,17 +65,21 @@ export default function FormularioTarea({
     setError(null);
     setGuardando(true);
     try {
-      let documentoClave: string | null = null;
-      let documentoNombre: string | null = null;
+      let documentoClave: string | null = quitarDocumento
+        ? null
+        : (tareaExistente?.documento_url ?? null);
+      let documentoNombre: string | null = quitarDocumento
+        ? null
+        : (tareaExistente?.documento_nombre ?? null);
 
-      if (documento) {
+      if (documentoNuevo) {
         const res = await fetch("/api/r2/subir", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
-            nombre: documento.name,
-            contentType: documento.type,
-            tamano: documento.size,
+            nombre: documentoNuevo.name,
+            contentType: documentoNuevo.type,
+            tamano: documentoNuevo.size,
             destino: "documento",
           }),
         });
@@ -60,32 +91,39 @@ export default function FormularioTarea({
 
         const subida = await fetch(url, {
           method: "PUT",
-          headers: { "Content-Type": documento.type },
-          body: documento,
+          headers: { "Content-Type": documentoNuevo.type },
+          body: documentoNuevo,
         });
         if (!subida.ok) throw new Error("Falló la subida del documento.");
 
         documentoClave = clave;
-        documentoNombre = documento.name;
+        documentoNombre = documentoNuevo.name;
       }
 
-      await crearTarea({
+      const datos = {
         titulo,
         descripcion,
         fecha: fecha || null,
         asignados,
         documentoClave,
         documentoNombre,
-      });
+      };
+
+      if (tareaExistente) {
+        await editarTarea(tareaExistente.id, datos);
+      } else {
+        await crearTarea(datos);
+      }
 
       setTitulo("");
       setDescripcion("");
       setFecha("");
       setAsignados([]);
-      setDocumento(null);
-      onCreada();
+      setDocumentoNuevo(null);
+      setQuitarDocumento(false);
+      onGuardada();
     } catch (err) {
-      setError(err instanceof Error ? err.message : "No se pudo crear.");
+      setError(err instanceof Error ? err.message : "No se pudo guardar.");
     } finally {
       setGuardando(false);
     }
@@ -147,20 +185,38 @@ export default function FormularioTarea({
       <SelectorMiembros miembros={miembros} seleccionados={asignados} onCambio={setAsignados} />
 
       <div className="space-y-1.5">
-        <label className="flex min-h-[52px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 text-sm transition-colors duration-200 hover:border-white/40">
-          <Paperclip size={16} aria-hidden="true" />
-          {documento ? documento.name : "Adjuntar documento (opcional)"}
-          <input
-            type="file"
-            accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,image/*"
-            className="sr-only"
-            onChange={(e) => setDocumento(e.target.files?.[0] ?? null)}
-          />
-        </label>
-        {documento && (
+        {documentoActual ? (
+          <div className="flex items-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 py-3 text-sm">
+            <Paperclip size={16} className="shrink-0" aria-hidden="true" />
+            <span className="min-w-0 flex-1 truncate">{documentoActual.nombre}</span>
+            <button
+              type="button"
+              onClick={() => setQuitarDocumento(true)}
+              aria-label="Quitar documento adjunto"
+              className="shrink-0 cursor-pointer text-white/40 hover:text-red-400"
+            >
+              <X size={16} aria-hidden="true" />
+            </button>
+          </div>
+        ) : (
+          <label className="flex min-h-[52px] cursor-pointer items-center justify-center gap-2 rounded-lg border border-white/20 bg-white/5 px-4 text-sm transition-colors duration-200 hover:border-white/40">
+            <Paperclip size={16} aria-hidden="true" />
+            {documentoNuevo ? documentoNuevo.name : "Adjuntar documento (opcional)"}
+            <input
+              type="file"
+              accept=".pdf,.doc,.docx,.xls,.xlsx,.txt,.csv,image/*"
+              className="sr-only"
+              onChange={(e) => {
+                setDocumentoNuevo(e.target.files?.[0] ?? null);
+                setQuitarDocumento(false);
+              }}
+            />
+          </label>
+        )}
+        {documentoNuevo && !documentoActual && (
           <button
             type="button"
-            onClick={() => setDocumento(null)}
+            onClick={() => setDocumentoNuevo(null)}
             className="cursor-pointer text-xs text-white/40 hover:text-white"
           >
             Quitar documento
@@ -177,14 +233,26 @@ export default function FormularioTarea({
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={guardando || !titulo.trim()}
-        className="inline-flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-6 font-medium text-black transition-opacity duration-200 hover:opacity-85 disabled:opacity-40"
-      >
-        {guardando && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
-        {guardando ? "Guardando…" : "Crear tarea"}
-      </button>
+      <div className="flex gap-2">
+        <button
+          type="submit"
+          disabled={guardando || !titulo.trim()}
+          className="inline-flex min-h-[48px] flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-6 font-medium text-black transition-opacity duration-200 hover:opacity-85 disabled:opacity-40"
+        >
+          {guardando && <Loader2 size={16} className="animate-spin" aria-hidden="true" />}
+          {guardando ? "Guardando…" : editando ? "Guardar cambios" : "Crear tarea"}
+        </button>
+        {editando && onCancelar && (
+          <button
+            type="button"
+            onClick={onCancelar}
+            disabled={guardando}
+            className="inline-flex min-h-[48px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-white/25 px-5 text-sm font-medium transition-colors duration-200 hover:bg-white/10 disabled:opacity-40"
+          >
+            Cancelar
+          </button>
+        )}
+      </div>
     </form>
   );
 }
