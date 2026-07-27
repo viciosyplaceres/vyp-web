@@ -902,6 +902,37 @@ pudo marcar un pago pero no pudo entrar en `/admin/miembros` ni en
 
 ---
 
+## 7quinvicies. Deudas: quién marca y quién borra (migración `0017`)
+
+Hasta ahora crear, marcar y borrar una deuda era todo `es_admin()`. Se pidió
+repartirlo:
+
+- **Marcar como saldada**: la directiva, el tesorero, o **el propio
+  acreedor** (a quien se le debe) si es un miembro concreto. Cuando la
+  acreedora es la peña entera (`acreedor_id = NULL`), no hay "el propio
+  acreedor" al que dejar entrar, así que ahí solo quedan directiva y
+  tesorero — sale solo de la condición `acreedor_id = auth.uid()`, que nunca
+  es cierta si la columna es NULL.
+- **Borrar**: solo directiva y tesorero, nunca el acreedor (aunque sea su
+  deuda).
+- **Apuntar/crear**: sin cambios, sigue siendo solo `es_admin()`.
+
+**El acreedor solo puede tocar `pagada`.** La política de `UPDATE` decide SI
+puede escribir la fila, pero no qué columnas — así que sin más, el acreedor
+podría colarse y cambiar también la cantidad o el concepto de su propia
+deuda. Se añadió `deudas_solo_marcar()` (mismo patrón que
+`compra_solo_marcar` y `perfiles_solo_rol_con_permiso`): si quien escribe no
+es directiva ni tesorero, el trigger revierte todo salvo `pagada` al valor
+anterior.
+
+Verificado con cuentas desechables y por API directa (saltándose la
+interfaz): el acreedor pudo marcar su propia deuda pero no la de VYP; un
+intento de cambiar la cantidad junto con `pagada` en la misma petición dejó
+la cantidad intacta y solo aplicó el cambio de estado; un intento de borrar
+su propia deuda fue rechazado sin más.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

@@ -81,8 +81,12 @@ export async function exigirAdmin(): Promise<Sesion> {
   return sesion;
 }
 
-/** Para marcar pagos: puede la directiva o el tesorero. */
-export async function exigirPagos(): Promise<Sesion> {
+/**
+ * Para lo que puede hacer la directiva o el tesorero por igual: marcar
+ * pagos, borrar deudas... Nada relacionado con altas ni almacenamiento, que
+ * siguen siendo solo de `exigirAdmin`.
+ */
+export async function exigirDirectivaOTesorero(): Promise<Sesion> {
   const sesion = await getSesion();
   if (!sesion?.esAdmin && !sesion?.esTesorero) {
     throw new Error("Solo la directiva o el tesorero pueden hacer esto.");

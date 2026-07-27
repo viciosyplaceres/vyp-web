@@ -61,6 +61,8 @@ export default async function DeudasPage() {
           deudas={(deudas ?? []) as DeudaListada[]}
           miembros={miembros}
           esAdmin={sesion.esAdmin}
+          puedeBorrar={sesion.esAdmin || sesion.esTesorero}
+          userId={sesion.userId}
         />
       </div>
     </main>

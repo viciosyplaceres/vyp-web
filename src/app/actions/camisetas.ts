@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { exigirMiembro, exigirPagos } from "@/lib/auth";
+import { exigirMiembro, exigirDirectivaOTesorero } from "@/lib/auth";
 import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
 
 /**
@@ -143,7 +143,7 @@ export async function guardarPedidoCamiseta(
 
 /** Marca o desmarca la cuota. Puede la directiva o el tesorero. */
 export async function marcarPago(perfilId: string, anio: number, pagado: boolean) {
-  await exigirPagos();
+  await exigirDirectivaOTesorero();
   const supabase = await createClient();
 
   const { error } = await supabase.from("pagos").upsert(

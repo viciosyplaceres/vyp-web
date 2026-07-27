@@ -2,7 +2,7 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { exigirAdmin, exigirMiembro } from "@/lib/auth";
+import { exigirAdmin, exigirMiembro, exigirDirectivaOTesorero } from "@/lib/auth";
 import { avisarAdmins } from "@/lib/push";
 import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
 
@@ -67,9 +67,33 @@ export async function crearDeuda(
   }
 }
 
+/**
+ * Marca o desmarca una deuda como saldada. Puede la directiva, el tesorero,
+ * o el propio acreedor (a quien se le debe) si es un miembro concreto — si
+ * la acreedora es la peña entera, no hay "el propio acreedor" y solo quedan
+ * directiva y tesorero. La política RLS de `deudas` exige exactamente esto
+ * por su cuenta (y un trigger le impide tocar nada más que `pagada`), pero
+ * se comprueba aquí también para dar un error claro en vez de un fallo
+ * silencioso de PostgREST.
+ */
 export async function marcarDeuda(id: string, pagada: boolean) {
-  await exigirAdmin();
+  const sesion = await exigirMiembro();
   const supabase = await createClient();
+
+  if (!sesion.esAdmin && !sesion.esTesorero) {
+    const { data: deuda } = await supabase
+      .from("deudas")
+      .select("acreedor_id")
+      .eq("id", id)
+      .maybeSingle();
+
+    if (deuda?.acreedor_id !== sesion.userId) {
+      throw new Error(
+        "Solo quien tiene la deuda a su favor, la directiva o el tesorero pueden marcarla.",
+      );
+    }
+  }
+
   const { error } = await supabase
     .from("deudas")
     .update({ pagada })
@@ -78,8 +102,9 @@ export async function marcarDeuda(id: string, pagada: boolean) {
   revalidatePath("/admin/deudas");
 }
 
+/** Borrar una deuda es solo de la directiva o el tesorero, nunca del acreedor. */
 export async function borrarDeuda(id: string) {
-  await exigirAdmin();
+  await exigirDirectivaOTesorero();
   const supabase = await createClient();
   const { error } = await supabase.from("deudas").delete().eq("id", id);
   if (error) throw new Error(error.message);

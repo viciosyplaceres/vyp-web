@@ -58,11 +58,16 @@ export default function PanelDeudas({
   deudas,
   miembros,
   esAdmin,
+  puedeBorrar,
+  userId,
 }: {
   deudas: DeudaListada[];
   miembros: MiembroSimple[];
-  /** Las deudas las ve toda la peña, pero solo la directiva las apunta y las salda. */
+  /** Las deudas las ve toda la peña, pero solo la directiva las apunta. */
   esAdmin: boolean;
+  /** Borrar (y marcar cualquiera) es de la directiva o el tesorero. */
+  puedeBorrar: boolean;
+  userId: string;
 }) {
   const [, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
@@ -273,7 +278,11 @@ export default function PanelDeudas({
           <li className="text-sm text-white/40">No hay deudas apuntadas.</li>
         )}
 
-        {deudas.map((d) => (
+        {deudas.map((d) => {
+          // Puede marcarla: la directiva, el tesorero, o el propio acreedor
+          // (a quien se le debe) si es un miembro concreto, no la peña.
+          const puedeMarcar = puedeBorrar || d.acreedor_id === userId;
+          return (
           <li
             key={d.id}
             className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2.5"
@@ -284,7 +293,7 @@ export default function PanelDeudas({
                 d.pagada ? "Marcar como no saldada" : "Marcar como saldada"
               }
               aria-pressed={d.pagada}
-              disabled={!esAdmin}
+              disabled={!puedeMarcar}
               onClick={() =>
                 startTransition(() => {
                   void marcarDeuda(d.id, !d.pagada);
@@ -294,7 +303,7 @@ export default function PanelDeudas({
                 d.pagada
                   ? "border-white bg-white text-black"
                   : "border-white/30 text-transparent"
-              } ${esAdmin ? "cursor-pointer hover:border-white/60" : "cursor-default opacity-70"}`}
+              } ${puedeMarcar ? "cursor-pointer hover:border-white/60" : "cursor-default opacity-70"}`}
             >
               <Check size={18} aria-hidden="true" />
             </button>
@@ -329,7 +338,7 @@ export default function PanelDeudas({
               </a>
             )}
 
-            {esAdmin && (
+            {puedeBorrar && (
               <button
                 type="button"
                 aria-label="Borrar deuda"
@@ -344,7 +353,8 @@ export default function PanelDeudas({
               </button>
             )}
           </li>
-        ))}
+          );
+        })}
       </ul>
     </div>
   );
