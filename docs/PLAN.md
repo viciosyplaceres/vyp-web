@@ -124,8 +124,21 @@ Esta es la pieza que hace cumplir el requisito, y va en la base de datos, no en 
 | `perfiles` | el propio + admin | solo admin cambia rol y aprobación |
 | `participantes`, `lista_compra` | **solo admin** | solo admin |
 
-La comprobación de "miembro aprobado" se hace con una función `es_miembro()` en Postgres, para no
-repetir la misma condición en cada política.
+La comprobación de "miembro aprobado" se hace con `private.es_miembro()` / `private.es_admin()`,
+dos funciones `SECURITY DEFINER` en un esquema `private` **no expuesto por la Data API** (siguiendo
+la recomendación de seguridad de Supabase: una función `SECURITY DEFINER` en `public` sería
+invocable directamente por cualquiera). Un trigger en `auth.users` crea el perfil automáticamente
+al registrarse (`aprobado = false`, `rol = 'miembro'`), y otro trigger en `perfiles` impide que un
+usuario se autoapruebe o se autoasigne el rol admin (solo lo ignora si quien edita es el propio
+usuario; las operaciones con la clave `service_role` —sin `auth.uid()`— no se ven afectadas).
+
+**F2 verificado en vivo el 2026-07-27** (no solo "debería funcionar"): tablas y RLS aplicadas
+directamente contra la base de datos real vía la Management API de Supabase
+(`supabase/migrations/0001_esquema_base_auth_rls.sql`), y probado con un usuario de prueba real
+(creado y borrado después): un visitante anónimo puede leer `media`/`pistas`/`comentarios` pero no
+escribir ni ver `participantes`/`lista_compra`; un miembro recién registrado (sin aprobar) no puede
+subir nada; tras aprobarlo puede subir y comentar; su intento de autoascenderse a `admin` queda
+bloqueado por el trigger; sigue sin acceso a `participantes`.
 
 ---
 
@@ -198,8 +211,8 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 | Fase | Contenido | Estado |
 |---|---|---|
 | **F0** | Base: Next.js, dominio, despliegue | Hecho |
-| **F1** | Logo e identidad visual | Candidatos generados, falta elegir |
-| **F2** | Auth + tablas + RLS + aprobación de miembros | Pendiente |
+| **F1** | Logo e identidad visual | Hecho |
+| **F2** | Auth + tablas + RLS + aprobación de miembros | **Hecho** (base de datos), falta la interfaz (login/registro/admin miembros) |
 | **F3** | Galería por años + subida con compresión (firmada) | Pendiente |
 | **F4** | Comentarios | Pendiente |
 | **F5** | Música y reproductor global | Pendiente (depende de decidir el almacenamiento) |
