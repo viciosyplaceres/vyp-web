@@ -4,6 +4,7 @@ import { useRef, useState, useTransition } from "react";
 import Image from "next/image";
 import { Heart, Trash2, Camera, Loader2, Trophy, Minus, Plus } from "lucide-react";
 import Avatar from "./Avatar";
+import VisorImagen from "./VisorImagen";
 import {
   registrarCamiseta,
   votarCamiseta,
@@ -52,6 +53,8 @@ export default function PanelCamisetas({
   const [error, setError] = useState<string | null>(null);
   const [titulo, setTitulo] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
+  // Qué diseño se está viendo a pantalla completa (null = cerrado).
+  const [verGrande, setVerGrande] = useState<DisenoCamiseta | null>(null);
 
   // El pedido se edita en local para que los botones respondan al instante;
   // el servidor guarda detrás.
@@ -180,7 +183,12 @@ export default function PanelCamisetas({
                     esLaMasVotada ? "border-white" : "border-white/15"
                   }`}
                 >
-                  <div className="relative aspect-square bg-white/5">
+                  <button
+                    type="button"
+                    onClick={() => setVerGrande(d)}
+                    aria-label={`Ver ${d.titulo ?? "diseño"} a pantalla completa`}
+                    className="relative block aspect-square w-full cursor-zoom-in bg-white/5"
+                  >
                     <Image
                       src={d.url}
                       alt={d.titulo ?? "Diseño de camiseta"}
@@ -194,7 +202,7 @@ export default function PanelCamisetas({
                         La más votada
                       </span>
                     )}
-                  </div>
+                  </button>
 
                   <div className="space-y-2 p-2.5">
                     {d.titulo && (
@@ -353,6 +361,14 @@ export default function PanelCamisetas({
           })}
         </ul>
       </section>
+
+      {verGrande && (
+        <VisorImagen
+          src={verGrande.url}
+          alt={verGrande.titulo ?? "Diseño de camiseta"}
+          onCerrar={() => setVerGrande(null)}
+        />
+      )}
     </div>
   );
 }

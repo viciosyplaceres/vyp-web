@@ -521,6 +521,24 @@ consulta deja de devolver nada; restaurado el estado original después.
 
 ---
 
+## 7terdecies. Visor a pantalla completa para los diseños de camiseta
+
+Las miniaturas de `PanelCamisetas` (200×200 recortadas) no dejaban ver el detalle real de la
+camiseta. Ahora la miniatura es un botón que abre `VisorImagen.tsx` (nuevo, reutilizable): fondo
+oscuro, imagen a `object-contain` (se ve entera, sin recortar), cierre con el botón, con un clic
+fuera de la imagen o con Escape.
+
+**Bug real encontrado al probarlo en un Chromium con pantalla táctil (no con curl, aquí no sirve):**
+el botón de cerrar quedaba **tapado** por el contenedor de la imagen. Ambos son hijos directos del
+mismo `fixed inset-0` sin `z-index`, así que el orden en el DOM decidía qué se pinta encima — y el
+contenedor de la imagen, que viene después, ganaba. El clic en la esquina donde debía estar la "X"
+en realidad caía sobre la imagen. Arreglado dándole `z-10` al botón de cerrar.
+
+Verificado con Playwright (viewport móvil, táctil): la miniatura abre el visor, la imagen ocupa la
+pantalla completa, el botón de cerrar funciona, Escape también. Datos de prueba limpiados.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
