@@ -8,6 +8,7 @@ import {
   Shirt,
   Wallet,
   Coins,
+  Sparkles,
   HardDrive,
 } from "lucide-react";
 import { getSesion } from "@/lib/auth";
@@ -29,6 +30,7 @@ const SECCIONES_MIEMBRO = [
   { href: "/admin/camisetas", texto: "Camisetas", Icono: Shirt },
   { href: "/admin/pagos", texto: "Pagos", Icono: Wallet },
   { href: "/admin/tareas", texto: "Tareas", Icono: ListChecks },
+  { href: "/admin/limpieza", texto: "Limpieza", Icono: Sparkles },
   { href: "/admin/compras", texto: "Lista de la compra", Icono: ShoppingCart },
   { href: "/admin/deudas", texto: "Deudas", Icono: Coins },
 ];

@@ -725,6 +725,47 @@ que ver con la aplicación.
 
 ---
 
+## 7unvicies. Limpieza: reparto del 22 al 31 de agosto sorteado a dados
+
+Página nueva `/admin/limpieza`, visible para cualquier miembro; el sorteo solo lo lanza la
+directiva. Del 22 al 30 limpian 2 personas al día y el 31 —**limpieza y desmontaje**— van 3: 21
+turnos en total.
+
+**El reparto justo, que era la pregunta de fondo.** Con 9 miembros, 21 turnos no se reparten
+enteros (21 / 9 = 2,33). Lo más equilibrado posible es: **todos limpian 2 días**, y los 3 turnos
+que sobran caen exactamente en el desmontaje. Así nadie pasa de 2 salvo donde no queda otra, que
+es justo lo que pidió el señor.
+
+Eso NO se consigue repartiendo cupos a mano, sino con una sola regla:
+**nadie puede llevar más de un turno por encima de quien menos lleva**. El sorteo se equilibra él
+solo, y sigue funcionando si la peña crece o mengua (con 12 miembros sale 1-2 turnos por cabeza;
+con 6, 3-4). Además, quien va rezagado entra con prioridad natural en el desmontaje, porque los
+que ya van servidos no pueden subir mientras quede alguien por debajo.
+
+**Por qué un dado de 10 caras y no dos de seis.** Con dos dados sumados el resultado NO es
+uniforme: el 7 sale seis veces más que el 2, así que quien tuviera los números centrales limpiaría
+muchísimo más. Se usa un solo dado con más caras que miembros (con 9 → d10), y el número que no es
+de nadie obliga a repetir la tirada, que es literalmente lo que pidió el señor.
+
+**El sorteo corre en el servidor**, no en el navegador: es el reparto oficial de la peña, no puede
+depender de la máquina de quien pulsa ni repetirse hasta que salga algo que convenga. Lo que se
+devuelve al cliente es el **guion completo de tiradas, incluidas las descartadas**, para que la
+animación enseñe lo que pasó de verdad y no una recreación inventada.
+
+En `/perfil`, cada uno ve sus días y cuál es **el próximo** (los ya pasados salen tachados). "Hoy"
+se calcula en hora de Madrid por lo de siempre: el servidor va en UTC y si no, el día cambiaría
+antes de tiempo.
+
+**Validación antes de escribir la app**: se prototipó el algoritmo y se simuló **20.000 sorteos con
+9 miembros** → 0 repartos inválidos, 0 bloqueos, y desviación máxima del **1,7%** entre miembros a
+la hora de cargar con el tercer turno (ruido estadístico normal). Repetido para N = 3, 5, 6, 9, 10,
+12 y 15 sin un solo fallo, y con error controlado por debajo de 3 miembros. Después, probado de
+extremo a extremo en navegador con 9 miembros reales (2 de la peña + 7 desechables, borrados
+luego): la animación corre, el reparto guardado cumple las 21 plazas, nadie repite día, y salen 6
+personas con 2 turnos y 3 con 3 —las del desmontaje—. Datos de prueba eliminados.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

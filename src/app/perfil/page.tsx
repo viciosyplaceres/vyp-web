@@ -16,7 +16,11 @@ import MisPendientes, {
 } from "@/components/MisPendientes";
 import MiGaleria, { type MiFoto } from "@/components/MiGaleria";
 import MiMusica, { type MiPista } from "@/components/MiMusica";
-import MiResumenPena, { type DeudaResumen } from "@/components/MiResumenPena";
+import MiResumenPena, {
+  type DeudaResumen,
+  type TurnoLimpieza,
+} from "@/components/MiResumenPena";
+import { diasLimpieza } from "@/lib/limpieza";
 
 export const dynamic = "force-dynamic";
 
@@ -50,6 +54,7 @@ export default async function PerfilPage() {
     miPago,
     misDeudas,
     indice,
+    misLimpiezas,
   ] = sesion.esMiembro
       ? await Promise.all([
           supabase
@@ -101,8 +106,14 @@ export default async function PerfilPage() {
             .or(`deudor_id.eq.${sesion.userId},acreedor_id.eq.${sesion.userId}`)
             .order("pagada", { ascending: true }),
           indiceMiembros(),
+          supabase
+            .from("limpieza_turnos")
+            .select("fecha")
+            .eq("perfil_id", sesion.userId)
+            .eq("anio", anio)
+            .order("fecha", { ascending: true }),
         ])
-      : [null, null, null, null, null, null, null, null, null, null];
+      : [null, null, null, null, null, null, null, null, null, null, null];
 
   const tareasSinEncargados = aplanarRelacion<Omit<MiTarea, "asignados">>(
     misTareas?.data,
@@ -158,6 +169,19 @@ export default async function PerfilPage() {
     asignados: encargadosPorCompra.get(c.id) ?? [],
   }));
 
+  // "Hoy" en hora de aquí, para decidir qué turnos ya pasaron sin que la
+  // zona del servidor (UTC en Vercel) adelante o atrase el día.
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+  const desmontajePorFecha = new Map(
+    diasLimpieza(anio).map((d) => [d.fecha, d.desmontaje]),
+  );
+  const turnosLimpieza: TurnoLimpieza[] = (misLimpiezas?.data ?? []).map((t) => ({
+    fecha: t.fecha,
+    dia: Number(t.fecha.slice(8, 10)),
+    desmontaje: desmontajePorFecha.get(t.fecha) ?? false,
+    pasado: t.fecha < hoy,
+  }));
+
   const deudasResumen: DeudaResumen[] = (misDeudas?.data ?? []).map((d) => {
     const loDeboYo = d.deudor_id === sesion.userId;
     const otroId = loDeboYo ? d.acreedor_id : d.deudor_id;
@@ -208,6 +232,7 @@ export default async function PerfilPage() {
                 tallas={miPedido?.data?.tallas ?? []}
                 pagado={miPago?.data?.pagado ?? false}
                 deudas={deudasResumen}
+                limpieza={turnosLimpieza}
               />
             </section>
 

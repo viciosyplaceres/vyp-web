@@ -78,3 +78,17 @@ input[type="range"]::-moz-range-thumb {
     transform: translateX(-50%);
   }
 }
+
+/* El dado del sorteo de la limpieza: cada tirada entra dando un cuarto de
+   vuelta y creciendo, para que se note que ha rodado de verdad y no que
+   simplemente ha cambiado el número. */
+@keyframes girar {
+  from {
+    transform: rotate(-90deg) scale(0.6);
+    opacity: 0.4;
+  }
+  to {
+    transform: rotate(0deg) scale(1);
+    opacity: 1;
+  }
+}

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { Shirt, Wallet, Coins, ArrowRight } from "lucide-react";
+import { Shirt, Wallet, Coins, Sparkles, Wrench, ArrowRight } from "lucide-react";
 import Avatar from "./Avatar";
 
 export type DeudaResumen = {
@@ -20,17 +20,29 @@ export type DeudaResumen = {
  * Es solo lectura a propósito. Marcar un pago es de la directiva y apuntar
  * deudas también; aquí se enseña para no tener que ir preguntando.
  */
+export type TurnoLimpieza = {
+  fecha: string;
+  dia: number;
+  desmontaje: boolean;
+  /** Si ya pasó, para no anunciarlo como "el próximo". */
+  pasado: boolean;
+};
+
 export default function MiResumenPena({
   anio,
   tallas,
   pagado,
   deudas,
+  limpieza,
 }: {
   anio: number;
   tallas: string[];
   pagado: boolean;
   deudas: DeudaResumen[];
+  /** Los días que te toca limpiar, en orden. */
+  limpieza: TurnoLimpieza[];
 }) {
+  const proximaLimpieza = limpieza.find((t) => !t.pasado) ?? null;
   const debo = deudas.filter((d) => !d.pagada && d.loDeboYo);
   const meDeben = deudas.filter((d) => !d.pagada && !d.loDeboYo);
 
@@ -84,6 +96,54 @@ export default function MiResumenPena({
             )}
           </p>
         </div>
+      </div>
+
+      {/* Limpieza */}
+      <div>
+        <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/40">
+          <Sparkles size={14} aria-hidden="true" />
+          Limpieza
+        </p>
+
+        {limpieza.length === 0 ? (
+          <p className="mt-2 text-sm text-white/50">
+            Todavía no se ha sorteado el reparto de la limpieza.
+          </p>
+        ) : (
+          <>
+            <p className="mt-2 text-sm text-white/70">
+              {proximaLimpieza ? (
+                <>
+                  Te toca el{" "}
+                  <span className="font-semibold tabular-nums text-white">
+                    {proximaLimpieza.dia} de agosto
+                  </span>
+                  {proximaLimpieza.desmontaje && " (y desmontaje)"}
+                </>
+              ) : (
+                "Ya has hecho todos tus turnos."
+              )}
+            </p>
+
+            <ul className="mt-2 flex flex-wrap gap-2">
+              {limpieza.map((t) => (
+                <li
+                  key={t.fecha}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm tabular-nums ${
+                    t.pasado
+                      ? "border-white/10 text-white/30 line-through"
+                      : t.fecha === proximaLimpieza?.fecha
+                        ? "border-white bg-white text-black"
+                        : "border-white/25 text-white/70"
+                  }`}
+                >
+                  {t.desmontaje && <Wrench size={12} aria-hidden="true" />}
+                  {t.dia} de agosto
+                </li>
+              ))}
+            </ul>
+          </>
+        )}
       </div>
 
       {/* Deudas */}
