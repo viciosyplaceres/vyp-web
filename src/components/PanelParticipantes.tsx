@@ -1,214 +1,178 @@
 "use client";
 
-import { useActionState, useEffect, useRef, useTransition } from "react";
-import { Check, Trash2, Plus } from "lucide-react";
-import {
-  crearParticipante,
-  alternarPago,
-  borrarParticipante,
-} from "@/app/actions/gestion";
+import { useRouter } from "next/navigation";
+import { useState, useTransition } from "react";
+import { Check, Loader2 } from "lucide-react";
+import { guardarParticipante, type DatosParticipante } from "@/app/actions/gestion";
 
-export type Participante = {
-  id: string;
-  nombre: string;
+export type FichaParticipante = {
+  perfilId: string;
+  nombre: string | null;
+  talla: string | null;
   pagado: boolean;
   importe: number | null;
-  talla_camiseta: string | null;
-  notas: string | null;
-  anio: number;
 };
 
+const PRIMER_ANIO = 2026;
+const ULTIMO_ANIO = 2040;
 const ANIOS = Array.from(
-  { length: new Date().getFullYear() - 2010 + 1 },
-  (_, i) => new Date().getFullYear() - i,
+  { length: ULTIMO_ANIO - PRIMER_ANIO + 1 },
+  (_, i) => PRIMER_ANIO + i,
 );
 
-export default function PanelParticipantes({
-  participantes,
+/**
+ * Una fila por miembro aprobado, no una lista que hay que rellenar a mano.
+ * Cada cambio (talla, pago, importe) se guarda solo, con upsert sobre
+ * (perfil_id, año) — no hace falta "crear" ni "borrar" a nadie.
+ */
+function FilaParticipante({
+  anio,
+  ficha,
 }: {
-  participantes: Participante[];
+  anio: number;
+  ficha: FichaParticipante;
 }) {
-  const [estado, accion, pendiente] = useActionState(crearParticipante, null);
-  const [, startTransition] = useTransition();
-  const formRef = useRef<HTMLFormElement>(null);
+  const [talla, setTalla] = useState(ficha.talla ?? "");
+  const [pagado, setPagado] = useState(ficha.pagado);
+  const [importe, setImporte] = useState(
+    ficha.importe != null ? String(ficha.importe) : "",
+  );
+  const [pendiente, startTransition] = useTransition();
 
-  useEffect(() => {
-    if (estado && !estado.error) formRef.current?.reset();
-  }, [estado]);
-
-  const pagados = participantes.filter((p) => p.pagado).length;
-  const recaudado = participantes
-    .filter((p) => p.pagado)
-    .reduce((suma, p) => suma + Number(p.importe ?? 0), 0);
-
-  // Agrupado por año: las fiestas son anuales, y así no se mezclan listas.
-  const porAnio = new Map<number, Participante[]>();
-  for (const p of participantes) {
-    const lista = porAnio.get(p.anio) ?? [];
-    lista.push(p);
-    porAnio.set(p.anio, lista);
+  function guardar(datos: Partial<DatosParticipante>) {
+    const siguiente: DatosParticipante = {
+      talla: datos.talla !== undefined ? datos.talla : talla || null,
+      pagado: datos.pagado !== undefined ? datos.pagado : pagado,
+      importe:
+        datos.importe !== undefined
+          ? datos.importe
+          : importe
+            ? Number(importe)
+            : null,
+    };
+    startTransition(() => {
+      void guardarParticipante(
+        ficha.perfilId,
+        anio,
+        siguiente,
+        ficha.nombre ?? "Un miembro",
+      );
+    });
   }
 
   return (
-    <div className="mt-8">
-      <h2 className="text-lg font-semibold">Participantes</h2>
-      {participantes.length > 0 && (
-        <p className="mt-1 text-sm text-white/50">
-          {pagados} de {participantes.length} han pagado
-          {recaudado > 0 && ` · ${recaudado.toFixed(2)} € recaudados`}
-        </p>
-      )}
-
-      <form
-        ref={formRef}
-        action={accion}
-        className="mt-4 space-y-2 rounded-xl border border-white/15 p-4"
+    <li className="flex flex-wrap items-center gap-3 rounded-lg border border-white/10 px-3 py-2.5">
+      <button
+        type="button"
+        aria-label={
+          pagado
+            ? `Marcar a ${ficha.nombre} como no pagado`
+            : `Marcar a ${ficha.nombre} como pagado`
+        }
+        aria-pressed={pagado}
+        onClick={() => {
+          const nuevo = !pagado;
+          setPagado(nuevo);
+          guardar({ pagado: nuevo });
+        }}
+        className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors duration-200 ${
+          pagado
+            ? "border-white bg-white text-black"
+            : "border-white/30 text-transparent hover:border-white/60"
+        }`}
       >
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="flex-1">
-            <label htmlFor="nombreP" className="sr-only">
-              Nombre
-            </label>
-            <input
-              id="nombreP"
-              name="nombre"
-              required
-              placeholder="Nombre"
-              className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
-            />
-          </div>
-          <div className="w-full sm:w-28">
-            <label htmlFor="anioP" className="sr-only">
-              Año
-            </label>
-            <select
-              id="anioP"
-              name="anio"
-              defaultValue={ANIOS[0]}
-              className="min-h-[48px] w-full cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
-            >
-              {ANIOS.map((a) => (
-                <option key={a} value={a} className="bg-black">
-                  {a}
-                </option>
-              ))}
-            </select>
-          </div>
-        </div>
+        <Check size={18} aria-hidden="true" />
+      </button>
 
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="flex-1">
-            <label htmlFor="tallaP" className="sr-only">
-              Talla de camiseta
-            </label>
-            <input
-              id="tallaP"
-              name="talla"
-              placeholder="Talla (S, M, L…)"
-              className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
-            />
-          </div>
-          <div className="flex-1">
-            <label htmlFor="importeP" className="sr-only">
-              Importe en euros
-            </label>
-            <input
-              id="importeP"
-              name="importe"
-              type="number"
-              step="0.01"
-              min="0"
-              inputMode="decimal"
-              placeholder="Importe (€)"
-              className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
-            />
-          </div>
-        </div>
+      <p className="min-w-0 flex-1 basis-32 truncate font-medium">
+        {ficha.nombre ?? "Miembro"}
+      </p>
 
-        {estado?.error && (
-          <p role="alert" className="text-sm text-red-400">
-            {estado.error}
-          </p>
+      <input
+        value={talla}
+        onChange={(e) => setTalla(e.target.value)}
+        onBlur={() => guardar({ talla: talla || null })}
+        placeholder="Talla"
+        className="min-h-[40px] w-20 rounded-lg border border-white/20 bg-white/5 px-2 text-center text-sm outline-none focus:border-white"
+      />
+
+      <div className="flex items-center gap-1">
+        <input
+          value={importe}
+          onChange={(e) => setImporte(e.target.value)}
+          onBlur={() =>
+            guardar({ importe: importe ? Number(importe) : null })
+          }
+          type="number"
+          step="0.01"
+          min="0"
+          inputMode="decimal"
+          placeholder="€"
+          className="min-h-[40px] w-20 rounded-lg border border-white/20 bg-white/5 px-2 text-center text-sm outline-none focus:border-white"
+        />
+        {pendiente && (
+          <Loader2 size={14} className="animate-spin text-white/30" aria-hidden="true" />
         )}
+      </div>
+    </li>
+  );
+}
 
-        <button
-          type="submit"
-          disabled={pendiente}
-          className="inline-flex min-h-[48px] w-full cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-5 font-medium text-black transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
-        >
-          <Plus size={18} aria-hidden="true" />
-          {pendiente ? "Añadiendo…" : "Añadir participante"}
-        </button>
-      </form>
+export default function PanelParticipantes({
+  anio,
+  fichas,
+}: {
+  anio: number;
+  fichas: FichaParticipante[];
+}) {
+  const router = useRouter();
 
-      {[...porAnio.entries()].map(([anio, lista]) => (
-        <section key={anio} className="mt-8">
-          <h3 className="mb-3 text-sm uppercase tracking-wider text-white/40 tabular-nums">
-            {anio}
-          </h3>
-          <ul className="space-y-2">
-            {lista.map((p) => (
-              <li
-                key={p.id}
-                className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2.5"
-              >
-                <button
-                  type="button"
-                  aria-label={
-                    p.pagado
-                      ? `Marcar a ${p.nombre} como no pagado`
-                      : `Marcar a ${p.nombre} como pagado`
-                  }
-                  aria-pressed={p.pagado}
-                  onClick={() =>
-                    startTransition(() => {
-                      void alternarPago(p.id, !p.pagado);
-                    })
-                  }
-                  className={`flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full border transition-colors duration-200 ${
-                    p.pagado
-                      ? "border-white bg-white text-black"
-                      : "border-white/30 text-transparent hover:border-white/60"
-                  }`}
-                >
-                  <Check size={18} aria-hidden="true" />
-                </button>
+  const pagados = fichas.filter((f) => f.pagado).length;
+  const recaudado = fichas
+    .filter((f) => f.pagado)
+    .reduce((suma, f) => suma + Number(f.importe ?? 0), 0);
 
-                <div className="min-w-0 flex-1">
-                  <p className="truncate font-medium">{p.nombre}</p>
-                  <p className="truncate text-xs text-white/50">
-                    {[
-                      p.pagado ? "Pagado" : "Pendiente",
-                      p.talla_camiseta && `Talla ${p.talla_camiseta}`,
-                      p.importe != null && `${Number(p.importe).toFixed(2)} €`,
-                    ]
-                      .filter(Boolean)
-                      .join(" · ")}
-                  </p>
-                </div>
+  return (
+    <div className="mt-6">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <div>
+          <h2 className="text-lg font-semibold">Participantes</h2>
+          {fichas.length > 0 && (
+            <p className="text-sm text-white/50">
+              {pagados} de {fichas.length} han pagado
+              {recaudado > 0 && ` · ${recaudado.toFixed(2)} € recaudados`}
+            </p>
+          )}
+        </div>
 
-                <button
-                  type="button"
-                  aria-label={`Borrar a ${p.nombre}`}
-                  onClick={() =>
-                    startTransition(() => {
-                      void borrarParticipante(p.id);
-                    })
-                  }
-                  className="flex h-11 w-11 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/30 transition-colors duration-200 hover:text-red-400"
-                >
-                  <Trash2 size={16} aria-hidden="true" />
-                </button>
-              </li>
+        <label className="flex items-center gap-2 text-sm text-white/70">
+          Año
+          <select
+            value={anio}
+            onChange={(e) =>
+              router.push(`/admin/participantes?anio=${e.target.value}`)
+            }
+            className="min-h-[44px] cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
+          >
+            {ANIOS.map((a) => (
+              <option key={a} value={a} className="bg-black">
+                {a}
+              </option>
             ))}
-          </ul>
-        </section>
-      ))}
+          </select>
+        </label>
+      </div>
 
-      {participantes.length === 0 && (
+      {fichas.length === 0 ? (
         <p className="mt-6 text-sm text-white/40">
-          Todavía no hay participantes apuntados.
+          Todavía no hay miembros aprobados.
         </p>
+      ) : (
+        <ul className="mt-4 space-y-2">
+          {fichas.map((f) => (
+            <FilaParticipante key={f.perfilId} anio={anio} ficha={f} />
+          ))}
+        </ul>
       )}
     </div>
   );

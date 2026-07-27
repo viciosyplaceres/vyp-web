@@ -1,10 +1,8 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { ShoppingCart, Users, ListChecks } from "lucide-react";
-import { createClient } from "@/lib/supabase/server";
+import { ShoppingCart, Users, ListChecks, UserRound, Coins } from "lucide-react";
 import { getSesion } from "@/lib/auth";
-import PanelParticipantes from "@/components/PanelParticipantes";
 
 export const dynamic = "force-dynamic";
 
@@ -12,6 +10,14 @@ export const metadata: Metadata = {
   title: "Gestión",
   robots: { index: false, follow: false },
 };
+
+const SECCIONES = [
+  { href: "/admin/participantes", texto: "Participantes", Icono: UserRound },
+  { href: "/admin/deudas", texto: "Deudas", Icono: Coins },
+  { href: "/admin/tareas", texto: "Tareas", Icono: ListChecks },
+  { href: "/admin/compras", texto: "Lista de la compra", Icono: ShoppingCart },
+  { href: "/admin/miembros", texto: "Miembros", Icono: Users },
+];
 
 export default async function AdminPage() {
   const sesion = await getSesion();
@@ -27,43 +33,24 @@ export default async function AdminPage() {
     );
   }
 
-  const supabase = await createClient();
-  const { data: participantes } = await supabase
-    .from("participantes")
-    .select("id, nombre, pagado, importe, talla_camiseta, notas, anio")
-    .order("anio", { ascending: false })
-    .order("nombre", { ascending: true });
-
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-3xl">
         <h1 className="text-2xl font-semibold sm:text-3xl">Gestión</h1>
 
-        <div className="mt-4 flex flex-wrap gap-2">
-          <Link
-            href="/admin/tareas"
-            className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/25 px-4 text-sm transition-colors duration-200 hover:bg-white/10"
-          >
-            <ListChecks size={16} aria-hidden="true" />
-            Tareas
-          </Link>
-          <Link
-            href="/admin/compras"
-            className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/25 px-4 text-sm transition-colors duration-200 hover:bg-white/10"
-          >
-            <ShoppingCart size={16} aria-hidden="true" />
-            Lista de la compra
-          </Link>
-          <Link
-            href="/admin/miembros"
-            className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/25 px-4 text-sm transition-colors duration-200 hover:bg-white/10"
-          >
-            <Users size={16} aria-hidden="true" />
-            Miembros
-          </Link>
-        </div>
-
-        <PanelParticipantes participantes={participantes ?? []} />
+        <ul className="mt-6 grid gap-2 sm:grid-cols-2">
+          {SECCIONES.map(({ href, texto, Icono }) => (
+            <li key={href}>
+              <Link
+                href={href}
+                className="flex min-h-[56px] cursor-pointer items-center gap-3 rounded-lg border border-white/15 px-4 transition-colors duration-200 hover:bg-white/5"
+              >
+                <Icono size={18} className="text-white/60" aria-hidden="true" />
+                {texto}
+              </Link>
+            </li>
+          ))}
+        </ul>
       </div>
     </main>
   );

@@ -33,7 +33,7 @@ Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran
 | `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar. **Miembros**: botón "Subir música" arriba de la página |
 | `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp |
 | `/perfil` | Con sesión | Avatar y nombre de usuario, mis tareas, mi compra, mis fotos, mi música, ajustes y cerrar sesión |
-| `/admin` · `/admin/tareas` · `/admin/compras` · `/admin/miembros` | **Directiva** | Tareas de agosto con calendario, pagos y tallas, lista de la compra, aprobar altas |
+| `/admin` · `/admin/participantes` · `/admin/deudas` · `/admin/tareas` · `/admin/compras` · `/admin/miembros` | **Directiva** | Talla y pago por miembro y año (2026–2040), quién le debe dinero a quién (incluida "VYP"), tareas de agosto con calendario, lista de la compra, aprobar altas |
 
 ## Arquitectura
 

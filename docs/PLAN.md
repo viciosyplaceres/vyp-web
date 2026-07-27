@@ -124,8 +124,10 @@ pistas            id, titulo, artista, tipo ('sesion'|'cancion'), anio,
                   origen ('r2'|'mixcloud'|'soundcloud'), url, embed_url,
                   duracion_s, subido_por, created_at
 comentarios       id, media_id (nullable), pista_id (nullable), autor_id, texto, created_at
-participantes     id, nombre, pagado, importe, talla_camiseta, notas, anio
+participantes     id, perfil_id (único junto a anio), talla_camiseta, pagado, importe, anio
 lista_compra      id, item, cantidad, comprado, anio, notas
+deudas            id, deudor_id, acreedor_id (NULL en cualquiera de los dos = "VYP"),
+                  cantidad, descripcion, pagada, creado_por, created_at
 mensajes          id, autor_id, texto, created_at            (chat interno, solo miembros)
 tareas            id, titulo, descripcion, fecha, hecha, hecha_por, hecha_en,
                   documento_url, documento_nombre, creado_por, created_at
@@ -256,6 +258,40 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 > endpoint interno que responde con `X-Frame-Options: SAMEORIGIN`, así que el navegador bloquea
 > el iframe en cualquier dominio que no sea `google.com` — el recuadro se quedaba en blanco para
 > todo el mundo. Verificado con cabeceras HTTP reales antes y después del cambio.
+
+---
+
+## 9-pre-bis. Participantes por año y Deudas (2026-07-27)
+
+### Participantes (`/admin/participantes`)
+
+Antes había que dar de alta a cada participante a mano, con un nombre libre. Ahora **la lista sale
+sola**: son todos los miembros aprobados, y `participantes` pasa de ser una ficha manual a ser
+"la talla y el pago de este miembro en este año concreto" — una fila por `(perfil_id, año)`, con un
+índice único que lo garantiza.
+
+- Selector de año de **2026 a 2040** arriba de la página (`?anio=` en la URL).
+- Cada miembro es una fila con casilla de pagado, talla y un importe opcional. Cualquier cambio se
+  guarda solo, con un `upsert` sobre `(perfil_id, anio)` — no hay botón "guardar" ni que crear o
+  borrar a nadie.
+- Sigue siendo **solo para la directiva**, como ya lo era.
+
+### Deudas (`/admin/deudas`)
+
+Sección nueva: quién le debe dinero a quién, con **dos desplegables** (quién debe → a quién) sobre
+los miembros aprobados, más una opción extra en ambos: **"VYP (la peña)"**, para cuando la deuda es
+con la propia peña y no con una persona. Se guarda como `NULL` en la columna correspondiente.
+
+Dos comprobaciones en la propia base de datos, no solo en el formulario (probadas insertando
+directo contra la API):
+- Deudor y acreedor no pueden ser los dos "VYP" a la vez (no tendría sentido).
+- Nadie puede deberse dinero a sí mismo.
+
+Solo directiva, igual que `participantes`.
+
+> Nota: el señor pidió el nombre "puas" para esta sección; se ha titulado **"Deudas"** por claridad
+> (no es una palabra reconocida en español para este uso). Si prefiere otro nombre, es un cambio de
+> una palabra.
 
 ---
 
