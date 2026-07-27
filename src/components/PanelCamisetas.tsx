@@ -16,6 +16,7 @@ import { subirImagenFirmada, comprimirImagen } from "@/lib/subir-cloudinary";
 export type DisenoCamiseta = {
   id: string;
   titulo: string | null;
+  notas: string | null;
   url: string;
   subidoPor: string | null;
   subidoPorNombre: string | null;
@@ -52,6 +53,7 @@ export default function PanelCamisetas({
   const [subiendo, setSubiendo] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [titulo, setTitulo] = useState("");
+  const [notas, setNotas] = useState("");
   const inputRef = useRef<HTMLInputElement>(null);
   // Qué diseño se está viendo a pantalla completa (null = cerrado).
   const [verGrande, setVerGrande] = useState<DisenoCamiseta | null>(null);
@@ -80,11 +82,13 @@ export default function PanelCamisetas({
       await registrarCamiseta({
         anio,
         titulo: titulo.trim() || null,
+        notas: notas.trim() || null,
         url: subida.url,
         storageId: subida.storageId,
         bytes: subida.bytes,
       });
       setTitulo("");
+      setNotas("");
     } catch (err) {
       setError(err instanceof Error ? err.message : "No se pudo subir el diseño.");
     } finally {
@@ -139,8 +143,22 @@ export default function PanelCamisetas({
             onChange={(e) => setTitulo(e.target.value)}
             maxLength={120}
             placeholder="La del año pasado pero en negro"
-            className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
+            className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base text-white outline-none focus:border-white"
           />
+
+          <label htmlFor="notasCamiseta" className="text-sm text-white/70">
+            Notas (opcional)
+          </label>
+          <textarea
+            id="notasCamiseta"
+            value={notas}
+            onChange={(e) => setNotas(e.target.value)}
+            maxLength={500}
+            rows={3}
+            placeholder="Detalles para que se entienda bien la propuesta: tela, colores, dónde va el logo…"
+            className="w-full resize-none rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-base text-white outline-none focus:border-white"
+          />
+
           <button
             type="button"
             onClick={() => inputRef.current?.click()}
@@ -206,7 +224,10 @@ export default function PanelCamisetas({
 
                   <div className="space-y-2 p-2.5">
                     {d.titulo && (
-                      <p className="truncate text-sm font-medium">{d.titulo}</p>
+                      <p className="truncate text-sm font-medium text-white">{d.titulo}</p>
+                    )}
+                    {d.notas && (
+                      <p className="whitespace-pre-wrap text-xs text-white">{d.notas}</p>
                     )}
                     <div className="flex items-center gap-1.5">
                       <Avatar

@@ -12,6 +12,7 @@ import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
 export async function registrarCamiseta(datos: {
   anio: number;
   titulo: string | null;
+  notas: string | null;
   url: string;
   storageId: string;
   bytes: number | null;
@@ -28,6 +29,7 @@ export async function registrarCamiseta(datos: {
   const { error } = await supabase.from("camisetas").insert({
     anio: datos.anio,
     titulo: datos.titulo?.trim() || null,
+    notas: datos.notas?.trim() || null,
     url: datos.url,
     storage_id: datos.storageId,
     bytes: datos.bytes,

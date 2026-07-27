@@ -39,7 +39,7 @@ export default async function CamisetasPage() {
     await Promise.all([
       supabase
         .from("camisetas")
-        .select("id, titulo, url, subido_por")
+        .select("id, titulo, notas, url, subido_por")
         .eq("anio", anio)
         .order("created_at", { ascending: false }),
       supabase
@@ -66,6 +66,7 @@ export default async function CamisetasPage() {
     return {
       id: c.id,
       titulo: c.titulo,
+      notas: c.notas,
       url: c.url,
       subidoPor: c.subido_por,
       subidoPorNombre: autor?.nombre ?? null,
