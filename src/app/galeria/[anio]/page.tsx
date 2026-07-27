@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import PanelSubirGaleria from "@/components/PanelSubirGaleria";
+import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -31,7 +32,7 @@ export default async function AnioPage({ params }: Props) {
   const sesion = await getSesion();
   const { data: media } = await supabase
     .from("media")
-    .select("id, tipo, url, thumb_url, descripcion")
+    .select("id, tipo, url, thumb_url, descripcion, autores(nombre, avatar_url)")
     .eq("anio", anioNum)
     .order("created_at", { ascending: false });
 
@@ -63,28 +64,42 @@ export default async function AnioPage({ params }: Props) {
           </p>
         ) : (
           <ul className="mt-6 grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2 lg:grid-cols-5">
-            {media.map((m) => (
-              <li key={m.id}>
-                <Link
-                  href={`/galeria/${anioNum}/${m.id}`}
-                  className="group relative block aspect-square cursor-pointer overflow-hidden rounded-md bg-white/5"
-                >
-                  <Image
-                    src={m.thumb_url || m.url}
-                    alt={m.descripcion || `Fiestas de ${anioNum}`}
-                    fill
-                    sizes="(max-width: 640px) 33vw, 20vw"
-                    className="object-cover transition-opacity duration-200 group-hover:opacity-80"
-                  />
-                  {m.tipo === "video" && (
-                    <span className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70">
-                      <Play size={12} className="ml-0.5" aria-hidden="true" />
-                      <span className="sr-only">Vídeo</span>
+            {media.map((m) => {
+              type RelAutor = { nombre: string | null; avatar_url: string | null };
+              const rel = m.autores as unknown as RelAutor | RelAutor[] | null;
+              const autor = Array.isArray(rel) ? rel[0] : rel;
+
+              return (
+                <li key={m.id}>
+                  <Link
+                    href={`/galeria/${anioNum}/${m.id}`}
+                    className="group relative block aspect-square cursor-pointer overflow-hidden rounded-md bg-white/5"
+                  >
+                    <Image
+                      src={m.thumb_url || m.url}
+                      alt={m.descripcion || `Fiestas de ${anioNum}`}
+                      fill
+                      sizes="(max-width: 640px) 33vw, 20vw"
+                      className="object-cover transition-opacity duration-200 group-hover:opacity-80"
+                    />
+                    <span className="absolute bottom-1.5 left-1.5">
+                      <Avatar
+                        nombre={autor?.nombre ?? null}
+                        avatarUrl={autor?.avatar_url ?? null}
+                        tamano={22}
+                        className="border-black/60"
+                      />
                     </span>
-                  )}
-                </Link>
-              </li>
-            ))}
+                    {m.tipo === "video" && (
+                      <span className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70">
+                        <Play size={12} className="ml-0.5" aria-hidden="true" />
+                        <span className="sr-only">Vídeo</span>
+                      </span>
+                    )}
+                  </Link>
+                </li>
+              );
+            })}
           </ul>
         )}
       </div>

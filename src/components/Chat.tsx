@@ -4,6 +4,7 @@ import { useEffect, useOptimistic, useRef, useState, useTransition } from "react
 import { Send } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { enviarMensaje } from "@/app/actions/chat";
+import Avatar from "./Avatar";
 import AvisosPush from "./AvisosPush";
 
 export type Mensaje = {
@@ -12,7 +13,10 @@ export type Mensaje = {
   created_at: string;
   autor_id: string;
   autor: string | null;
+  avatarUrl: string | null;
 };
+
+export type InfoAutor = { nombre: string | null; avatarUrl: string | null };
 
 function hora(iso: string) {
   const f = new Date(iso);
@@ -47,11 +51,11 @@ function diaLegible(iso: string) {
 export default function Chat({
   inicial,
   userId,
-  nombres,
+  autores,
 }: {
   inicial: Mensaje[];
   userId: string;
-  nombres: Record<string, string | null>;
+  autores: Record<string, InfoAutor>;
 }) {
   const [mensajes, setMensajes] = useState<Mensaje[]>(inicial);
   const [texto, setTexto] = useState("");
@@ -63,12 +67,12 @@ export default function Chat({
     (estado, nuevo: Mensaje) => [...estado, nuevo],
   );
 
-  // El índice de nombres cambia de identidad en cada render del servidor. Si
+  // El índice de autores cambia de identidad en cada render del servidor. Si
   // fuera dependencia del efecto, el canal se cerraría y reabriría sin parar.
-  const nombresRef = useRef(nombres);
+  const autoresRef = useRef(autores);
   useEffect(() => {
-    nombresRef.current = nombres;
-  }, [nombres]);
+    autoresRef.current = autores;
+  }, [autores]);
 
   // Escucha en vivo: los mensajes de los demás aparecen sin recargar.
   useEffect(() => {
@@ -100,20 +104,21 @@ export default function Chat({
             // se descarta en vez de pintar una burbuja rota.
             if (!m?.id || !m.created_at) return;
 
-            setMensajes((prev) =>
-              prev.some((x) => x.id === m.id)
-                ? prev
-                : [
-                    ...prev,
-                    {
-                      id: m.id!,
-                      texto: m.texto ?? "",
-                      created_at: m.created_at!,
-                      autor_id: m.autor_id ?? "",
-                      autor: nombresRef.current[m.autor_id ?? ""] ?? null,
-                    },
-                  ],
-            );
+            setMensajes((prev) => {
+              if (prev.some((x) => x.id === m.id)) return prev;
+              const info = autoresRef.current[m.autor_id ?? ""];
+              return [
+                ...prev,
+                {
+                  id: m.id!,
+                  texto: m.texto ?? "",
+                  created_at: m.created_at!,
+                  autor_id: m.autor_id ?? "",
+                  autor: info?.nombre ?? null,
+                  avatarUrl: info?.avatarUrl ?? null,
+                },
+              ];
+            });
           },
         )
         .subscribe();
@@ -143,6 +148,7 @@ export default function Chat({
         created_at: new Date().toISOString(),
         autor_id: userId,
         autor: null,
+        avatarUrl: null,
       });
 
       // Se añade la fila devuelta por el servidor en vez de esperar al canal
@@ -186,8 +192,18 @@ export default function Chat({
                 </p>
               )}
               <div
-                className={`flex ${mio ? "justify-end" : "justify-start"}`}
+                className={`flex items-end gap-2 ${mio ? "justify-end" : "justify-start"}`}
               >
+                {/* Como en WhatsApp: el avatar solo se ve en los mensajes de
+                    los demás, nunca en los propios. */}
+                {!mio && (
+                  <Avatar
+                    nombre={m.autor}
+                    avatarUrl={m.avatarUrl}
+                    tamano={28}
+                    className="mb-0.5"
+                  />
+                )}
                 <div
                   className={`max-w-[80%] rounded-2xl px-3.5 py-2 ${
                     mio

@@ -2,7 +2,7 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
-import Chat, { type Mensaje } from "@/components/Chat";
+import Chat, { type Mensaje, type InfoAutor } from "@/components/Chat";
 
 export const dynamic = "force-dynamic";
 
@@ -53,30 +53,34 @@ export default async function ChatPage() {
 
   const { data: filas } = await supabase
     .from("mensajes")
-    .select("id, texto, created_at, autor_id, autores(nombre)")
+    .select("id, texto, created_at, autor_id, autores(nombre, avatar_url)")
     .order("created_at", { ascending: true })
     .limit(200);
 
+  type RelAutor = { nombre: string | null; avatar_url: string | null };
+
   const mensajes: Mensaje[] = (filas ?? []).map((m) => {
-    const rel = m.autores as unknown as
-      | { nombre: string | null }
-      | { nombre: string | null }[]
-      | null;
-    const autor = Array.isArray(rel) ? rel[0]?.nombre : rel?.nombre;
+    const rel = m.autores as unknown as RelAutor | RelAutor[] | null;
+    const info = Array.isArray(rel) ? rel[0] : rel;
     return {
       id: m.id,
       texto: m.texto,
       created_at: m.created_at,
       autor_id: m.autor_id,
-      autor: autor ?? null,
+      autor: info?.nombre ?? null,
+      avatarUrl: info?.avatar_url ?? null,
     };
   });
 
-  // Índice de nombres para poder etiquetar los mensajes que llegan en vivo,
+  // Índice de autores para poder etiquetar los mensajes que llegan en vivo,
   // que solo traen el autor_id.
-  const { data: autores } = await supabase.from("autores").select("id, nombre");
-  const nombres: Record<string, string | null> = {};
-  for (const a of autores ?? []) nombres[a.id] = a.nombre;
+  const { data: todosAutores } = await supabase
+    .from("autores")
+    .select("id, nombre, avatar_url");
+  const autores: Record<string, InfoAutor> = {};
+  for (const a of todosAutores ?? []) {
+    autores[a.id] = { nombre: a.nombre, avatarUrl: a.avatar_url };
+  }
 
   return (
     <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 sm:px-6">
@@ -87,7 +91,7 @@ export default async function ChatPage() {
         </p>
       </div>
 
-      <Chat inicial={mensajes} userId={sesion.userId} nombres={nombres} />
+      <Chat inicial={mensajes} userId={sesion.userId} autores={autores} />
     </main>
   );
 }

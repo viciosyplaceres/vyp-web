@@ -6,6 +6,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import Comentarios, { type Comentario } from "@/components/Comentarios";
+import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
 
@@ -25,30 +26,34 @@ export default async function DetalleMediaPage({ params }: Props) {
 
   const { data: media } = await supabase
     .from("media")
-    .select("id, tipo, anio, url, ancho, alto, descripcion, created_at")
+    .select(
+      "id, tipo, anio, url, ancho, alto, descripcion, created_at, autores(nombre, avatar_url)",
+    )
     .eq("id", id)
     .maybeSingle();
 
   if (!media) notFound();
 
+  type RelAutor = { nombre: string | null; avatar_url: string | null };
+  const relSubidoPor = media.autores as unknown as RelAutor | RelAutor[] | null;
+  const subidoPor = Array.isArray(relSubidoPor) ? relSubidoPor[0] : relSubidoPor;
+
   const { data: filas } = await supabase
     .from("comentarios")
-    .select("id, texto, created_at, autor_id, autores(nombre)")
+    .select("id, texto, created_at, autor_id, autores(nombre, avatar_url)")
     .eq("media_id", id)
     .order("created_at", { ascending: true });
 
   const comentarios: Comentario[] = (filas ?? []).map((c) => {
     // La relación viene como objeto o array según la inferencia de PostgREST.
-    const rel = c.autores as unknown as
-      | { nombre: string | null }
-      | { nombre: string | null }[]
-      | null;
-    const autor = Array.isArray(rel) ? rel[0]?.nombre : rel?.nombre;
+    const rel = c.autores as unknown as RelAutor | RelAutor[] | null;
+    const info = Array.isArray(rel) ? rel[0] : rel;
     return {
       id: c.id,
       texto: c.texto,
       created_at: c.created_at,
-      autor: autor ?? null,
+      autor: info?.nombre ?? null,
+      avatarUrl: info?.avatar_url ?? null,
     };
   });
 
@@ -83,6 +88,20 @@ export default async function DetalleMediaPage({ params }: Props) {
               priority
             />
           )}
+        </div>
+
+        <div className="mt-3 flex items-center gap-2">
+          <Avatar
+            nombre={subidoPor?.nombre ?? null}
+            avatarUrl={subidoPor?.avatar_url ?? null}
+            tamano={28}
+          />
+          <p className="text-sm text-white/60">
+            Subido por{" "}
+            <span className="font-medium text-white">
+              {subidoPor?.nombre ?? "un miembro"}
+            </span>
+          </p>
         </div>
 
         {media.descripcion && (

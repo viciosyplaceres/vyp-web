@@ -3,6 +3,7 @@
 import { ExternalLink, Pause, Play } from "lucide-react";
 import { useReproductor, type PistaReproducible } from "./ReproductorProvider";
 import type { PistaListada } from "./ListaMusica";
+import Avatar from "./Avatar";
 
 /**
  * Versión reducida de la lista de música para la portada: solo título,
@@ -75,6 +76,12 @@ export default function MusicaCompacta({
                   .join(" · ")}
               </p>
             </div>
+
+            <Avatar
+              nombre={p.subidoPorNombre}
+              avatarUrl={p.subidoPorAvatar}
+              tamano={24}
+            />
           </li>
         );
       })}

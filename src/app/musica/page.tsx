@@ -19,9 +19,20 @@ export default async function MusicaPage() {
   const { data: pistas } = await supabase
     .from("pistas")
     .select(
-      "id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s",
+      "id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s, autores(nombre, avatar_url)",
     )
     .order("created_at", { ascending: false });
+
+  type RelAutor = { nombre: string | null; avatar_url: string | null };
+  const conAutor: PistaListada[] = (pistas ?? []).map((p) => {
+    const rel = p.autores as unknown as RelAutor | RelAutor[] | null;
+    const autor = Array.isArray(rel) ? rel[0] : rel;
+    return {
+      ...p,
+      subidoPorNombre: autor?.nombre ?? null,
+      subidoPorAvatar: autor?.avatar_url ?? null,
+    } as PistaListada;
+  });
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
@@ -34,7 +45,7 @@ export default async function MusicaPage() {
 
         {sesion?.esMiembro && <PanelSubirMusica />}
 
-        <ListaMusica pistas={(pistas ?? []) as PistaListada[]} />
+        <ListaMusica pistas={conAutor} />
       </div>
     </main>
   );

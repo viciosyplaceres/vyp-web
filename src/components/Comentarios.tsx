@@ -3,12 +3,14 @@
 import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { comentarMedia } from "@/app/actions/comentarios";
+import Avatar from "./Avatar";
 
 export type Comentario = {
   id: string;
   texto: string;
   created_at: string;
   autor: string | null;
+  avatarUrl: string | null;
 };
 
 function fecha(iso: string) {
@@ -94,14 +96,17 @@ export default function Comentarios({
           <li className="text-sm text-white/40">Sin comentarios todavía.</li>
         )}
         {comentarios.map((c) => (
-          <li key={c.id} className="border-l-2 border-white/15 pl-3">
-            <p className="text-sm">
-              <span className="font-medium">{c.autor ?? "Miembro"}</span>{" "}
-              <span className="text-xs text-white/40">{fecha(c.created_at)}</span>
-            </p>
-            <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-white/80">
-              {c.texto}
-            </p>
+          <li key={c.id} className="flex gap-2.5">
+            <Avatar nombre={c.autor} avatarUrl={c.avatarUrl} tamano={32} />
+            <div className="min-w-0 flex-1 border-l-2 border-white/15 pl-3">
+              <p className="text-sm">
+                <span className="font-medium">{c.autor ?? "Miembro"}</span>{" "}
+                <span className="text-xs text-white/40">{fecha(c.created_at)}</span>
+              </p>
+              <p className="mt-0.5 whitespace-pre-wrap break-words text-sm text-white/80">
+                {c.texto}
+              </p>
+            </div>
           </li>
         ))}
       </ul>

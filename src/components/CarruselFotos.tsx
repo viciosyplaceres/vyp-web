@@ -1,6 +1,7 @@
 import Image from "next/image";
 import Link from "next/link";
 import { Play } from "lucide-react";
+import Avatar from "./Avatar";
 
 export type FotoCarrusel = {
   id: string;
@@ -9,6 +10,8 @@ export type FotoCarrusel = {
   url: string;
   thumb_url: string | null;
   descripcion: string | null;
+  autorNombre: string | null;
+  autorAvatar: string | null;
 };
 
 /**
@@ -44,6 +47,13 @@ export default function CarruselFotos({ fotos }: { fotos: FotoCarrusel[] }) {
                 sizes="144px"
                 className="object-cover transition-opacity duration-200 group-hover:opacity-80"
               />
+              <span className="absolute bottom-1.5 left-1.5">
+                <Avatar
+                  nombre={f.autorNombre}
+                  avatarUrl={f.autorAvatar}
+                  tamano={20}
+                />
+              </span>
               {f.tipo === "video" && (
                 <span className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70">
                   <Play size={12} className="ml-0.5" aria-hidden="true" />

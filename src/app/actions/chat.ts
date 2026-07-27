@@ -10,6 +10,7 @@ export type MensajeCreado = {
   created_at: string;
   autor_id: string;
   autor: string | null;
+  avatarUrl: string | null;
 };
 
 /**
@@ -51,7 +52,7 @@ export async function enviarMensaje(
     // silencioso a propósito
   }
 
-  return { ...data, autor: sesion.nombre };
+  return { ...data, autor: sesion.nombre, avatarUrl: sesion.avatarUrl };
 }
 
 export async function borrarMensaje(id: string) {

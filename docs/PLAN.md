@@ -262,6 +262,29 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 
 ---
 
+## 9-pre-quinquies. Nombre y avatar de quien sube cada cosa (2026-07-27)
+
+Todo lo que sube un miembro queda firmado con su nombre y su foto, en el mismo sitio en toda la
+web: avatar a la izquierda del nombre, usando el componente `Avatar.tsx` ya existente (foto si la
+tiene, iniciales sobre fondo gris si no).
+
+- **Galería**: la cuadrícula de cada año lleva una insignia con el avatar en la esquina de cada
+  miniatura; la página de detalle dice "Subido por [avatar] Nombre" antes de la descripción; el
+  carrusel de la portada lleva la misma insignia en miniatura.
+- **Música**: cada pista de `/musica` y de la portada lleva el avatar de quien la subió (o pegó el
+  enlace de Mixcloud/SoundCloud) al final de la fila.
+- **Comentarios**: el avatar aparece junto al nombre que ya se mostraba.
+- **Chat, al estilo WhatsApp**: avatar a la izquierda de los mensajes de los demás (nunca en los
+  propios, igual que hace WhatsApp), con el nombre encima del texto dentro de la propia burbuja.
+
+Todo sale de la relación `media.subido_por` / `pistas.subido_por` / `comentarios.autor_id` /
+`mensajes.autor_id` hacia la vista `autores` (que ya traía `avatar_url` desde que se añadió el
+perfil con foto). Verificado insertando contenido de prueba real: aparece el avatar correcto en
+cuadrícula, detalle, portada, música y chat — incluido un mensaje de un miembro sin foto todavía,
+que muestra sus iniciales.
+
+---
+
 ## 9-pre-quater. Año de gestión activo (2026-07-27)
 
 Antes había que elegir el año cada vez que se entraba a Tareas o a Participantes. Ahora la

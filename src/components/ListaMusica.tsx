@@ -3,6 +3,7 @@
 import { Play, Pause, ExternalLink } from "lucide-react";
 import { useReproductor, type PistaReproducible } from "./ReproductorProvider";
 import { formatearDuracion } from "@/lib/embeds";
+import Avatar from "./Avatar";
 
 export type PistaListada = {
   id: string;
@@ -14,6 +15,8 @@ export type PistaListada = {
   url: string;
   embed_url: string | null;
   duracion_s: number | null;
+  subidoPorNombre: string | null;
+  subidoPorAvatar: string | null;
 };
 
 export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
@@ -91,6 +94,12 @@ export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
                     .join(" · ")}
                 </p>
               </div>
+
+              <Avatar
+                nombre={p.subidoPorNombre}
+                avatarUrl={p.subidoPorAvatar}
+                tamano={28}
+              />
             </li>
           );
         }
@@ -114,6 +123,12 @@ export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
                     .join(" · ")}
                 </p>
               </div>
+              <Avatar
+                nombre={p.subidoPorNombre}
+                avatarUrl={p.subidoPorAvatar}
+                tamano={28}
+              />
+
               <a
                 href={p.url}
                 target="_blank"

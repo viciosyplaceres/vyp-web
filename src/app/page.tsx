@@ -38,12 +38,16 @@ export default async function Home() {
     await Promise.all([
       supabase
         .from("media")
-        .select("id, anio, tipo, url, thumb_url, descripcion")
+        .select(
+          "id, anio, tipo, url, thumb_url, descripcion, autores(nombre, avatar_url)",
+        )
         .order("created_at", { ascending: false })
         .limit(10),
       supabase
         .from("pistas")
-        .select("id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s")
+        .select(
+          "id, titulo, artista, tipo, anio, origen, url, embed_url, duracion_s, autores(nombre, avatar_url)",
+        )
         .order("created_at", { ascending: false })
         .limit(5),
       supabase.from("media").select("anio"),
@@ -142,7 +146,18 @@ export default async function Home() {
 
           {/* Sin el max-w del contenedor: la cinta puede sangrar hasta el borde. */}
           <div className="px-4 sm:px-6">
-            <CarruselFotos fotos={ultimasFotos as FotoCarrusel[]} />
+            <CarruselFotos
+              fotos={ultimasFotos.map((f) => {
+                type RelAutor = { nombre: string | null; avatar_url: string | null };
+                const rel = f.autores as unknown as RelAutor | RelAutor[] | null;
+                const autor = Array.isArray(rel) ? rel[0] : rel;
+                return {
+                  ...f,
+                  autorNombre: autor?.nombre ?? null,
+                  autorAvatar: autor?.avatar_url ?? null,
+                } as FotoCarrusel;
+              })}
+            />
           </div>
         </section>
       )}
@@ -162,7 +177,18 @@ export default async function Home() {
               </Link>
             </div>
 
-            <MusicaCompacta pistas={ultimasPistas as PistaListada[]} />
+            <MusicaCompacta
+              pistas={ultimasPistas.map((p) => {
+                type RelAutor = { nombre: string | null; avatar_url: string | null };
+                const rel = p.autores as unknown as RelAutor | RelAutor[] | null;
+                const autor = Array.isArray(rel) ? rel[0] : rel;
+                return {
+                  ...p,
+                  subidoPorNombre: autor?.nombre ?? null,
+                  subidoPorAvatar: autor?.avatar_url ?? null,
+                } as PistaListada;
+              })}
+            />
           </div>
         </section>
       )}
