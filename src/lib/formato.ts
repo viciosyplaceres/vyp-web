@@ -1,5 +1,27 @@
 /** Formateo compartido por toda la app: fechas y tamaños. */
 
+/**
+ * Toda hora se escribe en la hora de aquí, pase donde pase el render.
+ *
+ * Sin fijarla, `toLocaleTimeString` usa la zona de quien ejecuta: el servidor
+ * de Vercel va en UTC y el móvil de la peña en Europe/Madrid, así que el mismo
+ * mensaje salía como "19:22" en el HTML del servidor y como "21:22" al
+ * hidratar en el navegador. React lo detecta como un texto que no cuadra y
+ * revienta con el error #418, tira el HTML del servidor y vuelve a pintar
+ * entero en el cliente.
+ *
+ * Fijarla a Madrid arregla las dos cosas a la vez: servidor y navegador
+ * escriben lo mismo, y la hora que se ve es la de las fiestas —que es la única
+ * que le importa a nadie aquí— aunque alguien abra la web desde fuera.
+ */
+const ZONA = "Europe/Madrid";
+
+/** El día ("2026-07-27") de un instante, ya en hora de aquí. */
+function diaEnMadrid(f: Date): string {
+  // "en-CA" da el formato ISO (año-mes-día), que se puede comparar como texto.
+  return f.toLocaleDateString("en-CA", { timeZone: ZONA });
+}
+
 const MESES = [
   "enero",
   "febrero",
@@ -46,7 +68,11 @@ export function diaLegible(fecha: string | null | undefined): string | null {
 export function horaCorta(iso: string): string {
   const f = new Date(iso);
   if (Number.isNaN(f.getTime())) return "";
-  return f.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+  return f.toLocaleTimeString("es-ES", {
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: ZONA,
+  });
 }
 
 /**
@@ -60,21 +86,22 @@ export function horaCorta(iso: string): string {
 export function diaRelativo(iso: string): string {
   const f = new Date(iso);
   if (Number.isNaN(f.getTime())) return "";
-  const hoy = new Date();
-  const ayer = new Date();
-  ayer.setDate(hoy.getDate() - 1);
 
-  const mismoDia = (a: Date, b: Date) =>
-    a.getFullYear() === b.getFullYear() &&
-    a.getMonth() === b.getMonth() &&
-    a.getDate() === b.getDate();
+  const ahora = new Date();
+  const ayer = new Date(ahora.getTime() - 24 * 60 * 60 * 1000);
 
-  if (mismoDia(f, hoy)) return "Hoy";
-  if (mismoDia(f, ayer)) return "Ayer";
+  // Se comparan los días ya convertidos a hora de aquí, no los componentes
+  // de la fecha en bruto: si no, un mensaje de las 00:30 de Madrid (23:30 UTC
+  // del día anterior) contaba como de otro día distinto según quién mirase.
+  const dia = diaEnMadrid(f);
+  if (dia === diaEnMadrid(ahora)) return "Hoy";
+  if (dia === diaEnMadrid(ayer)) return "Ayer";
+
   return f.toLocaleDateString("es-ES", {
     day: "numeric",
     month: "long",
-    year: f.getFullYear() === hoy.getFullYear() ? undefined : "numeric",
+    year: dia.slice(0, 4) === diaEnMadrid(ahora).slice(0, 4) ? undefined : "numeric",
+    timeZone: ZONA,
   });
 }
 
@@ -83,4 +110,22 @@ export function formatearBytes(bytes: number | null | undefined): string {
   if (!bytes) return "tamaño desconocido";
   const mb = bytes / (1024 * 1024);
   return mb >= 1024 ? `${(mb / 1024).toFixed(2)} GB` : `${mb.toFixed(1)} MB`;
+}
+
+/**
+ * Día y hora cortos ("27 jul, 21:22"), para los comentarios de la galería.
+ * Con la zona fijada, por el mismo motivo que el resto: el comentario se pinta
+ * en el servidor y se hidrata en el navegador, y los dos tienen que escribir
+ * exactamente lo mismo.
+ */
+export function fechaCortaConHora(iso: string): string {
+  const f = new Date(iso);
+  if (Number.isNaN(f.getTime())) return "";
+  return f.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "short",
+    hour: "2-digit",
+    minute: "2-digit",
+    timeZone: ZONA,
+  });
 }

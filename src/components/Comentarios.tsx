@@ -4,6 +4,7 @@ import { useActionState, useEffect, useRef } from "react";
 import Link from "next/link";
 import { comentarMedia } from "@/app/actions/comentarios";
 import Avatar from "./Avatar";
+import { fechaCortaConHora as fecha } from "@/lib/formato";
 
 export type Comentario = {
   id: string;
@@ -12,15 +13,6 @@ export type Comentario = {
   autor: string | null;
   avatarUrl: string | null;
 };
-
-function fecha(iso: string) {
-  return new Date(iso).toLocaleDateString("es-ES", {
-    day: "numeric",
-    month: "short",
-    hour: "2-digit",
-    minute: "2-digit",
-  });
-}
 
 export default function Comentarios({
   mediaId,

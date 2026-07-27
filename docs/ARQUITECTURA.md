@@ -585,6 +585,39 @@ escritorio, tanto el botón como el clic siguen funcionando. Capturas de pantall
 
 ---
 
+## 7sexdecies. React #418: las horas se escribían en dos zonas horarias distintas
+
+El señor vio un `Minified React error #418` en el móvil. Es un desajuste de hidratación de **texto**:
+el HTML que manda el servidor y lo que el navegador calcula al hidratar no coinciden.
+
+**Causa, reproducida:** `horaCorta`, `diaRelativo` y la fecha de los comentarios usaban
+`toLocaleTimeString`/`toLocaleDateString` **sin fijar `timeZone`**, así que cada lado usaba la suya:
+Vercel corre en **UTC** y el móvil de la peña en **Europe/Madrid**. El mismo mensaje salía como
+`19:22` en el HTML del servidor y como `21:22` al hidratar → React tira el árbol servido y vuelve a
+pintar entero en el cliente.
+
+**Arreglo:** `timeZone: "Europe/Madrid"` fijado en `lib/formato.ts` (constante `ZONA`) para las tres
+funciones. Para "Hoy"/"Ayer" no basta con comparar los componentes de la fecha en bruto: se compara
+el día **ya convertido a hora de aquí** (`diaEnMadrid`, con locale `en-CA` porque da formato ISO
+comparable como texto). Si no, un mensaje de las 00:30 de Madrid —23:30 UTC del día anterior—
+contaba como de otro día según quién mirase. De paso, la hora que se ve es siempre la de las
+fiestas aunque alguien abra la web desde fuera de España.
+
+**Verificado de las dos maneras**, con un Chromium en `timezone_id="Europe/Madrid"` contra un
+servidor arrancado con `TZ=UTC` (el escenario exacto de Vercel): con el código anterior
+(`git stash`) el error #418 **se reproduce**; con el arreglo, cero errores de hidratación y las
+horas correctas en hora española. Repetido después contra producción con la sesión de un miembro
+normal.
+
+**Nota de proceso (fallo mío):** el "Email o contraseña incorrectos" que el señor veía con las
+cuentas de miembro NO era un fallo de la app — las cuentas estaban confirmadas, aprobadas y sin
+bloqueo. Era que en rondas anteriores probé el acceso de esos miembros **cambiándoles la contraseña
+real** y no había forma de restaurarla (no se conoce la original). Para probar sesiones ajenas hay
+que crear una cuenta desechable y borrarla al terminar, nunca tocar la de alguien que la está
+usando.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
