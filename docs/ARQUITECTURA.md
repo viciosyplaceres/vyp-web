@@ -245,6 +245,31 @@ fotos: ahí no existe un estado "pendiente", solo "subido".
 
 ---
 
+## 7quater. Previa de 9 + borrado propio en `/perfil`
+
+`/perfil` mostraba **todas** las fotos y **toda** la música de quien fuera, sin límite — de hecho
+la consulta de música ni siquiera tenía `.limit()`. Con años de fiestas subiendo contenido eso
+crecía sin tope y hacía la página cada vez más pesada (lo que el señor llamó "scroll infinito").
+
+- `app/perfil/page.tsx` ahora limita ambas consultas a `LIMITE_PREVIA = 9` y pide el total aparte
+  con `{ count: "exact", head: true }`; el enlace "Ver todas" solo aparece si hay más de 9.
+- `/perfil/galeria` y `/perfil/musica` (páginas nuevas) listan **todo** lo de esa persona sin
+  límite: es la vista explícita a la que se llega solo si se pide, no la que carga por defecto.
+- `components/MiGaleria.tsx` y `components/MiMusica.tsx` son los mismos listados pero con un botón
+  de borrar por elemento (`borrarMedia`/`borrarPista`, ya existentes). La política RLS de `media` y
+  `pistas` (`subido_por = auth.uid() or es_admin()`) es la que de verdad decide quién puede borrar
+  qué: cualquier miembro borra lo suyo, la directiva borra lo de cualquiera. El botón de la
+  interfaz nunca es la única barrera.
+- Igual que en la subida por lotes, `borrarMedia`/`borrarPista` revalidan `/perfil`,
+  `/perfil/galeria|musica` y `/` además de `/galeria`/`/musica`, para que el carrusel de la home no
+  se quede enseñando algo recién borrado.
+- Sigue pendiente lo de siempre (ver más abajo): esto borra la fila, no el archivo real en
+  Cloudinary/R2. Para borrar el archivo de verdad, la directiva usa `/admin/almacenamiento`
+  (`borrarMediaAdmin`/`borrarPistaAdmin`), que ya lista y permite borrar el contenido de **todos**
+  los perfiles, no solo el propio.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

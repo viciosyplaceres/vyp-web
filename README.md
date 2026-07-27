@@ -32,7 +32,8 @@ Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran
 | `/galeria` · `/galeria/[año]` · `/galeria/[año]/[id]` | Todos | Años, cuadrícula y detalle con comentarios. **Miembros**: botón "Subir" arriba de la página |
 | `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar. **Miembros**: botón "Subir música" arriba de la página |
 | `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp: responder citando, editar y eliminar los propios mensajes, reacciones con emoji, doble check azul de leído y burbuja de no leídos en tiempo real en el menú inferior. Sin subida de multimedia, a propósito, para no disparar el consumo de Cloudinary/R2 |
-| `/perfil` | Con sesión | Avatar y nombre de usuario, mis tareas, mi compra, mis fotos, mi música, ajustes y cerrar sesión. El avatar del header lleva una **burbuja en tiempo real** con el total de tareas y artículos de la compra que tienes pendientes |
+| `/perfil` | Con sesión | Avatar y nombre de usuario, mis tareas, mi compra, mis fotos, mi música, ajustes y cerrar sesión. El avatar del header lleva una **burbuja en tiempo real** con el total de tareas y artículos de la compra que tienes pendientes. La galería y la música muestran solo las **últimas 9** con un botón "Ver todas" (evita que la página crezca sin límite), y cada foto/pista propia se puede **borrar** desde ahí |
+| `/perfil/galeria` · `/perfil/musica` | Con sesión (miembro) | Todo lo que ha subido esa persona, sin límite, cada cosa con su botón de borrar |
 | `/admin` · `/admin/participantes` · `/admin/deudas` · `/admin/tareas` · `/admin/compras` · `/admin/miembros` · `/admin/almacenamiento` | **Directiva** | Talla y pago por miembro y año (2026–2040), quién le debe dinero a quién (incluida "VYP"), tareas de agosto con calendario, lista de la compra, aprobar altas, uso real de Cloudinary/R2 con borrado para hacer sitio |
 
 ## Arquitectura

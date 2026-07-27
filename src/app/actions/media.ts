@@ -91,4 +91,7 @@ export async function borrarMedia(id: string, anio: number) {
 
   revalidatePath("/galeria");
   revalidatePath(`/galeria/${anio}`);
+  revalidatePath("/perfil");
+  revalidatePath("/perfil/galeria");
+  revalidatePath("/");
 }

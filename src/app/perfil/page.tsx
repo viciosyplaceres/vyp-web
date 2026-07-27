@@ -1,8 +1,7 @@
-import Image from "next/image";
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { LogOut, Play, Music } from "lucide-react";
+import { ArrowRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import { cerrarSesion } from "@/app/actions/auth";
@@ -12,8 +11,15 @@ import MisPendientes, {
   type MiTarea,
   type MiCompra,
 } from "@/components/MisPendientes";
+import MiGaleria, { type MiFoto } from "@/components/MiGaleria";
+import MiMusica, { type MiPista } from "@/components/MiMusica";
 
 export const dynamic = "force-dynamic";
+
+// Solo se enseña un puñado de lo más reciente: listar TODO lo que alguien ha
+// subido en años de peña haría crecer la página sin límite (era justo el
+// problema a evitar). El resto se ve en "Ver todas".
+const LIMITE_PREVIA = 9;
 
 export const metadata: Metadata = {
   title: "Mi perfil",
@@ -28,31 +34,41 @@ export default async function PerfilPage() {
 
   // Quien todavía no está aprobado no tiene nada asignado ni ha subido nada,
   // así que se le ahorran las consultas.
-  const [misFotos, misPistas, misTareas, misCompras] = sesion.esMiembro
-    ? await Promise.all([
-        supabase
-          .from("media")
-          .select("id, anio, tipo, url, thumb_url, descripcion")
-          .eq("subido_por", sesion.userId)
-          .order("created_at", { ascending: false })
-          .limit(12),
-        supabase
-          .from("pistas")
-          .select("id, titulo, artista, tipo, origen")
-          .eq("subido_por", sesion.userId)
-          .order("created_at", { ascending: false }),
-        supabase
-          .from("tareas_miembros")
-          .select(
-            "tareas(id, titulo, descripcion, fecha, hecha, documento_url, documento_nombre)",
-          )
-          .eq("perfil_id", sesion.userId),
-        supabase
-          .from("compra_miembros")
-          .select("lista_compra(id, item, cantidad, comprado, anio)")
-          .eq("perfil_id", sesion.userId),
-      ])
-    : [null, null, null, null];
+  const [misFotos, totalFotos, misPistas, totalPistas, misTareas, misCompras] =
+    sesion.esMiembro
+      ? await Promise.all([
+          supabase
+            .from("media")
+            .select("id, anio, tipo, url, thumb_url, descripcion")
+            .eq("subido_por", sesion.userId)
+            .order("created_at", { ascending: false })
+            .limit(LIMITE_PREVIA),
+          supabase
+            .from("media")
+            .select("id", { count: "exact", head: true })
+            .eq("subido_por", sesion.userId),
+          supabase
+            .from("pistas")
+            .select("id, titulo, artista, tipo, origen")
+            .eq("subido_por", sesion.userId)
+            .order("created_at", { ascending: false })
+            .limit(LIMITE_PREVIA),
+          supabase
+            .from("pistas")
+            .select("id", { count: "exact", head: true })
+            .eq("subido_por", sesion.userId),
+          supabase
+            .from("tareas_miembros")
+            .select(
+              "tareas(id, titulo, descripcion, fecha, hecha, documento_url, documento_nombre)",
+            )
+            .eq("perfil_id", sesion.userId),
+          supabase
+            .from("compra_miembros")
+            .select("lista_compra(id, item, cantidad, comprado, anio)")
+            .eq("perfil_id", sesion.userId),
+        ])
+      : [null, null, null, null, null, null];
 
   function aplanar<T>(filas: unknown[] | null | undefined, campo: string): T[] {
     return (filas ?? [])
@@ -94,69 +110,35 @@ export default async function PerfilPage() {
             </section>
 
             <section className="border-t border-white/10 pt-8">
-              <h2 className="text-lg font-semibold">Mis fotos y vídeos</h2>
-              {!misFotos?.data?.length ? (
-                <p className="mt-2 text-sm text-white/40">
-                  Todavía no has subido nada a la galería.
-                </p>
-              ) : (
-                <ul className="mt-3 grid grid-cols-3 gap-1.5 sm:grid-cols-4 sm:gap-2">
-                  {misFotos.data.map((m) => (
-                    <li key={m.id}>
-                      <Link
-                        href={`/galeria/${m.anio}/${m.id}`}
-                        className="group relative block aspect-square cursor-pointer overflow-hidden rounded-md bg-white/5"
-                      >
-                        <Image
-                          src={m.thumb_url || m.url}
-                          alt={m.descripcion || `Foto de ${m.anio}`}
-                          fill
-                          sizes="(max-width: 640px) 33vw, 25vw"
-                          className="object-cover transition-opacity duration-200 group-hover:opacity-80"
-                        />
-                        {m.tipo === "video" && (
-                          <span className="absolute bottom-1.5 right-1.5 flex h-6 w-6 items-center justify-center rounded-full bg-black/70">
-                            <Play size={12} className="ml-0.5" aria-hidden="true" />
-                            <span className="sr-only">Vídeo</span>
-                          </span>
-                        )}
-                      </Link>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="text-lg font-semibold">Mis fotos y vídeos</h2>
+                {(totalFotos?.count ?? 0) > LIMITE_PREVIA && (
+                  <Link
+                    href="/perfil/galeria"
+                    className="inline-flex shrink-0 cursor-pointer items-center gap-1 text-sm text-white/50 transition-colors duration-200 hover:text-white"
+                  >
+                    Ver todas
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+              <MiGaleria fotos={(misFotos?.data ?? []) as MiFoto[]} />
             </section>
 
             <section className="border-t border-white/10 pt-8">
-              <h2 className="text-lg font-semibold">Mi música</h2>
-              {!misPistas?.data?.length ? (
-                <p className="mt-2 text-sm text-white/40">
-                  Todavía no has subido música.
-                </p>
-              ) : (
-                <ul className="mt-3 space-y-2">
-                  {misPistas.data.map((p) => (
-                    <li
-                      key={p.id}
-                      className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2.5"
-                    >
-                      <Music
-                        size={16}
-                        className="shrink-0 text-white/40"
-                        aria-hidden="true"
-                      />
-                      <div className="min-w-0 flex-1">
-                        <p className="truncate text-sm font-medium">{p.titulo}</p>
-                        <p className="truncate text-xs text-white/50">
-                          {[p.artista, p.tipo === "sesion" ? "Sesión" : "Canción"]
-                            .filter(Boolean)
-                            .join(" · ")}
-                        </p>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              )}
+              <div className="flex items-baseline justify-between gap-4">
+                <h2 className="text-lg font-semibold">Mi música</h2>
+                {(totalPistas?.count ?? 0) > LIMITE_PREVIA && (
+                  <Link
+                    href="/perfil/musica"
+                    className="inline-flex shrink-0 cursor-pointer items-center gap-1 text-sm text-white/50 transition-colors duration-200 hover:text-white"
+                  >
+                    Ver todas
+                    <ArrowRight size={14} aria-hidden="true" />
+                  </Link>
+                )}
+              </div>
+              <MiMusica pistas={(misPistas?.data ?? []) as MiPista[]} />
               <Link
                 href="/musica"
                 className="mt-3 inline-block cursor-pointer text-sm text-white/50 underline hover:text-white"

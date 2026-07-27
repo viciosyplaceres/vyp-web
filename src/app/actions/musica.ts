@@ -113,4 +113,7 @@ export async function borrarPista(id: string) {
   const { error } = await supabase.from("pistas").delete().eq("id", id);
   if (error) throw new Error(error.message);
   revalidatePath("/musica");
+  revalidatePath("/perfil");
+  revalidatePath("/perfil/musica");
+  revalidatePath("/");
 }
