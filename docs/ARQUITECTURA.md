@@ -618,6 +618,34 @@ usando.
 
 ---
 
+## 7septdecies. Registro sin correo de confirmación
+
+El señor no quería que Supabase mandara un email de "confirma tu cuenta" en cada registro: la
+directiva ya hace de filtro real aprobando a mano en `/admin/miembros`, así que pedir además
+confirmar el correo era un segundo cerrojo redundante — el mismo motivo por el que
+`aprobarMiembro()` ya confirmaba el email al aprobar (7septies).
+
+Causa raíz, en el proyecto de Supabase (no en el código): `mailer_autoconfirm = false` en la
+configuración de Auth. Con eso activo, cada `signUp()` deja la cuenta con `email_confirmed_at` en
+blanco y dispara el correo de confirmación por defecto de Supabase (el mismo mailer lento y
+limitado de siempre, sin SMTP propio).
+
+**Arreglo**: `mailer_autoconfirm = true` vía la Management API del proyecto. Con esto,
+`supabase.auth.signUp()` confirma la cuenta al instante y **no manda ningún correo** — la persona
+queda con sesión iniciada de inmediato, igual que si hubiera hecho login, solo que con
+`aprobado = false` hasta que la directiva la apruebe. De paso se quitó de
+`registro/gracias/page.tsx` la frase "revisa tu correo para confirmar la cuenta", que ya no aplica.
+
+Con esto activo, el parche de `aprobarMiembro()` de la ronda 7septies queda como defensa de
+respaldo (por si alguien cambia esta opción sin saberlo), no como el único camino.
+
+Verificado con un registro real de extremo a extremo con una cuenta desechable en Mailinator: el
+`signUp` devuelve `access_token` y `email_confirmed_at` relleno en la misma respuesta, sin ningún
+correo de por medio; el perfil se crea con `aprobado = false`, tal cual debe quedar hasta que se
+apruebe a mano. Cuenta de prueba borrada después.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

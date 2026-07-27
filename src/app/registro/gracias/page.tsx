@@ -6,10 +6,9 @@ export default function GraciasRegistroPage() {
       <div className="max-w-sm space-y-4">
         <h1 className="text-2xl font-semibold">Cuenta creada</h1>
         <p className="text-white/70">
-          Revisa tu correo para confirmar la cuenta. Después, un miembro de la
-          directiva debe aprobarte antes de que puedas subir contenido o
-          comentar — mientras tanto puedes ver toda la galería y escuchar toda
-          la música.
+          Un miembro de la directiva debe aprobarte antes de que puedas subir
+          contenido, comentar o entrar en el chat — mientras tanto puedes ver
+          toda la galería y escuchar toda la música.
         </p>
         <Link href="/" className="underline">
           Volver al inicio
