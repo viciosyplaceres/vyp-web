@@ -53,15 +53,13 @@ export default async function Header() {
               >
                 Miembros
               </Link>
+              <Link
+                href="/admin"
+                className="cursor-pointer text-white/60 transition-colors duration-200 hover:text-white"
+              >
+                Gestión
+              </Link>
             </>
-          )}
-          {sesion?.esAdmin && (
-            <Link
-              href="/admin"
-              className="cursor-pointer text-white/60 transition-colors duration-200 hover:text-white"
-            >
-              Gestión
-            </Link>
           )}
         </nav>
 

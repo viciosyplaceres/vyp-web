@@ -2,56 +2,12 @@
 
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { exigirAdmin } from "@/lib/auth";
+import { exigirAdmin, exigirMiembro } from "@/lib/auth";
 import { avisarAdmins } from "@/lib/push";
 
-// ---------- Participantes (quién ha pagado, tallas, por año) ----------
-//
-// Ya no se "crean" participantes a mano: la lista sale sola de los miembros
-// aprobados. Cada fila de `participantes` es la ficha de un miembro en un año
-// concreto (talla + pago), y se guarda con upsert sobre (perfil_id, anio).
-
-export type DatosParticipante = {
-  talla: string | null;
-  pagado: boolean;
-  importe: number | null;
-};
-
-export async function guardarParticipante(
-  perfilId: string,
-  anio: number,
-  datos: DatosParticipante,
-  nombreMiembro: string,
-) {
-  const sesion = await exigirAdmin();
-  const supabase = await createClient();
-
-  const { error } = await supabase.from("participantes").upsert(
-    {
-      perfil_id: perfilId,
-      anio,
-      talla_camiseta: datos.talla?.trim() || null,
-      pagado: datos.pagado,
-      importe: datos.importe,
-    },
-    { onConflict: "perfil_id,anio" },
-  );
-
-  if (error) throw new Error(error.message);
-  revalidatePath("/admin/participantes");
-
-  if (datos.pagado) {
-    await avisarAdmins(
-      {
-        titulo: "Pago recibido",
-        cuerpo: `${nombreMiembro} figura como pagado en ${anio}.`,
-        url: "/admin/participantes",
-        tag: "gestion",
-      },
-      sesion.userId,
-    );
-  }
-}
+// `participantes` (talla + pago + importe en una sola ficha) se retiró: se
+// partió en `Camisetas` y `Pagos`, que es como se usa de verdad. Sus acciones
+// vivían aquí y ya no existen; lo que las sustituye está en `actions/camisetas.ts`.
 
 // ---------- Deudas (quién le debe dinero a quién) ----------
 
@@ -69,6 +25,10 @@ export async function crearDeuda(
     const acreedorId = String(formData.get("acreedor") ?? "") || null;
     const cantidad = Number(formData.get("cantidad"));
     const descripcion = String(formData.get("descripcion") ?? "").trim();
+    // La foto del ticket ya está subida a Cloudinary cuando llega aquí: el
+    // formulario solo trae su URL y el identificador para poder borrarla.
+    const ticketUrl = String(formData.get("ticketUrl") ?? "").trim();
+    const ticketStorageId = String(formData.get("ticketStorageId") ?? "").trim();
 
     if (deudorId === null && acreedorId === null) {
       return { error: "Deudor y acreedor no pueden ser los dos VYP." };
@@ -86,6 +46,8 @@ export async function crearDeuda(
       acreedor_id: acreedorId,
       cantidad,
       descripcion: descripcion || null,
+      ticket_url: ticketUrl || null,
+      ticket_storage_id: ticketStorageId || null,
       creado_por: sesion.userId,
     });
 
@@ -129,6 +91,12 @@ export async function crearItemCompra(
     const item = String(formData.get("item") ?? "").trim();
     const anio = Number(formData.get("anio"));
     const cantidad = Number(formData.get("cantidad") || 1);
+    // Quién lo compra se elige ya al apuntarlo, sin tener que crear el
+    // artículo primero y repartirlo después en otro paso.
+    const asignados = String(formData.get("asignados") ?? "")
+      .split(",")
+      .map((x) => x.trim())
+      .filter(Boolean);
 
     if (!item) return { error: "Pon qué hay que comprar." };
     if (!Number.isInteger(anio) || anio < 2010 || anio > 2100) {
@@ -136,15 +104,28 @@ export async function crearItemCompra(
     }
 
     const supabase = await createClient();
-    const { error } = await supabase.from("lista_compra").insert({
-      item,
-      anio,
-      cantidad: Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 1,
-      comprado: false,
-    });
+    const { data: creado, error } = await supabase
+      .from("lista_compra")
+      .insert({
+        item,
+        anio,
+        cantidad: Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 1,
+        comprado: false,
+      })
+      .select("id")
+      .single();
 
     if (error) return { error: error.message };
+
+    if (creado && asignados.length) {
+      const { error: errorAsignar } = await supabase
+        .from("compra_miembros")
+        .insert(asignados.map((perfilId) => ({ item_id: creado.id, perfil_id: perfilId })));
+      if (errorAsignar) return { error: errorAsignar.message };
+    }
+
     revalidatePath("/admin/compras");
+    revalidatePath("/perfil");
 
     await avisarAdmins(
       {
@@ -162,8 +143,18 @@ export async function crearItemCompra(
   }
 }
 
+/**
+ * Marca un artículo como comprado (o lo desmarca).
+ *
+ * Pide ser miembro, NO admin: quien lo tiene asignado tiene que poder tacharlo
+ * desde su propio perfil. La política RLS de `lista_compra` ya dice
+ * exactamente eso (`es_admin() or compra_asignada(id)`), así que es la base de
+ * datos la que decide de verdad. Antes exigía admin y no cuadraba con su
+ * gemela `marcarTarea`: un miembro podía dar por hecha su tarea pero le
+ * saltaba "Solo la directiva puede hacer esto" al tachar su compra.
+ */
 export async function alternarComprado(id: string, comprado: boolean) {
-  const sesion = await exigirAdmin();
+  const sesion = await exigirMiembro();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lista_compra")

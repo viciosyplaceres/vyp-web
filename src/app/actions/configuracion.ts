@@ -39,7 +39,8 @@ export async function actualizarAnioActivo(anio: number) {
   // Todo lo que depende del año activo se refresca de golpe.
   revalidatePath("/admin");
   revalidatePath("/admin/tareas");
-  revalidatePath("/admin/participantes");
+  revalidatePath("/admin/camisetas");
+  revalidatePath("/admin/pagos");
   revalidatePath("/admin/compras");
   revalidatePath("/perfil");
 }

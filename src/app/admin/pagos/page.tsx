@@ -5,18 +5,19 @@ import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import { listarMiembros } from "@/lib/miembros";
-import PanelDeudas, { type DeudaListada } from "@/components/PanelDeudas";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
+import PanelPagos, { type PagoMiembro } from "@/components/PanelPagos";
 
 export const dynamic = "force-dynamic";
 
 export const metadata: Metadata = {
-  title: "Deudas",
+  title: "Pagos",
   robots: { index: false, follow: false },
 };
 
-export default async function DeudasPage() {
+export default async function PagosPage() {
   const sesion = await getSesion();
-  if (!sesion) redirect("/login?next=/admin/deudas");
+  if (!sesion) redirect("/login?next=/admin/pagos");
 
   if (!sesion.esMiembro) {
     return (
@@ -29,17 +30,26 @@ export default async function DeudasPage() {
   }
 
   const supabase = await createClient();
+  const anio = await obtenerAnioActivo();
 
-  const [{ data: deudas }, miembros] = await Promise.all([
-    supabase
-      .from("deudas")
-      .select(
-        "id, deudor_id, acreedor_id, cantidad, descripcion, pagada, created_at, ticket_url",
-      )
-      .order("pagada", { ascending: true })
-      .order("created_at", { ascending: false }),
+  const [{ data: pagos }, miembros] = await Promise.all([
+    supabase.from("pagos").select("perfil_id, pagado").eq("anio", anio),
     listarMiembros(),
   ]);
+
+  const pagadoPor = new Map<string, boolean>(
+    (pagos ?? []).map((p) => [p.perfil_id, p.pagado]),
+  );
+
+  // Salen todos los miembros aprobados, hayan pagado o no: la lista sirve
+  // justamente para ver quién falta.
+  const lista: PagoMiembro[] = miembros.map((m) => ({
+    id: m.id,
+    nombre: m.nombre,
+    usuario: m.usuario,
+    avatarUrl: m.avatarUrl,
+    pagado: pagadoPor.get(m.id) ?? false,
+  }));
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
@@ -52,16 +62,12 @@ export default async function DeudasPage() {
           Gestión
         </Link>
 
-        <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Deudas</h1>
-        <p className="mt-1 text-sm text-white/50">
-          Quién le debe dinero a quién, incluida la propia peña (VYP).
+        <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Pagos</h1>
+        <p className="mt-1 text-sm text-white/50 tabular-nums">
+          Cuota de las fiestas de {anio}
         </p>
 
-        <PanelDeudas
-          deudas={(deudas ?? []) as DeudaListada[]}
-          miembros={miembros}
-          esAdmin={sesion.esAdmin}
-        />
+        <PanelPagos anio={anio} miembros={lista} esAdmin={sesion.esAdmin} />
       </div>
     </main>
   );

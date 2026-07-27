@@ -419,6 +419,47 @@ borre cualquier caché vieja ya guardada en los móviles de la gente.
 
 ---
 
+## 7decies. Gestión abierta a la peña: camisetas, pagos y tickets (migración `0012`)
+
+Hasta ahora `Gestión` entera era de la directiva. Se abre a cualquier miembro aprobado, porque
+organizar las fiestas lo hace la peña; siguen siendo exclusivas las dos cosas que de verdad lo son:
+`/admin/miembros` (dar de alta y echar gente) y `/admin/almacenamiento` (borrar archivos).
+
+**Gotcha que habría roto todo al abrirla:** las pantallas de gestión leían la lista de gente con
+`from("perfiles")`, y la RLS de esa tabla es `id = auth.uid() or es_admin()`. Para un miembro
+normal eso devuelve **su propia fila y nada más**, así que repartir tareas o la compra se habría
+quedado sin nadie a quien asignar. Lo mismo con los joins anidados `perfiles(...)` de
+`tareas_miembros` y `compra_miembros`. Se centraliza en `lib/miembros.ts` (`listarMiembros`,
+`indiceMiembros`), que usa el cliente de servicio y expone solo nombre, usuario y avatar —nunca el
+rol ni la aprobación—, cacheado por petición.
+
+- **`participantes` se retira.** Mezclaba talla, pago e importe en una ficha. Se parte en lo que de
+  verdad son dos cosas: `pagos` (sí/no, sin importes) y `pedidos_camiseta` (cuántas quiere cada uno
+  y de qué talla). Las tallas van en un `text[]`, una posición por camiseta, así que la cantidad es
+  cuántas hay.
+- **Camisetas** (`camisetas` + `camisetas_votos`): cualquiera propone un diseño con foto y hay
+  **un voto por persona y año** —no por camiseta—, con la clave primaria `(perfil_id, anio)`
+  haciéndolo cumplir. Así "la más votada" cuadra siempre con cuánta gente hay, y cambiar de
+  opinión mueve el voto en vez de acumular.
+- **Deudas**: pasan de `for all` solo-admin a leerlas toda la peña y escribirlas solo la directiva,
+  y admiten foto del ticket (`ticket_url`).
+- El flujo de subida firmada a Cloudinary estaba copiado en el avatar y en la galería; con
+  camisetas y tickets iban a ser cuatro copias, así que vive en `lib/subir-cloudinary.ts`.
+
+**Fallo real encontrado de paso:** `alternarComprado` exigía ser admin, mientras su gemela
+`marcarTarea` solo exigía ser miembro. La RLS de `lista_compra` ya permitía
+`es_admin() or compra_asignada(id)`, así que un miembro podía dar por hecha su tarea desde el
+perfil pero al tachar su compra le saltaba "Solo la directiva puede hacer esto". Ahora pide ser
+miembro y decide la base de datos, como debía.
+
+**Verificado en producción con la sesión real de un miembro normal (Paco):** entra en gestión,
+camisetas, pagos, tareas, compra y deudas; se topa con "solo para la directiva" en miembros y
+almacenamiento; ve a los tres miembros en Pagos pero sin poder marcar la casilla; y contra la base
+de datos con su propio token, intentar marcarse el pago o tocar el pedido de otro devuelve
+`42501` (violación de RLS). Datos de prueba limpiados después.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

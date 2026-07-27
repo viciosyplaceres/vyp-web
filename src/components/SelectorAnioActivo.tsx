@@ -26,7 +26,7 @@ export default function SelectorAnioActivo({ anioActivo }: { anioActivo: number 
       <div className="min-w-0 flex-1">
         <p className="text-sm font-medium">Año de gestión</p>
         <p className="text-xs text-white/50">
-          Tareas y participantes se gestionan para este año por defecto.
+          Tareas, camisetas, pagos y compra se gestionan para este año.
         </p>
       </div>
       <select

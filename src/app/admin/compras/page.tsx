@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { listarMiembros, indiceMiembros } from "@/lib/miembros";
 import PanelCompras, { type ItemCompra } from "@/components/PanelCompras";
 import type { MiembroSimple } from "@/components/SelectorMiembros";
 import { obtenerAnioActivo } from "@/app/actions/configuracion";
@@ -19,11 +20,11 @@ export default async function ComprasPage() {
   const sesion = await getSesion();
   if (!sesion) redirect("/login?next=/admin/compras");
 
-  if (!sesion.esAdmin) {
+  if (!sesion.esMiembro) {
     return (
       <main className="flex flex-1 items-center justify-center px-4 py-16 text-center">
         <p className="max-w-sm text-white/60">
-          Esta zona es solo para la directiva de la peña.
+          Tu cuenta todavía está pendiente de que la directiva la apruebe.
         </p>
       </main>
     );
@@ -32,27 +33,23 @@ export default async function ComprasPage() {
   const supabase = await createClient();
   const anioActivo = await obtenerAnioActivo();
 
-  const [{ data: items }, { data: asignaciones }, { data: miembros }] =
+  const [{ data: items }, { data: asignaciones }, miembros, indice] =
     await Promise.all([
       supabase
         .from("lista_compra")
         .select("id, item, cantidad, comprado, anio, notas")
         .order("anio", { ascending: false })
         .order("comprado", { ascending: true }),
-      supabase
-        .from("compra_miembros")
-        .select("item_id, perfiles(id, nombre, usuario)"),
-      supabase
-        .from("perfiles")
-        .select("id, nombre, usuario")
-        .eq("aprobado", true)
-        .order("nombre", { ascending: true }),
+      // Solo los ids: el perfil se cruza contra el índice, porque un join
+      // anidado a `perfiles` devolvería vacío para quien no sea admin.
+      supabase.from("compra_miembros").select("item_id, perfil_id"),
+      listarMiembros(),
+      indiceMiembros(),
     ]);
 
   const porItem = new Map<string, MiembroSimple[]>();
   for (const a of asignaciones ?? []) {
-    const rel = a.perfiles as unknown as MiembroSimple | MiembroSimple[] | null;
-    const perfil = Array.isArray(rel) ? rel[0] : rel;
+    const perfil = indice.get(a.perfil_id);
     if (!perfil) continue;
     porItem.set(a.item_id, [...(porItem.get(a.item_id) ?? []), perfil]);
   }
@@ -79,7 +76,7 @@ export default async function ComprasPage() {
 
         <PanelCompras
           items={lista}
-          miembros={(miembros ?? []) as MiembroSimple[]}
+          miembros={miembros}
           anioActivo={anioActivo}
         />
       </div>

@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/gestion";
 import { asignarCompra } from "@/app/actions/tareas";
 import SelectorMiembros, { type MiembroSimple } from "./SelectorMiembros";
+import Avatar from "./Avatar";
 
 export type ItemCompra = {
   id: string;
@@ -33,7 +34,20 @@ export default function PanelCompras({
   miembros: MiembroSimple[];
   anioActivo: number;
 }) {
-  const [estado, accion, pendiente] = useActionState(crearItemCompra, null);
+  // A quién se le encarga la compra se elige ya al apuntarla. Antes había que
+  // crear el artículo y buscar después un icono discreto para repartirlo, y
+  // por eso parecía que no se podía asignar a nadie.
+  const [nuevosAsignados, setNuevosAsignados] = useState<string[]>([]);
+
+  const [estado, accion, pendiente] = useActionState(
+    async (prev: { error?: string } | null, formData: FormData) => {
+      formData.set("asignados", nuevosAsignados.join(","));
+      const resultado = await crearItemCompra(prev, formData);
+      if (resultado && !resultado.error) setNuevosAsignados([]);
+      return resultado;
+    },
+    null,
+  );
   const [, startTransition] = useTransition();
   const formRef = useRef<HTMLFormElement>(null);
   // Qué artículo tiene abierto el panel de reparto.
@@ -119,6 +133,13 @@ export default function PanelCompras({
           </p>
         )}
 
+        <SelectorMiembros
+          etiqueta="Quién lo compra (opcional)"
+          miembros={miembros}
+          seleccionados={nuevosAsignados}
+          onCambio={setNuevosAsignados}
+        />
+
         <button
           type="submit"
           disabled={pendiente}
@@ -171,18 +192,19 @@ export default function PanelCompras({
                     >
                       {i.item}
                     </p>
-                    <p className="truncate text-xs text-white/50">
-                      {[
-                        i.cantidad > 1 && `Cantidad: ${i.cantidad}`,
-                        i.asignados.length
-                          ? i.asignados
-                              .map((a) => a.nombre || a.usuario)
-                              .join(", ")
-                          : "Sin asignar",
-                      ]
-                        .filter(Boolean)
-                        .join(" · ")}
-                    </p>
+                    <div className="flex flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/50">
+                      {i.cantidad > 1 && <span>Cantidad: {i.cantidad}</span>}
+                      {i.asignados.length === 0 ? (
+                        <span>Sin asignar</span>
+                      ) : (
+                        i.asignados.map((a) => (
+                          <span key={a.id} className="inline-flex items-center gap-1">
+                            <Avatar nombre={a.nombre} avatarUrl={a.avatarUrl} tamano={18} />
+                            {a.nombre || a.usuario}
+                          </span>
+                        ))
+                      )}
+                    </div>
                   </div>
 
                   <button

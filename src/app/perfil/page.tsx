@@ -5,6 +5,8 @@ import { ArrowRight, LogOut } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import { aplanarRelacion } from "@/lib/relaciones";
+import { indiceMiembros } from "@/lib/miembros";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
 import { cerrarSesion } from "@/app/actions/auth";
 import AvisosPush from "@/components/AvisosPush";
 import EditarPerfil from "@/components/EditarPerfil";
@@ -14,6 +16,7 @@ import MisPendientes, {
 } from "@/components/MisPendientes";
 import MiGaleria, { type MiFoto } from "@/components/MiGaleria";
 import MiMusica, { type MiPista } from "@/components/MiMusica";
+import MiResumenPena, { type DeudaResumen } from "@/components/MiResumenPena";
 
 export const dynamic = "force-dynamic";
 
@@ -32,11 +35,22 @@ export default async function PerfilPage() {
   if (!sesion) redirect("/login?next=/perfil");
 
   const supabase = await createClient();
+  const anio = await obtenerAnioActivo();
 
   // Quien todavía no está aprobado no tiene nada asignado ni ha subido nada,
   // así que se le ahorran las consultas.
-  const [misFotos, totalFotos, misPistas, totalPistas, misTareas, misCompras] =
-    sesion.esMiembro
+  const [
+    misFotos,
+    totalFotos,
+    misPistas,
+    totalPistas,
+    misTareas,
+    misCompras,
+    miPedido,
+    miPago,
+    misDeudas,
+    indice,
+  ] = sesion.esMiembro
       ? await Promise.all([
           supabase
             .from("media")
@@ -68,13 +82,46 @@ export default async function PerfilPage() {
             .from("compra_miembros")
             .select("lista_compra(id, item, cantidad, comprado, anio)")
             .eq("perfil_id", sesion.userId),
+          supabase
+            .from("pedidos_camiseta")
+            .select("tallas")
+            .eq("perfil_id", sesion.userId)
+            .eq("anio", anio)
+            .maybeSingle(),
+          supabase
+            .from("pagos")
+            .select("pagado")
+            .eq("perfil_id", sesion.userId)
+            .eq("anio", anio)
+            .maybeSingle(),
+          // Las deudas donde aparezco, deba yo o me deban a mí.
+          supabase
+            .from("deudas")
+            .select("id, deudor_id, acreedor_id, cantidad, descripcion, pagada")
+            .or(`deudor_id.eq.${sesion.userId},acreedor_id.eq.${sesion.userId}`)
+            .order("pagada", { ascending: true }),
+          indiceMiembros(),
         ])
-      : [null, null, null, null, null, null];
+      : [null, null, null, null, null, null, null, null, null, null];
 
   const tareas = aplanarRelacion<MiTarea>(misTareas?.data, "tareas").sort((a, b) =>
     (a.fecha ?? "9999").localeCompare(b.fecha ?? "9999"),
   );
   const compras = aplanarRelacion<MiCompra>(misCompras?.data, "lista_compra");
+
+  const deudasResumen: DeudaResumen[] = (misDeudas?.data ?? []).map((d) => {
+    const loDeboYo = d.deudor_id === sesion.userId;
+    const otroId = loDeboYo ? d.acreedor_id : d.deudor_id;
+    const otro = otroId ? (indice?.get(otroId) ?? null) : null;
+    return {
+      id: d.id,
+      cantidad: d.cantidad,
+      descripcion: d.descripcion,
+      pagada: d.pagada,
+      otro: otro ? { nombre: otro.nombre, avatarUrl: otro.avatarUrl } : null,
+      loDeboYo,
+    };
+  });
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
@@ -106,6 +153,15 @@ export default async function PerfilPage() {
 
         {sesion.esMiembro && (
           <>
+            <section className="border-t border-white/10 pt-8">
+              <MiResumenPena
+                anio={anio}
+                tallas={miPedido?.data?.tallas ?? []}
+                pagado={miPago?.data?.pagado ?? false}
+                deudas={deudasResumen}
+              />
+            </section>
+
             <section className="border-t border-white/10 pt-8">
               <MisPendientes tareas={tareas} compras={compras} />
             </section>

@@ -2,12 +2,22 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, Play, Music, Check, ClipboardList, ShoppingCart } from "lucide-react";
+import {
+  ArrowLeft,
+  Play,
+  Music,
+  Check,
+  ClipboardList,
+  ShoppingCart,
+  Shirt,
+  Wallet,
+} from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
 import { aplanarRelacion } from "@/lib/relaciones";
 import { diaLegible } from "@/lib/formato";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
 import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
@@ -41,8 +51,16 @@ export default async function PerfilPublicoPage({
 
   const esYoMismo = perfil.id === sesion.userId;
 
-  const [{ data: fotos }, { data: pistas }, { data: filasTareas }, { data: filasCompra }] =
-    await Promise.all([
+  const anio = await obtenerAnioActivo();
+
+  const [
+    { data: fotos },
+    { data: pistas },
+    { data: filasTareas },
+    { data: filasCompra },
+    { data: pedido },
+    { data: pago },
+  ] = await Promise.all([
       supabase
         .from("media")
         .select("id, anio, tipo, url, thumb_url, descripcion")
@@ -66,7 +84,22 @@ export default async function PerfilPublicoPage({
         .from("compra_miembros")
         .select("lista_compra(id, item, cantidad, comprado, anio)")
         .eq("perfil_id", id),
+      supabase
+        .from("pedidos_camiseta")
+        .select("tallas")
+        .eq("perfil_id", id)
+        .eq("anio", anio)
+        .maybeSingle(),
+      supabase
+        .from("pagos")
+        .select("pagado")
+        .eq("perfil_id", id)
+        .eq("anio", anio)
+        .maybeSingle(),
     ]);
+
+  const tallas: string[] = pedido?.tallas ?? [];
+  const haPagado = pago?.pagado ?? false;
 
   type SuTarea = { id: string; titulo: string; fecha: string | null; hecha: boolean };
   type SuCompra = { id: string; item: string; cantidad: number; comprado: boolean; anio: number };
@@ -110,6 +143,39 @@ export default async function PerfilPublicoPage({
             </p>
           )}
         </div>
+
+        <section className="grid gap-2 border-t border-white/10 pt-8 sm:grid-cols-2">
+          <div className="rounded-lg border border-white/10 px-4 py-3">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/40">
+              <Shirt size={14} aria-hidden="true" />
+              Camisetas {anio}
+            </p>
+            <p className="mt-1.5 text-sm">
+              {tallas.length === 0 ? (
+                <span className="text-white/50">No ha pedido ninguna.</span>
+              ) : (
+                <>
+                  <span className="font-semibold tabular-nums">{tallas.length}</span>{" "}
+                  · <span className="text-white/70">{tallas.join(", ")}</span>
+                </>
+              )}
+            </p>
+          </div>
+
+          <div className="rounded-lg border border-white/10 px-4 py-3">
+            <p className="flex items-center gap-2 text-xs uppercase tracking-wider text-white/40">
+              <Wallet size={14} aria-hidden="true" />
+              Cuota {anio}
+            </p>
+            <p className="mt-1.5 text-sm">
+              {haPagado ? (
+                <span className="font-medium text-white">Pagada</span>
+              ) : (
+                <span className="text-white/60">Pendiente</span>
+              )}
+            </p>
+          </div>
+        </section>
 
         <section className="border-t border-white/10 pt-8">
           <h2 className="flex items-center gap-2 text-lg font-semibold">

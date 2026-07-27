@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { listarMiembros, indiceMiembros } from "@/lib/miembros";
 import PanelTareas, { type TareaListada } from "@/components/PanelTareas";
 import type { MiembroSimple } from "@/components/SelectorMiembros";
 import { obtenerAnioActivo } from "@/app/actions/configuracion";
@@ -19,11 +20,11 @@ export default async function AdminTareasPage() {
   const sesion = await getSesion();
   if (!sesion) redirect("/login?next=/admin/tareas");
 
-  if (!sesion.esAdmin) {
+  if (!sesion.esMiembro) {
     return (
       <main className="flex flex-1 items-center justify-center px-4 py-16 text-center">
         <p className="max-w-sm text-white/60">
-          Esta zona es solo para la directiva de la peña.
+          Tu cuenta todavía está pendiente de que la directiva la apruebe.
         </p>
       </main>
     );
@@ -32,7 +33,7 @@ export default async function AdminTareasPage() {
   const supabase = await createClient();
   const anio = await obtenerAnioActivo();
 
-  const [{ data: tareas }, { data: asignaciones }, { data: miembros }] =
+  const [{ data: tareas }, { data: asignaciones }, miembros, indice] =
     await Promise.all([
       supabase
         .from("tareas")
@@ -44,22 +45,16 @@ export default async function AdminTareasPage() {
         .or(`fecha.is.null,and(fecha.gte.${anio}-01-01,fecha.lte.${anio}-12-31)`)
         .order("fecha", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true }),
-      supabase
-        .from("tareas_miembros")
-        .select("tarea_id, perfiles(id, nombre, usuario)"),
-      supabase
-        .from("perfiles")
-        .select("id, nombre, usuario")
-        .eq("aprobado", true)
-        .order("nombre", { ascending: true }),
+      // Solo los ids: un join anidado a `perfiles` devolvería vacío para
+      // quien no sea admin, y la gestión ya la ve toda la peña.
+      supabase.from("tareas_miembros").select("tarea_id, perfil_id"),
+      listarMiembros(),
+      indiceMiembros(),
     ]);
 
-  // Se cruzan aquí en vez de con un join anidado: PostgREST devuelve la
-  // relación con forma variable y así el tipo queda claro.
   const porTarea = new Map<string, MiembroSimple[]>();
   for (const a of asignaciones ?? []) {
-    const rel = a.perfiles as unknown as MiembroSimple | MiembroSimple[] | null;
-    const perfil = Array.isArray(rel) ? rel[0] : rel;
+    const perfil = indice.get(a.perfil_id);
     if (!perfil) continue;
     porTarea.set(a.tarea_id, [...(porTarea.get(a.tarea_id) ?? []), perfil]);
   }
@@ -91,7 +86,7 @@ export default async function AdminTareasPage() {
         <PanelTareas
           anio={anio}
           tareas={lista}
-          miembros={(miembros ?? []) as MiembroSimple[]}
+          miembros={miembros}
         />
       </div>
     </main>

@@ -3,6 +3,7 @@
 import { useMemo, useState, useTransition } from "react";
 import { Check, Trash2, Plus, Paperclip } from "lucide-react";
 import { diaLegible } from "@/lib/formato";
+import Avatar from "./Avatar";
 import type { MiembroSimple } from "./SelectorMiembros";
 import FormularioTarea, { claveDia } from "./tareas/FormularioTarea";
 import CalendarioAgosto from "./tareas/CalendarioAgosto";
@@ -124,7 +125,14 @@ export default function PanelTareas({
               <div className="mt-1.5 flex flex-wrap items-center gap-x-3 gap-y-1 text-xs text-white/50">
                 {t.fecha && <span className="tabular-nums">{diaLegible(t.fecha)}</span>}
                 {t.asignados.length > 0 && (
-                  <span>{t.asignados.map((a) => a.nombre || a.usuario).join(", ")}</span>
+                  <span className="inline-flex flex-wrap items-center gap-x-2 gap-y-1">
+                    {t.asignados.map((a) => (
+                      <span key={a.id} className="inline-flex items-center gap-1">
+                        <Avatar nombre={a.nombre} avatarUrl={a.avatarUrl} tamano={18} />
+                        {a.nombre || a.usuario}
+                      </span>
+                    ))}
+                  </span>
                 )}
                 {t.documento_url && (
                   <a

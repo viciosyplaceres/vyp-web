@@ -110,7 +110,6 @@ export default async function RootLayout({
           <BarraReproductor />
           <BottomNav
             esMiembro={sesion?.esMiembro ?? false}
-            esAdmin={sesion?.esAdmin ?? false}
             userId={sesion?.userId ?? null}
             noLeidosInicial={noLeidos}
           />

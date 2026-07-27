@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Images, Music, MessageCircle, Users, Settings } from "lucide-react";
+import { Home, Images, Music, MessageCircle, Settings } from "lucide-react";
 import { suscribirRealtime, type Escucha } from "@/lib/realtime";
 
 type Item = {
@@ -16,12 +16,10 @@ const ESCUCHAS: Escucha[] = [{ tabla: "mensajes", evento: "INSERT" }];
 
 export default function BottomNav({
   esMiembro,
-  esAdmin,
   userId,
   noLeidosInicial,
 }: {
   esMiembro: boolean;
-  esAdmin: boolean;
   userId: string | null;
   noLeidosInicial: number;
 }) {
@@ -63,10 +61,8 @@ export default function BottomNav({
 
   if (esMiembro) {
     items.push({ href: "/chat", etiqueta: "Chat", Icono: MessageCircle });
-    items.push({ href: "/miembros", etiqueta: "Miembros", Icono: Users });
-  }
-
-  if (esAdmin) {
+    // Organizar las fiestas es cosa de toda la peña, no solo de la junta:
+    // dentro de Gestión ya se distingue lo que es exclusivo de la directiva.
     items.push({ href: "/admin", etiqueta: "Gestión", Icono: Settings });
   }
 
