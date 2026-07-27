@@ -214,9 +214,17 @@ consumo de Cloudinary/R2 desde un canal sin límite de tamaño de conversación:
 - **Visto / doble check azul** (`chat_lecturas`): una fila por persona con "hasta qué momento he
   leído", no una fila por mensaje — comparar `created_at` del mensaje contra esa marca de cada
   miembro basta para saber si alguien más ya lo vio.
-- **Burbuja de no leídos en tiempo real**: `BottomNav.tsx` se suscribe en solitario (no depende de
-  que `/chat` esté montado) al canal de `mensajes`; si el chat está abierto se marca leído al
-  instante y la burbuja se queda en cero, si no, va sumando.
+- **Burbuja de no leídos en tiempo real**: `BottomNav.tsx` escucha `mensajes` por su cuenta (no
+  depende de que `/chat` esté montado). Con el chat abierto no hace nada: es el propio chat quien
+  marca leído (antes lo hacían los dos y se escribía dos veces en `chat_lecturas` por cada mensaje
+  recibido) y la burbuja ya se pinta en cero.
+- **Piezas del chat** (ronda 2 de la auditoría): `Chat.tsx` es el orquestador y reparte el trabajo
+  en `components/chat/` — `BurbujaMensaje.tsx` (memorizada con `memo`), `BarraEscritura.tsx` (el
+  texto en curso vive ahí dentro, de modo que teclear no repinta la lista), `useRealtimeChat.ts` y
+  `tipos.ts`.
+- Los mensajes se piden **descendentes con `limit(200)` y se invierten al pintarlos**: ordenar
+  ascendente dejaba fuera la conversación reciente en cuanto el chat pasara de 200 mensajes. Las
+  reacciones vienen embebidas en la misma consulta (`mensaje_reacciones(...)`), no en una aparte.
 - Igual que en `perfiles`, un trigger `mensajes_before_update` impide que alguien que no sea admin
   reasigne `autor_id` o falsee `created_at` al editar su propio mensaje.
 
@@ -234,14 +242,36 @@ en tiempo real con el total de **tareas asignadas sin marcar como hechas** más 
 lista de la compra asignados sin marcar como comprados**. A propósito no cuenta nada de música ni
 fotos: ahí no existe un estado "pendiente", solo "subido".
 
-- El número inicial se calcula en el servidor (`obtenerPendientesPerfil`, cruzando
-  `tareas_miembros`/`compra_miembros` con `tareas.hecha`/`lista_compra.comprado` vía embed
-  PostgREST) y se pasa como prop, igual que la burbuja de no leídos del chat.
-- En el cliente se suscribe a un canal que escucha `UPDATE` en `tareas` y `lista_compra` (cualquier
-  cambio de cualquiera, porque no se puede filtrar por "asignado a mí" directamente en esas tablas)
-  y `*` en `tareas_miembros`/`compra_miembros` **filtrado por `perfil_id=eq.<yo>`** (asignaciones
-  nuevas o quitadas). Cualquiera de los cuatro eventos vuelve a pedir el total al servidor.
-- Solo se abre el canal si `esMiembro`: quien está pendiente de aprobación no tiene nada asignado.
+- El número inicial se calcula en el servidor (`obtenerPendientesPerfil`) con **dos `count` exactos**
+  (`head: true`) filtrando por la tabla relacionada (`tareas.hecha = false`), y se pasa como prop,
+  igual que la burbuja de no leídos del chat. Antes se descargaba cada asignación del miembro para
+  contarlas con un `filter().length` en memoria.
+- En el cliente escucha `UPDATE` en `tareas` y `lista_compra` (cualquier cambio de cualquiera,
+  porque no se puede filtrar por "asignado a mí" directamente en esas tablas) y `*` en
+  `tareas_miembros`/`compra_miembros` **filtrado por `perfil_id=eq.<yo>`** (asignaciones nuevas o
+  quitadas). Cualquiera de los cuatro eventos vuelve a pedir el total al servidor.
+- Solo escucha si `esMiembro`: quien está pendiente de aprobación no tiene nada asignado.
+- **Estuvo roto desde el principio** y se arregló en la ronda 2 de la auditoría: esas cuatro tablas
+  no estaban en la publicación `supabase_realtime` (migración `0011`), así que el servidor
+  respondía "Unable to subscribe to changes with given parameters" y tumbaba el canal entero. El
+  número inicial salía bien, pero no se movía hasta recargar.
+
+---
+
+## 7ter-bis. Un solo canal de Realtime para toda la app (`lib/realtime.ts`)
+
+Había tres canales abiertos a la vez (`chat-vyp`, `chat-badge-vyp`, `pendientes-perfil-vyp`), cada
+uno con su `getSession()` y su `setAuth`, y dos de ellos escuchando lo mismo: cada mensaje del chat
+llegaba **dos veces** por el WebSocket y contaba doble en la cuota del plan gratuito.
+
+`suscribirRealtime(escuchas, callback)` registra oyentes, suma sus escuchas y abre **un único canal
+`vyp`** con la unión. Si alguien se suscribe pidiendo una escucha nueva (entrar en `/chat`), el
+canal se rehace: los bindings de `postgres_changes` se mandan en el `phx_join` y no se pueden
+añadir a un canal ya conectado.
+
+> **Regla**: toda tabla que se escuche desde aquí tiene que estar en la publicación
+> `supabase_realtime` (ver `0011_realtime_gestion.sql`). Si un solo binding no es suscribible,
+> Supabase tumba **el canal completo** — y ahora el canal es común a todo el sitio.
 
 ---
 

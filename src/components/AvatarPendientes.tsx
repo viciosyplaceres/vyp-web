@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { createClient } from "@/lib/supabase/client";
+import { suscribirRealtime, type Escucha } from "@/lib/realtime";
 import { obtenerPendientesPerfil } from "@/app/actions/pendientes";
 import Avatar from "./Avatar";
 
@@ -33,57 +33,38 @@ export default function AvatarPendientes({
 }) {
   const [pendientes, setPendientes] = useState(pendientesInicial);
 
+  // Cuando la directiva marca/desmarca cualquier tarea o artículo (o cuando
+  // yo mismo lo hago desde /perfil), o cuando me asignan o me quitan algo
+  // nuevo, se recalcula el total.
+  const escuchas = useMemo<Escucha[]>(
+    () => [
+      { tabla: "tareas", evento: "UPDATE" },
+      { tabla: "lista_compra", evento: "UPDATE" },
+      { tabla: "tareas_miembros", evento: "*", filtro: `perfil_id=eq.${userId}` },
+      { tabla: "compra_miembros", evento: "*", filtro: `perfil_id=eq.${userId}` },
+    ],
+    [userId],
+  );
+
   useEffect(() => {
     // Quien todavía no está aprobado no tiene nada asignado: no hace falta
-    // abrir un canal en tiempo real que nunca va a tener nada que contar.
+    // escuchar en tiempo real algo que nunca va a tener nada que contar.
     if (!esMiembro) return;
 
-    const supabase = createClient();
-    let canal: ReturnType<typeof supabase.channel> | null = null;
     let cancelado = false;
-
-    const refrescar = () => {
+    const baja = suscribirRealtime(escuchas, () => {
       obtenerPendientesPerfil()
         .then((n) => {
           if (!cancelado) setPendientes(n);
         })
         .catch(() => undefined);
-    };
-
-    (async () => {
-      // Igual que en el chat: sin el token del usuario, Supabase no deja
-      // pasar los eventos de tablas que solo pueden leer los miembros.
-      const { data } = await supabase.auth.getSession();
-      if (data.session) {
-        await supabase.realtime.setAuth(data.session.access_token);
-      }
-      if (cancelado) return;
-
-      canal = supabase
-        .channel("pendientes-perfil-vyp")
-        // Cuando la directiva marca/desmarca cualquier tarea o artículo
-        // (o cuando yo mismo lo hago desde /perfil), o cuando me asignan o me
-        // quitan algo nuevo, se recalcula el total.
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "tareas" }, refrescar)
-        .on("postgres_changes", { event: "UPDATE", schema: "public", table: "lista_compra" }, refrescar)
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "tareas_miembros", filter: `perfil_id=eq.${userId}` },
-          refrescar,
-        )
-        .on(
-          "postgres_changes",
-          { event: "*", schema: "public", table: "compra_miembros", filter: `perfil_id=eq.${userId}` },
-          refrescar,
-        )
-        .subscribe();
-    })();
+    });
 
     return () => {
       cancelado = true;
-      if (canal) void supabase.removeChannel(canal);
+      baja();
     };
-  }, [userId, esMiembro]);
+  }, [escuchas, esMiembro]);
 
   return (
     <Link

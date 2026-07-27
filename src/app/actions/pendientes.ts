@@ -18,31 +18,22 @@ export async function obtenerPendientesPerfil(): Promise<number> {
 
   const supabase = await createClient();
 
-  const [{ data: tareas }, { data: compras }] = await Promise.all([
+  // Se pide el número, no las filas: antes se descargaba cada asignación del
+  // miembro (con su tarea o su artículo dentro) solo para contarlas con un
+  // `filter().length` en memoria. La base de datos ya sabe contar, y filtrar
+  // por la tabla relacionada es lo que hace `!inner` + `eq`.
+  const [{ count: tareasPendientes }, { count: comprasPendientes }] = await Promise.all([
     supabase
       .from("tareas_miembros")
-      .select("tareas!inner(hecha)")
-      .eq("perfil_id", sesion.userId),
+      .select("tareas!inner(hecha)", { count: "exact", head: true })
+      .eq("perfil_id", sesion.userId)
+      .eq("tareas.hecha", false),
     supabase
       .from("compra_miembros")
-      .select("lista_compra!inner(comprado)")
-      .eq("perfil_id", sesion.userId),
+      .select("lista_compra!inner(comprado)", { count: "exact", head: true })
+      .eq("perfil_id", sesion.userId)
+      .eq("lista_compra.comprado", false),
   ]);
 
-  type ConHecha = { tareas: { hecha: boolean } | { hecha: boolean }[] | null };
-  type ConComprado = {
-    lista_compra: { comprado: boolean } | { comprado: boolean }[] | null;
-  };
-
-  const tareasPendientes = (tareas as ConHecha[] | null ?? []).filter((f) => {
-    const rel = Array.isArray(f.tareas) ? f.tareas[0] : f.tareas;
-    return rel && !rel.hecha;
-  }).length;
-
-  const comprasPendientes = (compras as ConComprado[] | null ?? []).filter((f) => {
-    const rel = Array.isArray(f.lista_compra) ? f.lista_compra[0] : f.lista_compra;
-    return rel && !rel.comprado;
-  }).length;
-
-  return tareasPendientes + comprasPendientes;
+  return (tareasPendientes ?? 0) + (comprasPendientes ?? 0);
 }

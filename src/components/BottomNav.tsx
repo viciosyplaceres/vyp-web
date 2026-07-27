@@ -1,11 +1,10 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Images, Music, MessageCircle, Users, Settings } from "lucide-react";
-import { createClient } from "@/lib/supabase/client";
-import { marcarChatLeido } from "@/app/actions/chat";
+import { suscribirRealtime, type Escucha } from "@/lib/realtime";
 
 type Item = {
   href: string;
@@ -13,13 +12,17 @@ type Item = {
   Icono: typeof Home;
 };
 
+const ESCUCHAS: Escucha[] = [{ tabla: "mensajes", evento: "INSERT" }];
+
 export default function BottomNav({
   esMiembro,
   esAdmin,
+  userId,
   noLeidosInicial,
 }: {
   esMiembro: boolean;
   esAdmin: boolean;
+  userId: string | null;
   noLeidosInicial: number;
 }) {
   const pathname = usePathname();
@@ -30,45 +33,27 @@ export default function BottomNav({
   // vez de resetear el estado desde un efecto.
   const mostrado = enChat ? 0 : noLeidos;
 
-  // Burbuja en vivo: un mensaje nuevo de otro miembro la sube; si el chat
-  // está abierto se marca leído al momento y se queda en cero.
+  // Estar o no en el chat se lee dentro del callback, no como dependencia:
+  // así navegar a /chat y volver no rehace la suscripción.
+  const enChatRef = useRef(enChat);
   useEffect(() => {
-    if (!esMiembro) return;
+    enChatRef.current = enChat;
+  }, [enChat]);
 
-    const supabase = createClient();
-    let canal: ReturnType<typeof supabase.channel> | null = null;
-    let cancelado = false;
+  // Burbuja en vivo: un mensaje nuevo de otro miembro la sube. Con el chat
+  // abierto no hay nada que hacer: el propio chat marca la conversación como
+  // leída (antes lo hacían los dos, duplicando la escritura) y la burbuja ya
+  // se pinta en cero.
+  useEffect(() => {
+    if (!esMiembro || !userId) return;
 
-    (async () => {
-      const { data } = await supabase.auth.getSession();
-      const userId = data.session?.user.id;
-      if (data.session) await supabase.realtime.setAuth(data.session.access_token);
-      if (cancelado) return;
-
-      canal = supabase
-        .channel("chat-badge-vyp")
-        .on(
-          "postgres_changes",
-          { event: "INSERT", schema: "public", table: "mensajes" },
-          (payload) => {
-            const m = payload.new as { autor_id?: string } | null;
-            if (!m?.autor_id || m.autor_id === userId) return;
-
-            if (enChat) {
-              marcarChatLeido().catch(() => undefined);
-              return;
-            }
-            setNoLeidos((n) => n + 1);
-          },
-        )
-        .subscribe();
-    })();
-
-    return () => {
-      cancelado = true;
-      if (canal) void supabase.removeChannel(canal);
-    };
-  }, [esMiembro, enChat]);
+    return suscribirRealtime(ESCUCHAS, (_escucha, cambio) => {
+      const m = cambio.new as { autor_id?: string } | null;
+      if (!m?.autor_id || m.autor_id === userId) return;
+      if (enChatRef.current) return;
+      setNoLeidos((n) => n + 1);
+    });
+  }, [esMiembro, userId]);
 
   const items: Item[] = [
     { href: "/", etiqueta: "Inicio", Icono: Home },

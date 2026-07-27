@@ -56,7 +56,6 @@ export default async function ChatPage() {
   const [
     { data: filas, error: errorMensajes },
     { data: todosAutores },
-    { data: reaccionesFilas },
     { data: lecturasFilas },
   ] = await Promise.all([
       supabase
@@ -68,13 +67,21 @@ export default async function ChatPage() {
         // entera con un error. Aquí no se comprobaba ese error, así que el
         // chat se quedaba en silencio mostrando "Aún no hay mensajes" aunque
         // la conversación seguía intacta en la base de datos.
+        //
+        // Las reacciones vienen dentro de cada mensaje en vez de en una
+        // consulta aparte: así se traen justo las de los mensajes que se van
+        // a pintar (antes se descargaban las de toda la historia del chat) y
+        // se ahorra un viaje a la base de datos.
         .select(
-          "id, texto, created_at, autor_id, respuesta_a, respuesta_texto, respuesta_autor, editado_at, borrado, autores!mensajes_autor_id_fkey(nombre, avatar_url)",
+          "id, texto, created_at, autor_id, respuesta_a, respuesta_texto, respuesta_autor, editado_at, borrado, autores!mensajes_autor_id_fkey(nombre, avatar_url), mensaje_reacciones(perfil_id, emoji)",
         )
-        .order("created_at", { ascending: true })
+        // Los últimos 200, no los 200 primeros: ordenar ascendente con
+        // `limit` dejaba fuera la conversación reciente en cuanto el chat
+        // pasara de 200 mensajes. Se le da la vuelta abajo para pintarlos en
+        // orden de lectura.
+        .order("created_at", { ascending: false })
         .limit(200),
       supabase.from("autores").select("id, nombre, avatar_url"),
-      supabase.from("mensaje_reacciones").select("mensaje_id, perfil_id, emoji"),
       supabase.from("chat_lecturas").select("perfil_id, ultimo_leido_at"),
     ]);
 
@@ -84,7 +91,10 @@ export default async function ChatPage() {
     console.error("Error al cargar mensajes del chat:", errorMensajes.message);
   }
 
-  const mensajes: Mensaje[] = (filas ?? []).map((m) => {
+  const recientesPrimero = filas ?? [];
+  const enOrden = [...recientesPrimero].reverse();
+
+  const mensajes: Mensaje[] = enOrden.map((m) => {
     const info = autorDe(m.autores);
     return {
       id: m.id,
@@ -109,12 +119,14 @@ export default async function ChatPage() {
   }
 
   const reaccionesIniciales: Record<string, { emoji: string; perfilId: string; nombre: string | null }[]> = {};
-  for (const r of reaccionesFilas ?? []) {
-    (reaccionesIniciales[r.mensaje_id] ??= []).push({
-      emoji: r.emoji,
-      perfilId: r.perfil_id,
-      nombre: autores[r.perfil_id]?.nombre ?? null,
-    });
+  for (const m of enOrden) {
+    for (const r of m.mensaje_reacciones ?? []) {
+      (reaccionesIniciales[m.id] ??= []).push({
+        emoji: r.emoji,
+        perfilId: r.perfil_id,
+        nombre: autores[r.perfil_id]?.nombre ?? null,
+      });
+    }
   }
 
   const lecturas: Record<string, string> = {};

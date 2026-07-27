@@ -111,6 +111,7 @@ export default async function RootLayout({
           <BottomNav
             esMiembro={sesion?.esMiembro ?? false}
             esAdmin={sesion?.esAdmin ?? false}
+            userId={sesion?.userId ?? null}
             noLeidosInicial={noLeidos}
           />
         </ReproductorProvider>

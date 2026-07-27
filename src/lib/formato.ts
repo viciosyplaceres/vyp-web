@@ -42,6 +42,42 @@ export function diaLegible(fecha: string | null | undefined): string | null {
   return nombreMes ? `${numeroDia} de ${nombreMes}` : null;
 }
 
+/** La hora de un instante ("14:05"), para los mensajes del chat. */
+export function horaCorta(iso: string): string {
+  const f = new Date(iso);
+  if (Number.isNaN(f.getTime())) return "";
+  return f.toLocaleTimeString("es-ES", { hour: "2-digit", minute: "2-digit" });
+}
+
+/**
+ * El día de un instante contado desde hoy ("Hoy", "Ayer", "3 de agosto"),
+ * para los separadores del chat.
+ *
+ * No confundir con `diaLegible`, que recibe una fecha suelta sin hora
+ * ("2026-08-14") y siempre la escribe entera. Aquí hay un instante real y sí
+ * importa a qué distancia queda de hoy.
+ */
+export function diaRelativo(iso: string): string {
+  const f = new Date(iso);
+  if (Number.isNaN(f.getTime())) return "";
+  const hoy = new Date();
+  const ayer = new Date();
+  ayer.setDate(hoy.getDate() - 1);
+
+  const mismoDia = (a: Date, b: Date) =>
+    a.getFullYear() === b.getFullYear() &&
+    a.getMonth() === b.getMonth() &&
+    a.getDate() === b.getDate();
+
+  if (mismoDia(f, hoy)) return "Hoy";
+  if (mismoDia(f, ayer)) return "Ayer";
+  return f.toLocaleDateString("es-ES", {
+    day: "numeric",
+    month: "long",
+    year: f.getFullYear() === hoy.getFullYear() ? undefined : "numeric",
+  });
+}
+
 /** Tamaño en unidades legibles, redondeado como lo espera un humano. */
 export function formatearBytes(bytes: number | null | undefined): string {
   if (!bytes) return "tamaño desconocido";
