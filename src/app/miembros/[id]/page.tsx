@@ -11,6 +11,9 @@ import {
   ShoppingCart,
   Shirt,
   Wallet,
+  Coins,
+  Sparkles,
+  Wrench,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
@@ -18,6 +21,8 @@ import { getSesion } from "@/lib/auth";
 import { aplanarRelacion } from "@/lib/relaciones";
 import { diaLegible } from "@/lib/formato";
 import { obtenerAnioActivo } from "@/app/actions/configuracion";
+import { indiceMiembros } from "@/lib/miembros";
+import { diasLimpieza } from "@/lib/limpieza";
 import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
@@ -60,6 +65,9 @@ export default async function PerfilPublicoPage({
     { data: filasCompra },
     { data: pedido },
     { data: pago },
+    { data: deudasFilas },
+    { data: limpiezaFilas },
+    indice,
   ] = await Promise.all([
       supabase
         .from("media")
@@ -96,10 +104,47 @@ export default async function PerfilPublicoPage({
         .eq("perfil_id", id)
         .eq("anio", anio)
         .maybeSingle(),
+      supabase
+        .from("deudas")
+        .select("id, deudor_id, acreedor_id, cantidad, descripcion, pagada")
+        .or(`deudor_id.eq.${id},acreedor_id.eq.${id}`)
+        .order("pagada", { ascending: true }),
+      supabase
+        .from("limpieza_turnos")
+        .select("fecha")
+        .eq("perfil_id", id)
+        .eq("anio", anio)
+        .order("fecha", { ascending: true }),
+      indiceMiembros(),
     ]);
 
   const tallas: string[] = pedido?.tallas ?? [];
   const haPagado = pago?.pagado ?? false;
+
+  const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
+  const desmontajePorFecha = new Map(diasLimpieza(anio).map((d) => [d.fecha, d.desmontaje]));
+  const turnosLimpieza = (limpiezaFilas ?? []).map((t) => ({
+    fecha: t.fecha,
+    dia: Number(t.fecha.slice(8, 10)),
+    desmontaje: desmontajePorFecha.get(t.fecha) ?? false,
+    pasado: t.fecha < hoy,
+  }));
+
+  const deudas = (deudasFilas ?? []).map((d) => {
+    const loDebeEl = d.deudor_id === id;
+    const otroId = loDebeEl ? d.acreedor_id : d.deudor_id;
+    const otro = otroId ? (indice.get(otroId) ?? null) : null;
+    return {
+      id: d.id,
+      cantidad: Number(d.cantidad),
+      descripcion: d.descripcion,
+      pagada: d.pagada,
+      otro: otro ? { nombre: otro.nombre, avatarUrl: otro.avatarUrl } : null,
+      loDebeEl,
+    };
+  });
+  const debe = deudas.filter((d) => !d.pagada && d.loDebeEl);
+  const leDeben = deudas.filter((d) => !d.pagada && !d.loDebeEl);
 
   type SuTarea = { id: string; titulo: string; fecha: string | null; hecha: boolean };
   type SuCompra = { id: string; item: string; cantidad: number; comprado: boolean; anio: number };
@@ -175,6 +220,71 @@ export default async function PerfilPublicoPage({
               )}
             </p>
           </div>
+        </section>
+
+        <section className="border-t border-white/10 pt-8">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Sparkles size={18} className="text-white/50" aria-hidden="true" />
+            Limpieza
+          </h2>
+          {turnosLimpieza.length === 0 ? (
+            <p className="mt-2 text-sm text-white/40">
+              Todavía no se ha sorteado el reparto de la limpieza.
+            </p>
+          ) : (
+            <ul className="mt-3 flex flex-wrap gap-2">
+              {turnosLimpieza.map((t) => (
+                <li
+                  key={t.fecha}
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm tabular-nums ${
+                    t.pasado ? "border-white/10 text-white/30 line-through" : "border-white/25 text-white/70"
+                  }`}
+                >
+                  {t.desmontaje && <Wrench size={12} aria-hidden="true" />}
+                  {t.dia} de agosto
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="border-t border-white/10 pt-8">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <Coins size={18} className="text-white/50" aria-hidden="true" />
+            Deudas
+          </h2>
+          {debe.length === 0 && leDeben.length === 0 ? (
+            <p className="mt-2 text-sm text-white/40">No debe nada ni le deben nada.</p>
+          ) : (
+            <div className="mt-3 space-y-3">
+              {debe.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
+                >
+                  <Avatar nombre={d.otro?.nombre ?? "VYP"} avatarUrl={d.otro?.avatarUrl} tamano={24} />
+                  <span className="min-w-0 flex-1 truncate">
+                    Debe a {d.otro?.nombre ?? "VYP"}
+                    {d.descripcion && <span className="text-white/50"> · {d.descripcion}</span>}
+                  </span>
+                  <span className="shrink-0 font-medium tabular-nums">{d.cantidad.toFixed(2)} €</span>
+                </div>
+              ))}
+              {leDeben.map((d) => (
+                <div
+                  key={d.id}
+                  className="flex items-center gap-2 rounded-lg border border-white/10 px-3 py-2 text-sm"
+                >
+                  <Avatar nombre={d.otro?.nombre ?? "VYP"} avatarUrl={d.otro?.avatarUrl} tamano={24} />
+                  <span className="min-w-0 flex-1 truncate">
+                    Le debe {d.otro?.nombre ?? "VYP"}
+                    {d.descripcion && <span className="text-white/50"> · {d.descripcion}</span>}
+                  </span>
+                  <span className="shrink-0 font-medium tabular-nums">{d.cantidad.toFixed(2)} €</span>
+                </div>
+              ))}
+            </div>
+          )}
         </section>
 
         <section className="border-t border-white/10 pt-8">
