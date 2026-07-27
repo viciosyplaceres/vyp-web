@@ -1,68 +1,86 @@
 # VYP — Peña Vicios y Placeres
 
-Web de las fiestas de **Fuente Álamo de Murcia**: galería por años, música y sesiones,
-mapa de la peña y panel interno de gestión (cuotas, tallas de camiseta, lista de la compra).
+Web de las fiestas de **Fuente Álamo de Murcia**: galería por años, música y sesiones, chat interno,
+mapa de la peña y panel de gestión (cuotas, tallas de camiseta, lista de la compra).
 
-Público: todo el mundo ve y escucha. Solo los miembros suben y comentan.
+En vivo: **https://viciosyplaceres.com**
 
-**El plan completo del proyecto está en [`docs/PLAN.md`](docs/PLAN.md).**
+Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran en el chat.
 
-## Estado
+- Plan y decisiones del producto → [`docs/PLAN.md`](docs/PLAN.md)
+- Cómo está construido por dentro → [`docs/ARQUITECTURA.md`](docs/ARQUITECTURA.md)
+
+## Qué hay hecho
 
 | Fase | Estado |
 |---|---|
-| Cuentas de servicios creadas | Hecho |
-| Credenciales verificadas | Hecho (ver `CREDENCIALES.md`, fichero local no versionado) |
-| Preset de subida de fotos | Hecho — `vyp_galeria`, **modo firmado** (solo miembros) |
-| Plan del proyecto | **Hecho** — `docs/PLAN.md` |
-| Identidad visual | **Hecho** — logotipo horizontal (`public/logo/vyp-wordmark.png`), icono cuadrado para favicon, paleta negro/blanco, header con el logo |
-| Repositorio GitHub | **Hecho** — código subido a `viciosyplaceres/vyp-web`, rama `main` |
-| Código de la aplicación | Portada de bienvenida desplegada; falta galería y panel de gestión |
-| Esquema de base de datos | Pendiente |
-| Despliegue | **Hecho** — proyecto `vyp-web` en Vercel (equipo `vyp1`) |
-| Dominio conectado | **Hecho** — https://viciosyplaceres.com y https://www.viciosyplaceres.com responden 200 |
+| **F0** Base, dominio y despliegue | Hecho |
+| **F1** Identidad visual (logotipo horizontal, negro/blanco) | Hecho |
+| **F2** Auth, tablas, RLS y aprobación de miembros | Hecho |
+| **F3** Galería por años + subida con compresión firmada | Hecho |
+| **F4** Comentarios (solo miembros) | Hecho |
+| **F5** Música: R2 + enlaces Mixcloud/SoundCloud + reproductor global | Hecho |
+| **F6** Mapa y "cómo llegar" | Hecho |
+| **F7** Panel de la directiva | Hecho |
+| **F8** Móvil primero, PWA instalable, avisos push, chat interno | Hecho |
+
+## Páginas
+
+| Ruta | Quién entra | Qué hay |
+|---|---|---|
+| `/` | Todos | Portada, últimas subidas, acceso al mapa |
+| `/galeria` · `/galeria/[año]` · `/galeria/[año]/[id]` | Todos | Años, cuadrícula y detalle con comentarios |
+| `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar |
+| `/donde` | Todos | Mapa y botón "Cómo llegar" |
+| `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp |
+| `/subir` | **Miembros** | Fotos, vídeos y música |
+| `/cuenta` | Con sesión | Perfil, avisos push, cerrar sesión |
+| `/admin` · `/admin/compras` · `/admin/miembros` | **Directiva** | Pagos y tallas, lista de la compra, aprobar altas |
 
 ## Arquitectura
 
 Todo sobre capas gratuitas permanentes, alojado **fuera** del VPS propio:
 
-- **Hosting**: Vercel (plan Hobby) — Next.js App Router + TypeScript + Tailwind
-- **Base de datos y auth**: Supabase (Postgres 500 MB, free tier)
-- **Fotos y vídeos**: Cloudinary (free tier, 25 créditos) — subida **firmada en el servidor**,
-  así el API Secret nunca sale del servidor y solo firman los miembros aprobados
-- **Música y sesiones**: almacenamiento de objetos aparte (no caben en Cloudinary: tope 100 MB)
-- **Dominio**: `viciosyplaceres.com`, DNS gestionado en el panel de la zona
+- **Hosting**: Vercel (Hobby) — Next.js 16 App Router + TypeScript + Tailwind 4
+- **Base de datos y auth**: Supabase (Postgres 500 MB) con RLS en todas las tablas
+- **Fotos y vídeos**: Cloudinary — subida **firmada en el servidor**, así el API Secret nunca sale
+  del servidor y solo firman los miembros aprobados
+- **Música y sesiones**: Cloudflare R2 (bucket `vyp`), 10 GB y **salida gratis**, con URLs
+  prefirmadas; alternativa de enlazar Mixcloud/SoundCloud sin gastar espacio
+- **Avisos push**: `web-push` con claves VAPID propias — sin Firebase ni servicios de pago
+- **Dominio**: `viciosyplaceres.com`, DNS en Cloudflare
 
-Ver `docs/PLAN.md` para el detalle de páginas, modelo de datos, roles y fases.
+## Móvil primero
 
-## Identidad visual
-
-- **Logotipo horizontal** (`public/logo/vyp-wordmark.svg` + `.png`): wordmark serio en serif,
-  pensado para un header real — no un badge circular. Se usa en `Header.tsx` a 32-36px de alto.
-- **Icono cuadrado** (`public/logo/vyp-icon.svg`): monograma "V&P" compacto, usado como favicon
-  y app icon (funciona a tamaños pequeños, a diferencia del wordmark).
-- **Paleta**: negro puro de fondo, blanco de texto. Sin modo claro.
-- Ambos generados con Higgsfield (Recraft V4.1, vectorial) — fuente y variantes descartadas en
-  `design/logo-candidatos/`.
+El uso mayoritario es desde el móvil, así que: barra de navegación inferior tipo app, objetivos
+táctiles de 44 px, texto de 16 px (evita el zoom automático al escribir), respeto de las zonas
+seguras del teléfono, y la web **se puede instalar como app** desde el propio navegador.
 
 ## Configuración local
 
 ```bash
 npm install
-cp .env.example .env.local   # rellenar con los valores de CREDENCIALES.md
+# rellenar .env.local con los valores de CREDENCIALES.md
 npm run dev
+```
+
+Comprobaciones antes de desplegar:
+
+```bash
+npx tsc --noEmit && npx eslint src && npm run build
 ```
 
 ## Seguridad
 
-- `CREDENCIALES.md` y `.env*.local` están en `.gitignore` (no van al repositorio) y en
-  `.vercelignore` (no se suben al build de Vercel tampoco).
+- `CREDENCIALES.md` y `.env*.local` están en `.gitignore` y en `.vercelignore`.
 - Solo las variables con prefijo `NEXT_PUBLIC_` llegan al navegador. La clave `service_role` de
-  Supabase y el API Secret de Cloudinary son exclusivamente de servidor.
+  Supabase, el API Secret de Cloudinary, las de R2 y la clave privada VAPID son de servidor.
+- Cada permiso se comprueba en tres capas: `proxy.ts`, el server action, y las políticas RLS de
+  Postgres. La base de datos es la que manda.
 
 ## Pendiente
 
-- Rotar el token de GitHub: el actual funciona pero tiene permisos de administrador de toda la
+- **Rotar el token de GitHub**: el actual funciona pero tiene permisos de administrador de toda la
   cuenta, muy por encima de lo necesario (ver aviso en `CREDENCIALES.md`).
-- Escribir la galería, el login de directiva y el panel `/admin`.
-- Crear las tablas `participantes` y `lista_compra` en Supabase con RLS.
+- Al borrar una foto o pista se borra el registro, pero el archivo sigue en Cloudinary/R2.
+- Avisos push también al subir fotos nuevas (hoy solo avisa el chat).

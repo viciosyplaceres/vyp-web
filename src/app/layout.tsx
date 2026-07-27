@@ -1,6 +1,11 @@
 import type { Metadata, Viewport } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Header from "@/components/Header";
+import BottomNav from "@/components/BottomNav";
+import ReproductorProvider from "@/components/ReproductorProvider";
+import BarraReproductor from "@/components/BarraReproductor";
+import RegistrarSW from "@/components/RegistrarSW";
+import { getSesion } from "@/lib/auth";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -14,28 +19,59 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Vicios & Placeres (VYP)",
+  metadataBase: new URL("https://viciosyplaceres.com"),
+  title: {
+    default: "Vicios & Placeres (VYP)",
+    template: "%s · Vicios & Placeres",
+  },
   description:
-    "Web de la peña Vicios & Placeres — Fuente Álamo de Murcia. Galería, música y gestión de las fiestas.",
+    "Peña Vicios & Placeres — Fuente Álamo de Murcia. Galería de las fiestas, música y gestión de la peña.",
+  manifest: "/manifest.webmanifest",
+  appleWebApp: {
+    capable: true,
+    statusBarStyle: "black-translucent",
+    title: "VYP",
+  },
+  icons: {
+    icon: "/logo/vyp-icon-192.png",
+    apple: "/logo/vyp-icon-192.png",
+  },
 };
 
 export const viewport: Viewport = {
   themeColor: "#000000",
+  width: "device-width",
+  initialScale: 1,
+  viewportFit: "cover",
 };
 
-export default function RootLayout({
+export default async function RootLayout({
   children,
 }: Readonly<{
   children: React.ReactNode;
 }>) {
+  const sesion = await getSesion();
+
   return (
     <html
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
-      <body className="min-h-full flex flex-col bg-black text-white">
-        <Header />
-        {children}
+      <body className="flex min-h-full flex-col bg-black text-white">
+        <ReproductorProvider>
+          <Header />
+          {/* Hueco inferior: barra de navegación (móvil) + reproductor */}
+          <div className="flex flex-1 flex-col pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-24">
+            {children}
+          </div>
+          <BarraReproductor />
+          <BottomNav
+            esMiembro={sesion?.esMiembro ?? false}
+            esAdmin={sesion?.esAdmin ?? false}
+            haySesion={Boolean(sesion)}
+          />
+        </ReproductorProvider>
+        <RegistrarSW />
       </body>
     </html>
   );

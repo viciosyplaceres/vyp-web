@@ -101,7 +101,15 @@ pistas            id, titulo, artista, tipo ('sesion'|'cancion'), anio,
 comentarios       id, media_id (nullable), pista_id (nullable), autor_id, texto, created_at
 participantes     id, nombre, pagado, importe, talla_camiseta, notas, anio
 lista_compra      id, item, cantidad, comprado, anio, notas
+mensajes          id, autor_id, texto, created_at            (chat interno, solo miembros)
+push_subs         id, user_id, endpoint (único), p256dh, auth, created_at
+autores (vista)   id, nombre                                  (solo esas dos columnas)
 ```
+
+`autores` es una **vista** que expone únicamente `id` y `nombre` de `perfiles`. Existe porque los
+comentarios son públicos y hay que poder mostrar quién los escribió, pero la política de `perfiles`
+—correctamente— no deja ver perfiles ajenos. Se deja como `SECURITY DEFINER` a propósito y acotada a
+esas dos columnas: nunca expone `rol`, `aprobado` ni `created_at`.
 
 `pistas.origen` distingue si `url` apunta a un objeto propio en R2 (reproducible desde el
 reproductor global) o es una pista `mixcloud`/`soundcloud`: en ese caso `url` guarda el enlace que
@@ -123,6 +131,13 @@ Esta es la pieza que hace cumplir el requisito, y va en la base de datos, no en 
 | `comentarios` | todo el mundo | solo miembro aprobado (y solo puede borrar el suyo, o un admin) |
 | `perfiles` | el propio + admin | solo admin cambia rol y aprobación |
 | `participantes`, `lista_compra` | **solo admin** | solo admin |
+| `mensajes` (chat) | **solo miembro aprobado** | solo miembro aprobado |
+| `push_subs` | solo las propias | solo las propias |
+
+Además, en las tablas que no son públicas (`participantes`, `lista_compra`, `mensajes`,
+`push_subs`, `perfiles`) se ha hecho `revoke all ... from anon`: Supabase concede permisos al rol
+`anon` por defecto en tablas nuevas, y aunque el RLS ya lo cubría, quitar también el permiso de
+tabla deja dos cerraduras en vez de una.
 
 La comprobación de "miembro aprobado" se hace con `private.es_miembro()` / `private.es_admin()`,
 dos funciones `SECURITY DEFINER` en un esquema `private` **no expuesto por la Data API** (siguiendo
@@ -204,6 +219,60 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 
 ---
 
+## 9-bis. Chat interno de la peña (`/chat`)
+
+Un único grupo, estilo WhatsApp, **invisible para quien no sea miembro aprobado**. Esta es la
+única parte de la web que no es pública.
+
+- Tabla `mensajes`, con RLS que solo permite leer y escribir a `private.es_miembro()`.
+- A diferencia del resto de tablas, `anon` **no tiene ni permiso de tabla** (`revoke all ... from
+  anon`): aunque una política fallara, la Data API responde `permission denied`. Verificado.
+- Mensajes en vivo con Supabase Realtime (`alter publication supabase_realtime add table
+  mensajes`), sin recargar la página.
+- Envío optimista (`useOptimistic`): el mensaje aparece al instante mientras viaja al servidor.
+- Burbujas propias en blanco a la derecha, ajenas en gris a la izquierda, con separadores de día
+  ("Hoy", "Ayer", fecha) y hora en cada mensaje.
+- Enviar con Enter; Mayús+Enter hace salto de línea.
+
+## 9-ter. PWA y avisos push (Android)
+
+**Instalable como app**: `public/manifest.webmanifest` (modo `standalone`, iconos 192/512 y uno
+`maskable`, atajos directos a Galería/Música/Chat) y `public/sw.js` como service worker.
+
+La estrategia de caché es deliberadamente conservadora — **la red manda siempre**, y solo se tira de
+caché si no hay conexión. Con una caché agresiva, alguien vería fotos o mensajes viejos, que es peor
+que esperar un segundo. Nunca se cachean `/api/` ni audio/vídeo.
+
+**Avisos push** cuando llega un mensaje al chat, incluso con la app cerrada:
+
+- Claves VAPID propias (generadas con `web-push`, guardadas en `CREDENCIALES.md` y en Vercel).
+  No hace falta cuenta de Firebase ni ningún servicio de pago.
+- Cada dispositivo se registra en la tabla `push_subs` desde el botón "Activar avisos en este móvil"
+  (en `/chat` y en `/cuenta`).
+- Al enviar un mensaje se avisa a todos los miembros **menos al que escribe**.
+- Las suscripciones muertas se limpian solas: si el navegador responde 404/410, se borran.
+- Si el envío del aviso falla, **el mensaje se guarda igualmente** — el chat nunca depende de que
+  las notificaciones funcionen.
+
+> Nota de alcance: Android y escritorio admiten push desde el navegador. En iPhone solo funciona si
+> la web se ha añadido antes a la pantalla de inicio (limitación de Apple, no del código).
+
+## 9-quater. Móvil primero
+
+El uso mayoritario será desde el móvil en la calle, así que la interfaz se diseñó en ese orden:
+
+- **Barra de navegación inferior** fija tipo app nativa (Inicio · Galería · Música · Chat · Cuenta),
+  visible solo en móvil; en pantalla grande se usa el menú del encabezado.
+- Respeto de `env(safe-area-inset-bottom)` para que nada quede bajo la barra gestual del teléfono.
+- **Objetivos táctiles de 44 px mínimo** en todo elemento pulsable, con 8 px de separación.
+- Texto base de 16 px: por debajo, los navegadores móviles hacen zoom automático al enfocar un campo.
+- `overscroll-behavior: contain` para evitar recargas accidentales al estirar la página.
+- Se respeta `prefers-reduced-motion`, foco visible siempre, y todas las imágenes llevan texto
+  alternativo.
+- Iconos SVG (lucide-react), nunca emojis.
+
+---
+
 ## 10. Identidad visual — CERRADA
 
 - **Logotipo**: wordmark horizontal ("VICIOS & PLACERES" en una línea, serif elegante), pensado
@@ -221,13 +290,15 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 |---|---|---|
 | **F0** | Base: Next.js, dominio, despliegue | Hecho |
 | **F1** | Logo e identidad visual | Hecho |
-| **F2** | Auth + tablas + RLS + aprobación de miembros | **Hecho** |
-| **F3** | Galería por años + subida con compresión (firmada) | Pendiente |
-| **F4** | Comentarios | Pendiente |
-| **F5** | Música y reproductor global | Pendiente (depende de decidir el almacenamiento) |
-| **F6** | Mapa y cómo llegar | Pendiente |
-| **F7** | Panel de la directiva | Pendiente |
-| **F8** | Pulido, móvil, rendimiento | Pendiente |
+| **F2** | Auth + tablas + RLS + aprobación de miembros | Hecho |
+| **F3** | Galería por años + subida con compresión (firmada) | Hecho |
+| **F4** | Comentarios | Hecho |
+| **F5** | Música y reproductor global (R2 + Mixcloud/SoundCloud) | Hecho |
+| **F6** | Mapa y cómo llegar | Hecho |
+| **F7** | Panel de la directiva | Hecho |
+| **F8** | Mobile-first, PWA instalable, avisos push, chat interno | Hecho |
+
+Todo desplegado y verificado en `viciosyplaceres.com` el 2026-07-27.
 
 ---
 
