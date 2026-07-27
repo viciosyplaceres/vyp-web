@@ -10,11 +10,11 @@ Web de la peña de las fiestas del pueblo: galería de fotos compartida + panel 
 | Cuentas de servicios creadas | Hecho |
 | Credenciales verificadas | Hecho (ver `CREDENCIALES.md`, fichero local no versionado) |
 | Preset de subida de fotos | Hecho — `vyp_galeria` (sin firmar) |
-| Repositorio GitHub | Creado y vacío: `viciosyplaceres/vyp-web` |
-| Código de la aplicación | Pendiente |
+| Repositorio GitHub | Creado, vacío — **pendiente el primer push** (token actual sin permiso de escritura) |
+| Código de la aplicación | Portada de bienvenida desplegada; falta galería y panel de gestión |
 | Esquema de base de datos | Pendiente |
-| Despliegue | Pendiente |
-| Dominio conectado | Pendiente (falta token con permiso DNS) |
+| Despliegue | **Hecho** — proyecto `vyp-web` en Vercel (equipo `vyp1`) |
+| Dominio conectado | **Hecho** — https://viciosyplaceres.com y https://www.viciosyplaceres.com responden 200 |
 
 ## Arquitectura
 
@@ -53,6 +53,14 @@ npm run dev
 
 ## Seguridad
 
-- `CREDENCIALES.md` y `.env*.local` están en `.gitignore`. **Nunca** se suben al repositorio.
+- `CREDENCIALES.md` y `.env*.local` están en `.gitignore` (no van al repositorio) y en
+  `.vercelignore` (no se suben al build de Vercel tampoco).
 - Solo las variables con prefijo `NEXT_PUBLIC_` llegan al navegador. La clave `service_role` de
   Supabase y el API Secret de Cloudinary son exclusivamente de servidor.
+
+## Pendiente
+
+- Regenerar el token de GitHub con permiso "Contents: Read and write" para poder hacer el
+  primer `git push` (el actual solo tiene lectura).
+- Escribir la galería, el login de directiva y el panel `/admin`.
+- Crear las tablas `participantes` y `lista_compra` en Supabase con RLS.
