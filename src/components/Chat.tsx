@@ -177,9 +177,12 @@ export default function Chat({
         <div ref={finRef} />
       </ol>
 
+      {/* En móvil se separa del fondo lo que mide la barra de navegación
+          inferior (56px + zona segura del teléfono); en escritorio no hay
+          barra inferior, así que se pega abajo del todo. */}
       <form
         onSubmit={enviar}
-        className="sticky bottom-0 flex items-end gap-2 border-t border-white/10 bg-black/95 py-3 backdrop-blur-md"
+        className="sticky bottom-[calc(56px+env(safe-area-inset-bottom))] flex items-end gap-2 border-t border-white/10 bg-black/95 py-3 backdrop-blur-md md:bottom-0"
       >
         <label htmlFor="mensaje" className="sr-only">
           Escribe un mensaje

@@ -300,6 +300,35 @@ El uso mayoritario será desde el móvil en la calle, así que la interfaz se di
 
 Todo desplegado y verificado en `viciosyplaceres.com` el 2026-07-27.
 
+### Cómo se verificó (no solo "compila")
+
+Sobre la base de datos y el despliegue reales, no en local:
+
+- **Ciclo completo de un miembro nuevo**: se creó un usuario de verdad, se comprobó que el trigger
+  le crea el perfil sin aprobar, que **no puede escribir en el chat** (RLS lo rechaza) y que, con un
+  mensaje real ya guardado en la tabla, **lo ve como lista vacía**. Tras aprobarlo desde la
+  directiva, ese mismo mensaje sí aparece. Aprobado y todo, sigue sin ver `participantes`.
+- **R2**: subida con URL prefirmada (200), lectura del contenido correcto (200) y borrado (404
+  después). El bucket `vyp` funciona de verdad.
+- **Comentarios públicos**: un visitante anónimo lee el comentario y el nombre de quien lo escribió
+  a través de la vista `autores`.
+- **Rutas**: las 7 públicas responden 200; las 5 privadas (`/subir`, `/cuenta`, `/admin`,
+  `/admin/compras`, `/admin/miembros`) redirigen a `/login`. `/chat` sin sesión no filtra ni un
+  mensaje.
+- **PWA**: manifest, service worker e iconos servidos; el HTML lleva `manifest`, `theme-color` y
+  `viewport-fit=cover`. Las claves VAPID generan una cabecera de autorización válida.
+- Tipos (`tsc`), estilo (`eslint`) y build de producción sin errores ni avisos.
+
+Los datos de prueba se borraron después: la base de datos quedó limpia, solo con la cuenta de la
+directiva.
+
+### Lo que no se pudo probar aquí
+
+El **envío real de un aviso push a un móvil** necesita un teléfono de verdad suscrito: la
+infraestructura está verificada (claves válidas, rutas y limpieza de suscripciones muertas), pero la
+prueba de campo es abrir la web en el Android, pulsar "Activar avisos" y escribir desde otro
+dispositivo.
+
 ---
 
 ## 12. Decisiones que hacen falta antes de seguir
