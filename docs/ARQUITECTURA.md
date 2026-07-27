@@ -313,6 +313,26 @@ propia con RLS:
 
 ---
 
+## 7septies. Bug real: aprobar un miembro no le dejaba entrar
+
+Un miembro real (`juaniyo`) fue aprobado por la directiva y no podía iniciar sesión con su usuario y
+contraseña. Causa: Supabase exige confirmar el email antes de dejar entrar por contraseña
+(`mailer_autoconfirm = false`), y esta web no tiene SMTP propio configurado — usa el mailer por
+defecto de Supabase, que es lento, con límite de 2 envíos/hora y a menudo cae en spam o no llega.
+**Aprobar un registro (`aprobarMiembro`) y confirmar el email eran dos cosas totalmente
+independientes**: la directiva daba el visto bueno en `/admin/miembros`, pero por debajo la cuenta
+seguía con `email_confirmed_at = null`, y Supabase seguía rechazando el login.
+
+Arreglo en `app/actions/miembros.ts`: `aprobarMiembro` ahora también llama a
+`auth.admin.updateUserById(id, { email_confirm: true })` con el cliente de servicio, a la vez que
+marca `aprobado = true`. La aprobación manual de la directiva ya es el filtro de confianza real de
+esta peña; pedir además una confirmación por email que puede no llegar solo rompía el acceso sin
+aportar nada. Verificado con un registro de prueba de extremo a extremo (crear sin confirmar →
+aprobar → login con contraseña funciona) y arreglada a mano la cuenta de `juaniyo`, que ya puede
+entrar.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

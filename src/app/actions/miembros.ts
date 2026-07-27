@@ -58,6 +58,19 @@ export async function aprobarMiembro(id: string) {
     .maybeSingle();
 
   if (error) throw new Error(error.message);
+
+  // Aprobar es el verdadero filtro de confianza de esta peña (lo hace la
+  // directiva a mano, mirando quién es cada uno); pedir ADEMÁS que confirme
+  // el email por correo es un segundo cerrojo redundante que aquí solo hace
+  // daño: el envío usa el mailer por defecto de Supabase (sin SMTP propio
+  // configurado), que es lento, limitado y a menudo cae en spam o ni llega
+  // (le pasó de verdad a un miembro real, aprobado y sin poder entrar). Se
+  // confirma el email a la vez que se aprueba, para que la aprobación sea
+  // de verdad la única puerta.
+  await createAdminClient()
+    .auth.admin.updateUserById(id, { email_confirm: true })
+    .catch(() => undefined);
+
   revalidatePath("/admin/miembros");
 
   // Al recién aprobado: ya puede entrar en todo.
