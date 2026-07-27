@@ -2,7 +2,7 @@ import Image from "next/image";
 import Link from "next/link";
 import { redirect, notFound } from "next/navigation";
 import type { Metadata } from "next";
-import { ArrowLeft, Play, Music } from "lucide-react";
+import { ArrowLeft, Play, Music, Check, ClipboardList, ShoppingCart } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
@@ -39,20 +39,49 @@ export default async function PerfilPublicoPage({
 
   const esYoMismo = perfil.id === sesion.userId;
 
-  const [{ data: fotos }, { data: pistas }] = await Promise.all([
-    supabase
-      .from("media")
-      .select("id, anio, tipo, url, thumb_url, descripcion")
-      .eq("subido_por", id)
-      .order("created_at", { ascending: false })
-      .limit(9),
-    supabase
-      .from("pistas")
-      .select("id, titulo, artista, tipo")
-      .eq("subido_por", id)
-      .order("created_at", { ascending: false })
-      .limit(9),
-  ]);
+  const [{ data: fotos }, { data: pistas }, { data: filasTareas }, { data: filasCompra }] =
+    await Promise.all([
+      supabase
+        .from("media")
+        .select("id, anio, tipo, url, thumb_url, descripcion")
+        .eq("subido_por", id)
+        .order("created_at", { ascending: false })
+        .limit(9),
+      supabase
+        .from("pistas")
+        .select("id, titulo, artista, tipo")
+        .eq("subido_por", id)
+        .order("created_at", { ascending: false })
+        .limit(9),
+      // `tareas`/`tareas_miembros` sí son legibles para cualquier miembro
+      // (a diferencia de `perfiles`): es la organización de la peña, no algo
+      // privado de cada uno. No hace falta el cliente de servicio aquí.
+      supabase
+        .from("tareas_miembros")
+        .select("tareas(id, titulo, fecha, hecha)")
+        .eq("perfil_id", id),
+      supabase
+        .from("compra_miembros")
+        .select("lista_compra(id, item, cantidad, comprado, anio)")
+        .eq("perfil_id", id),
+    ]);
+
+  function aplanar<T>(filas: unknown[] | null | undefined, campo: string): T[] {
+    return (filas ?? [])
+      .map((f) => {
+        const rel = (f as Record<string, unknown>)[campo];
+        return (Array.isArray(rel) ? rel[0] : rel) as T | undefined;
+      })
+      .filter(Boolean) as T[];
+  }
+
+  type SuTarea = { id: string; titulo: string; fecha: string | null; hecha: boolean };
+  type SuCompra = { id: string; item: string; cantidad: number; comprado: boolean; anio: number };
+
+  const tareas = aplanar<SuTarea>(filasTareas, "tareas").sort((a, b) =>
+    (a.fecha ?? "9999").localeCompare(b.fecha ?? "9999"),
+  );
+  const compras = aplanar<SuCompra>(filasCompra, "lista_compra");
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
@@ -88,6 +117,79 @@ export default async function PerfilPublicoPage({
             </p>
           )}
         </div>
+
+        <section className="border-t border-white/10 pt-8">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <ClipboardList size={18} className="text-white/50" aria-hidden="true" />
+            Tareas asignadas
+          </h2>
+          {tareas.length === 0 ? (
+            <p className="mt-2 text-sm text-white/40">No tiene ninguna tarea asignada.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {tareas.map((t) => (
+                <li
+                  key={t.id}
+                  className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2.5"
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
+                      t.hecha ? "border-white bg-white text-black" : "border-white/30 text-transparent"
+                    }`}
+                  >
+                    <Check size={14} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={`truncate text-sm font-medium ${t.hecha ? "text-white/40 line-through" : ""}`}>
+                      {t.titulo}
+                    </p>
+                    {t.fecha && (
+                      <p className="text-xs text-white/50 tabular-nums">
+                        {Number(t.fecha.slice(8, 10))} de agosto
+                      </p>
+                    )}
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
+
+        <section className="border-t border-white/10 pt-8">
+          <h2 className="flex items-center gap-2 text-lg font-semibold">
+            <ShoppingCart size={18} className="text-white/50" aria-hidden="true" />
+            Compra asignada
+          </h2>
+          {compras.length === 0 ? (
+            <p className="mt-2 text-sm text-white/40">No tiene nada asignado de la compra.</p>
+          ) : (
+            <ul className="mt-3 space-y-2">
+              {compras.map((c) => (
+                <li
+                  key={c.id}
+                  className="flex items-center gap-3 rounded-lg border border-white/10 px-3 py-2.5"
+                >
+                  <span
+                    className={`flex h-7 w-7 shrink-0 items-center justify-center rounded-full border ${
+                      c.comprado ? "border-white bg-white text-black" : "border-white/30 text-transparent"
+                    }`}
+                  >
+                    <Check size={14} aria-hidden="true" />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className={`truncate text-sm font-medium ${c.comprado ? "text-white/40 line-through" : ""}`}>
+                      {c.item}
+                    </p>
+                    <p className="text-xs text-white/50">
+                      {c.cantidad > 1 && `Cantidad: ${c.cantidad} · `}
+                      <span className="tabular-nums">{c.anio}</span>
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          )}
+        </section>
 
         <section className="border-t border-white/10 pt-8">
           <h2 className="text-lg font-semibold">Fotos y vídeos</h2>

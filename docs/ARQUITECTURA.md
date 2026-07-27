@@ -305,11 +305,17 @@ propia con RLS:
   `guardarPerfil`, e incluida en la vista `autores` (ya era pública el nombre/avatar, la bio es del
   mismo nivel de sensibilidad).
 - `/miembros` y `/miembros/[id]` son de solo lectura para cualquier miembro aprobado: directorio y
-  perfil público (avatar, usuario, bio, sus últimas 9 fotos/pistas). **Gotcha real**: la política
-  RLS de `perfiles` es `id = auth.uid() or es_admin()` — un miembro normal no puede leer la fila de
-  otro por la vía normal. Estas dos páginas usan `createAdminClient()` a propósito, exponiendo solo
-  columnas no sensibles (nombre, usuario, avatar, bio, rol), igual que ya se hizo para el contador
-  de miembros de la home.
+  perfil público (avatar, usuario, bio, sus tareas y compra asignada, sus últimas 9 fotos/pistas).
+  **Gotcha real**: la política RLS de `perfiles` es `id = auth.uid() or es_admin()` — un miembro
+  normal no puede leer la fila de otro por la vía normal. Estas dos páginas usan
+  `createAdminClient()` a propósito para leer `perfiles`, exponiendo solo columnas no sensibles
+  (nombre, usuario, avatar, bio, rol), igual que ya se hizo para el contador de miembros de la home.
+  `tareas`/`tareas_miembros`/`lista_compra`/`compra_miembros` SÍ son legibles por cualquier
+  miembro con el cliente normal (es organización de la peña, no algo privado), a diferencia de
+  `deudas`/`participantes`, que siguen siendo solo de la directiva y no aparecen aquí.
+- Al principio el enlace a `/miembros` solo vivía como un texto discreto dentro de `/perfil`, y el
+  señor no lo encontraba. Se añadió "Miembros" al menú de escritorio (`Header.tsx`) y a la barra
+  inferior móvil (`BottomNav.tsx`, icono `Users`), que es donde de verdad se descubre.
 
 ---
 

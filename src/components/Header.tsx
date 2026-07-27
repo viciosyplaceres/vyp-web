@@ -40,12 +40,20 @@ export default async function Header() {
             </Link>
           ))}
           {sesion?.esMiembro && (
-            <Link
-              href="/chat"
-              className="cursor-pointer text-white/60 transition-colors duration-200 hover:text-white"
-            >
-              Chat
-            </Link>
+            <>
+              <Link
+                href="/chat"
+                className="cursor-pointer text-white/60 transition-colors duration-200 hover:text-white"
+              >
+                Chat
+              </Link>
+              <Link
+                href="/miembros"
+                className="cursor-pointer text-white/60 transition-colors duration-200 hover:text-white"
+              >
+                Miembros
+              </Link>
+            </>
           )}
           {sesion?.esAdmin && (
             <Link

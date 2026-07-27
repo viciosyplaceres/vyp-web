@@ -3,7 +3,7 @@
 import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Home, Images, Music, MessageCircle, Settings } from "lucide-react";
+import { Home, Images, Music, MessageCircle, Users, Settings } from "lucide-react";
 import { createClient } from "@/lib/supabase/client";
 import { marcarChatLeido } from "@/app/actions/chat";
 
@@ -78,6 +78,7 @@ export default function BottomNav({
 
   if (esMiembro) {
     items.push({ href: "/chat", etiqueta: "Chat", Icono: MessageCircle });
+    items.push({ href: "/miembros", etiqueta: "Miembros", Icono: Users });
   }
 
   if (esAdmin) {
