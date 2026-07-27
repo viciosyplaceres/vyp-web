@@ -1,10 +1,11 @@
 "use client";
 
-import { memo, useMemo } from "react";
-import { Reply, Pencil, Trash2, SmilePlus, Check, CheckCheck } from "lucide-react";
+import { memo, useCallback, useMemo } from "react";
+import { MoreHorizontal, Check, CheckCheck } from "lucide-react";
 import { horaCorta } from "@/lib/formato";
 import Avatar from "../Avatar";
-import { EMOJIS_RAPIDOS, type Mensaje, type Reaccion } from "./tipos";
+import { type Mensaje, type Reaccion } from "./tipos";
+import { usePulsacionLarga } from "./usePulsacionLarga";
 
 /**
  * Una burbuja del chat, con sus acciones y sus reacciones.
@@ -22,12 +23,8 @@ function BurbujaMensaje({
   reacciones,
   autorOriginalEsMio,
   leido,
-  pickerAbierto,
-  onAlternarPicker,
+  onAbrirMenu,
   onReaccionar,
-  onResponder,
-  onEditar,
-  onEliminar,
 }: {
   mensaje: Mensaje;
   mio: boolean;
@@ -35,14 +32,19 @@ function BurbujaMensaje({
   reacciones: Reaccion[];
   autorOriginalEsMio: boolean;
   leido: boolean;
-  pickerAbierto: boolean;
-  onAlternarPicker: (id: string) => void;
+  onAbrirMenu: (m: Mensaje) => void;
+  /** Solo para el atajo de tocar una reacción ya puesta; el resto va por el menú. */
   onReaccionar: (id: string, emoji: string) => void;
-  onResponder: (m: Mensaje) => void;
-  onEditar: (m: Mensaje) => void;
-  onEliminar: (id: string) => void;
 }) {
   const esTemporal = m.id.startsWith("temp-");
+
+  // Un mensaje ya borrado no tiene nada que ofrecer: ni responder a "Mensaje
+  // eliminado" ni editarlo.
+  const abrirMenu = useCallback(() => {
+    if (!m.borrado) onAbrirMenu(m);
+  }, [m, onAbrirMenu]);
+
+  const gesto = usePulsacionLarga(abrirMenu);
 
   const grupos = useMemo(() => {
     const mapa = new Map<string, Reaccion[]>();
@@ -63,10 +65,14 @@ function BurbujaMensaje({
 
       <div className={`flex max-w-[80%] flex-col ${mio ? "items-end" : "items-start"}`}>
         <div className="relative">
+          {/* Mantener pulsado (o hacer clic con el ratón) abre las acciones.
+              `select-none` evita que el móvil empiece a seleccionar el texto a
+              media pulsación; para eso está "Copiar texto" en el menú. */}
           <div
-            className={`rounded-2xl px-3.5 py-2 ${
+            {...(m.borrado ? {} : gesto)}
+            className={`select-none rounded-2xl px-3.5 py-2 ${
               mio ? "rounded-br-md bg-white text-black" : "rounded-bl-md bg-white/10 text-white"
-            } ${m.borrado ? "italic opacity-60" : ""}`}
+            } ${m.borrado ? "italic opacity-60" : "cursor-pointer"}`}
           >
             {!mio && !m.borrado && (
               <p className="text-xs font-medium text-white/60">{m.autor ?? "Miembro"}</p>
@@ -109,68 +115,23 @@ function BurbujaMensaje({
             </div>
           </div>
 
-          {/* Acciones: responder siempre, editar/eliminar solo lo propio. */}
+          {/* Atajo de escritorio: al pasar por encima aparece el acceso al
+              mismo menú. En móvil no existe el hover — por eso las acciones
+              eran inalcanzables— y ahí manda la pulsación larga. */}
           {!m.borrado && (
             <div
-              className={`pointer-events-none absolute top-1/2 flex -translate-y-1/2 items-center gap-0.5 opacity-0 transition-opacity duration-150 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100 ${
+              className={`pointer-events-none absolute top-1/2 hidden -translate-y-1/2 items-center opacity-0 transition-opacity duration-150 group-hover/msg:pointer-events-auto group-hover/msg:opacity-100 md:flex ${
                 mio ? "right-full mr-1" : "left-full ml-1"
               }`}
             >
               <button
                 type="button"
-                onClick={() => onAlternarPicker(m.id)}
-                aria-label="Reaccionar"
+                onClick={abrirMenu}
+                aria-label="Acciones del mensaje"
                 className={botonAccion}
               >
-                <SmilePlus size={15} aria-hidden="true" />
+                <MoreHorizontal size={16} aria-hidden="true" />
               </button>
-              <button
-                type="button"
-                onClick={() => onResponder(m)}
-                aria-label="Responder"
-                className={botonAccion}
-              >
-                <Reply size={15} aria-hidden="true" />
-              </button>
-              {mio && (
-                <>
-                  <button
-                    type="button"
-                    onClick={() => onEditar(m)}
-                    aria-label="Editar"
-                    className={botonAccion}
-                  >
-                    <Pencil size={14} aria-hidden="true" />
-                  </button>
-                  <button
-                    type="button"
-                    onClick={() => onEliminar(m.id)}
-                    aria-label="Eliminar"
-                    className="flex h-8 w-8 cursor-pointer items-center justify-center rounded-full bg-white/10 text-white/70 backdrop-blur-sm transition-colors duration-150 hover:bg-red-500/20 hover:text-red-400"
-                  >
-                    <Trash2 size={14} aria-hidden="true" />
-                  </button>
-                </>
-              )}
-            </div>
-          )}
-
-          {pickerAbierto && (
-            <div
-              className={`absolute top-full z-10 mt-1 flex gap-1 rounded-full border border-white/15 bg-neutral-900 px-2 py-1.5 shadow-lg ${
-                mio ? "right-0" : "left-0"
-              }`}
-            >
-              {EMOJIS_RAPIDOS.map((e) => (
-                <button
-                  key={e}
-                  type="button"
-                  onClick={() => onReaccionar(m.id, e)}
-                  className="cursor-pointer rounded-full p-1 text-lg transition-transform duration-100 hover:scale-125"
-                >
-                  {e}
-                </button>
-              ))}
             </div>
           )}
         </div>

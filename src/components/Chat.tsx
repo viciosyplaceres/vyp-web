@@ -9,6 +9,7 @@ import {
 } from "@/app/actions/chat";
 import { diaRelativo } from "@/lib/formato";
 import BurbujaMensaje from "./chat/BurbujaMensaje";
+import HojaAcciones from "./chat/HojaAcciones";
 import BarraEscritura from "./chat/BarraEscritura";
 import { useRealtimeChat } from "./chat/useRealtimeChat";
 import type { InfoAutor, Mensaje, Reaccion } from "./chat/tipos";
@@ -35,7 +36,8 @@ export default function Chat({
   const [lecturas, setLecturas] = useState(lecturasIniciales);
   const [respondiendoA, setRespondiendoA] = useState<Mensaje | null>(null);
   const [editandoId, setEditandoId] = useState<string | null>(null);
-  const [picketaAbierta, setPicketaAbierta] = useState<string | null>(null);
+  // Qué mensaje tiene abierto el menú de acciones (responder, editar, borrar…).
+  const [menuMensaje, setMenuMensaje] = useState<Mensaje | null>(null);
   const [pedirFoco, setPedirFoco] = useState(0);
   const [, startTransition] = useTransition();
   const finRef = useRef<HTMLDivElement>(null);
@@ -123,7 +125,6 @@ export default function Chat({
 
   const alternarReaccion = useCallback(
     (mensajeId: string, emoji: string) => {
-      setPicketaAbierta(null);
       setReacciones((prev) => {
         const actuales = prev[mensajeId] ?? [];
         const mia = actuales.find((r) => r.perfilId === userId);
@@ -151,9 +152,8 @@ export default function Chat({
     setPedirFoco((n) => n + 1);
   }, []);
 
-  const alternarPicker = useCallback((id: string) => {
-    setPicketaAbierta((abierta) => (abierta === id ? null : id));
-  }, []);
+  const abrirMenu = useCallback((m: Mensaje) => setMenuMensaje(m), []);
+  const cerrarMenu = useCallback(() => setMenuMensaje(null), []);
 
   // "Leído" cuando algún otro miembro tiene marcado como leído hasta una
   // fecha igual o posterior a la del mensaje. Se calcula la marca más
@@ -202,17 +202,29 @@ export default function Chat({
                 !!m.respuestaA && mensajesPorId.get(m.respuestaA)?.autor_id === userId
               }
               leido={leidoHasta >= new Date(m.created_at).getTime()}
-              pickerAbierto={picketaAbierta === m.id}
-              onAlternarPicker={alternarPicker}
+              onAbrirMenu={abrirMenu}
               onReaccionar={alternarReaccion}
-              onResponder={responder}
-              onEditar={empezarEdicion}
-              onEliminar={eliminar}
             />
           </li>
         ))}
         <div ref={finRef} />
       </ol>
+
+      {menuMensaje && (
+        <HojaAcciones
+          mensaje={menuMensaje}
+          mio={menuMensaje.autor_id === userId}
+          miEmoji={
+            (reacciones[menuMensaje.id] ?? SIN_REACCIONES).find((r) => r.perfilId === userId)
+              ?.emoji ?? null
+          }
+          onCerrar={cerrarMenu}
+          onReaccionar={alternarReaccion}
+          onResponder={responder}
+          onEditar={empezarEdicion}
+          onEliminar={eliminar}
+        />
+      )}
 
       <BarraEscritura
         key={editandoId ?? "nuevo"}

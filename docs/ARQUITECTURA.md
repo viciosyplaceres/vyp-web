@@ -469,6 +469,40 @@ de datos con su propio token, intentar marcarse el pago o tocar el pedido de otr
 
 ---
 
+## 7undecies. Bug real: las acciones del chat no existían en el móvil
+
+Responder, editar, borrar y reaccionar estaban implementadas y funcionando, pero **no había forma
+humana de llegar a ellas desde un teléfono**. Los botones vivían en un contenedor con
+`opacity-0 pointer-events-none` que solo se activaba con `group-hover/msg`: en una pantalla táctil
+no existe el `:hover`, así que eran invisibles *y* además intocables. La app es "móvil primero",
+o sea que el fallo se comía justo el caso de uso principal.
+
+Arreglo, con el gesto de cualquier app de mensajería:
+
+- `usePulsacionLarga.ts` — detecta mantener pulsado (450 ms). Lo delicado es que el dedo también
+  baja sobre un mensaje al desplazar la conversación, así que el gesto se cancela en cuanto el
+  contacto se aparta más de 10 px del punto inicial. Con ratón, un clic normal hace lo mismo
+  (más descubrible que un botón que solo aparece al pasar por encima); con el dedo, un toque suelto
+  no hace nada, como en WhatsApp. `onContextMenu` se anula para que el menú propio sustituya al del
+  navegador.
+- `HojaAcciones.tsx` — el menú va **anclado abajo**, no flotando junto a la burbuja: así no se sale
+  de la pantalla ni lo recorta la lista, caiga el mensaje donde caiga. Se dibuja **una sola vez** en
+  el chat, no una por mensaje (son 200 en pantalla). Incluye "Copiar texto", que compensa el
+  `select-none` que hace falta para que el móvil no empiece a seleccionar a media pulsación.
+- Se elimina de paso el estado `picketaAbierta`: el selector de emojis suelto y el menú hacían lo
+  mismo por dos caminos distintos. Ahora hay uno.
+- En escritorio queda un botón "···" al pasar por encima que abre ese mismo menú.
+- La cabecera del chat lo explica ("Mantén pulsado un mensaje para…"): el gesto hay que contarlo,
+  nadie lo adivina.
+
+**Verificado en un Chromium real con pantalla táctil simulada (390×844, `has_touch`)**, no con
+curl: un toque suelto no abre nada; mantener pulsado abre el menú; responder deja la cita en la
+barra de escritura; editar, reaccionar y borrar se ven en pantalla **y quedan guardados en la base
+de datos** (`editado_at` con fecha, `borrado = true`, la reacción en su tabla). En escritorio, clic
+abre y Escape cierra. Sin errores de consola. Datos de prueba limpiados.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
