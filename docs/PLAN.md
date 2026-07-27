@@ -212,9 +212,10 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 ## 12. Decisiones que hacen falta antes de seguir
 
 1. ~~Qué logo de los cuatro candidatos.~~ **Cerrado** (sección 10).
-2. ~~Dónde va la música.~~ **Cerrado**: R2 activado para subidas propias + enlaces Mixcloud/SoundCloud
-   incrustados para sesiones ya publicadas fuera (sección 3). Falta que el señor indique el
-   **nombre del bucket R2** creado en el dashboard de Cloudflare para poder cablearlo en el código.
+2. ~~Dónde va la música.~~ **Cerrado**: R2 activado, bucket `vyp` ya creado y sus 4 variables
+   (`R2_ACCOUNT_ID`, `R2_ACCESS_KEY_ID`, `R2_SECRET_ACCESS_KEY`, `R2_BUCKET_NAME`) ya cargadas en
+   `.env.local` y en Vercel (producción, cifradas) + enlaces Mixcloud/SoundCloud incrustados para
+   sesiones ya publicadas fuera (sección 3).
 3. **Años con contenido**: ¿de qué años hay fotos para sembrar la galería?
 
 ---
