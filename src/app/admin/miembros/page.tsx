@@ -5,6 +5,7 @@ import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import { aprobarMiembro, revocarMiembro } from "@/app/actions/miembros";
+import AccionesMiembro from "@/components/AccionesMiembro";
 
 export const dynamic = "force-dynamic";
 
@@ -70,7 +71,7 @@ export default async function AdminMiembrosPage() {
           {miembros?.map((m) => (
             <li
               key={m.id}
-              className="flex items-center justify-between gap-3 rounded-lg border border-white/15 px-4 py-3"
+              className="flex items-start justify-between gap-3 rounded-lg border border-white/15 px-4 py-3"
             >
               <div className="min-w-0">
                 <p className="truncate font-medium">
@@ -83,24 +84,27 @@ export default async function AdminMiembrosPage() {
               </div>
 
               {m.rol !== "admin" && (
-                <form
-                  action={
-                    m.aprobado
-                      ? revocarMiembro.bind(null, m.id)
-                      : aprobarMiembro.bind(null, m.id)
-                  }
-                >
-                  <button
-                    type="submit"
-                    className={`min-h-[44px] cursor-pointer rounded-full px-4 text-sm font-medium transition-colors duration-200 ${
+                <div className="flex flex-col items-end gap-2">
+                  <form
+                    action={
                       m.aprobado
-                        ? "border border-white/30 hover:bg-white/10"
-                        : "bg-white text-black hover:opacity-85"
-                    }`}
+                        ? revocarMiembro.bind(null, m.id)
+                        : aprobarMiembro.bind(null, m.id)
+                    }
                   >
-                    {m.aprobado ? "Revocar" : "Aprobar"}
-                  </button>
-                </form>
+                    <button
+                      type="submit"
+                      className={`min-h-[44px] cursor-pointer rounded-full px-4 text-sm font-medium transition-colors duration-200 ${
+                        m.aprobado
+                          ? "border border-white/30 hover:bg-white/10"
+                          : "bg-white text-black hover:opacity-85"
+                      }`}
+                    >
+                      {m.aprobado ? "Revocar" : "Aprobar"}
+                    </button>
+                  </form>
+                  <AccionesMiembro id={m.id} nombre={m.nombre || "este miembro"} />
+                </div>
               )}
             </li>
           ))}

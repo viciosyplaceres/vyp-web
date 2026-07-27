@@ -270,6 +270,35 @@ crecía sin tope y hacía la página cada vez más pesada (lo que el señor llam
 
 ---
 
+## 7quinquies. Resetear contraseña y eliminar miembro (`/admin/miembros`)
+
+Dos acciones nuevas en `app/actions/miembros.ts`, aparte de aprobar/revocar, ambas usando
+`createAdminClient()` (`service_role`) porque tocan la API de administración de Auth, no una tabla
+propia con RLS:
+
+- **`resetearContrasena(id)`**: no hay SMTP transaccional configurado, así que no hay email de
+  "restablece tu contraseña". En su lugar se genera una contraseña temporal aleatoria (10
+  caracteres, sin `0/O/1/l/I` para que se pueda copiar a mano sin confusiones) con
+  `auth.admin.updateUserById`, y se enseña **una sola vez** en pantalla (`AccionesMiembro.tsx`) para
+  que la directiva se la pase al miembro por WhatsApp o como sea.
+- **`eliminarMiembro(id)`**: borra la cuenta de Auth con `auth.admin.deleteUser`, y de ahí en
+  cascada su fila de `perfiles` (`perfiles.id references auth.users(id) on delete cascade`). Lo
+  importante es qué le pasa a lo demás:
+  - `media.subido_por` y `pistas.subido_por` son `on delete set null` desde el principio (migración
+    0001): sus fotos, vídeos y música **sobreviven**, solo se quedan sin autor.
+  - `comentarios.autor_id`, `mensajes.autor_id`, `tareas_miembros`/`compra_miembros` sí son
+    `on delete cascade`: sus comentarios, sus mensajes del chat y sus asignaciones desaparecen con
+    la cuenta. Es una consecuencia real y deliberadamente no se ha tocado el esquema para
+    evitarlo — solo se pidió no perder las subidas, que es justo lo que ya garantizaba el esquema.
+  - Ambas acciones llaman a un guardia (`exigirObjetivoNoAdmin`) que impide tocar la cuenta de la
+    directiva por error, comprobando el rol de la cuenta OBJETIVO (no de quien pide la acción).
+- Verificado end-to-end contra Supabase real (no solo RLS en teoría): usuario de prueba creado con
+  la API de administración, aprobado, con una foto asignada; reseteo confirmado con login real
+  usando la contraseña nueva; borrado confirmado con el perfil desaparecido y la foto intacta con
+  `subido_por = null`. Datos de prueba limpiados después.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
