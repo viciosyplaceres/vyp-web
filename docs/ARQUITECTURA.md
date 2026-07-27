@@ -772,6 +772,29 @@ personas con 2 turnos y 3 con 3 —las del desmontaje—. Datos de prueba elimin
 
 ---
 
+## 7octodecies. Dados: decidir algo al momento (`/admin/dados`)
+
+Aprovecha el mismo mecanismo de la limpieza (un dado con más caras que
+opciones, repitiendo la tirada si sale una que no cuenta) pero para una
+decisión suelta, sin guardar nada en la base de datos — vive entero en
+`lib/dados.ts`, sin tabla ni server action.
+
+Dos modos:
+
+- **Mayor o menor de 6**: dado de 12 caras (con uno de 6 nunca podría salir
+  "mayor de 6"). Del 1 al 5 gana menor, del 7 al 12 gana mayor; el 6 es
+  empate y se repite.
+- **Por miembro**: igual que en la limpieza — un dado de `carasDado(N)` caras,
+  cada miembro tiene la suya y el número que sobra obliga a repetir. Sin la
+  restricción de "no más de un turno de diferencia" de la limpieza, porque
+  aquí no hay turnos: es una tirada suelta, no un calendario.
+
+Como no persiste nada, la lista de miembros llega del servidor en el orden
+alfabético de siempre (`listarMiembros()`) y así se queda mientras dura la
+página.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).

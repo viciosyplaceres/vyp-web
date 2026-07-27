@@ -10,6 +10,7 @@ import {
   Coins,
   Sparkles,
   HardDrive,
+  Dices,
 } from "lucide-react";
 import { getSesion } from "@/lib/auth";
 import { obtenerAnioActivo } from "@/app/actions/configuracion";
@@ -33,6 +34,7 @@ const SECCIONES_MIEMBRO = [
   { href: "/admin/limpieza", texto: "Limpieza", Icono: Sparkles },
   { href: "/admin/compras", texto: "Lista de la compra", Icono: ShoppingCart },
   { href: "/admin/deudas", texto: "Deudas", Icono: Coins },
+  { href: "/admin/dados", texto: "Dados", Icono: Dices },
 ];
 
 const SECCIONES_DIRECTIVA = [
