@@ -1,10 +1,8 @@
 import type { Metadata } from "next";
-import { Music } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import ListaMusica, { type PistaListada } from "@/components/ListaMusica";
-import PanelSubir from "@/components/PanelSubir";
-import SubirMusica from "@/components/SubirMusica";
+import PanelSubirMusica from "@/components/PanelSubirMusica";
 
 export const dynamic = "force-dynamic";
 
@@ -34,11 +32,7 @@ export default async function MusicaPage() {
           se corta.
         </p>
 
-        {sesion?.esMiembro && (
-          <PanelSubir etiqueta="Subir música" Icono={Music}>
-            {(cerrar) => <SubirMusica onSubido={cerrar} />}
-          </PanelSubir>
-        )}
+        {sesion?.esMiembro && <PanelSubirMusica />}
 
         <ListaMusica pistas={(pistas ?? []) as PistaListada[]} />
       </div>

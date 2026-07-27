@@ -1,11 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
-import { ImagePlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
-import PanelSubir from "@/components/PanelSubir";
-import SubirMedia from "@/components/SubirMedia";
+import PanelSubirGaleria from "@/components/PanelSubirGaleria";
 
 export const dynamic = "force-dynamic";
 
@@ -55,11 +53,7 @@ export default async function GaleriaPage() {
           Las fiestas son una vez al año. Cada año, su carpeta.
         </p>
 
-        {sesion?.esMiembro && (
-          <PanelSubir etiqueta="Subir fotos o vídeos" Icono={ImagePlus}>
-            {(cerrar) => <SubirMedia onSubido={cerrar} />}
-          </PanelSubir>
-        )}
+        {sesion?.esMiembro && <PanelSubirGaleria />}
 
         {anios.length === 0 ? (
           <p className="mt-10 text-white/50">

@@ -8,6 +8,12 @@ import { ChevronDown } from "lucide-react";
  * Botón grande arriba de la página que despliega el formulario de subida
  * justo debajo. Empieza cerrado para no ensuciar la vista a quien solo entra
  * a mirar fotos o escuchar música.
+ *
+ * ⚠ SOLO puede usarse desde otro componente de cliente (ver
+ * `PanelSubirGaleria` y `PanelSubirMusica`). Recibe el icono —que es un
+ * componente— y los hijos como función, y ninguna de las dos cosas se puede
+ * enviar desde un Server Component: React no sabe serializar funciones y la
+ * página revienta con un 500 en producción. Ya pasó una vez.
  */
 export default function PanelSubir({
   etiqueta,

@@ -1,12 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, ImagePlus, Play } from "lucide-react";
+import { ChevronLeft, Play } from "lucide-react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
-import PanelSubir from "@/components/PanelSubir";
-import SubirMedia from "@/components/SubirMedia";
+import PanelSubirGaleria from "@/components/PanelSubirGaleria";
 
 export const dynamic = "force-dynamic";
 
@@ -52,9 +51,10 @@ export default async function AnioPage({ params }: Props) {
         </h1>
 
         {sesion?.esMiembro && (
-          <PanelSubir etiqueta={`Subir a ${anioNum}`} Icono={ImagePlus}>
-            {(cerrar) => <SubirMedia anioInicial={anioNum} onSubido={cerrar} />}
-          </PanelSubir>
+          <PanelSubirGaleria
+            etiqueta={`Subir a ${anioNum}`}
+            anioInicial={anioNum}
+          />
         )}
 
         {!media?.length ? (
