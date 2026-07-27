@@ -97,14 +97,19 @@ Se hace en dos capas, porque casi todo se sube desde el móvil en la calle y con
 
 ### Cómo se eligen las fotos: cámara o galería
 
-En `/subir` no hay un selector de archivos genérico, sino **tres botones grandes**: *Hacer foto*,
-*Grabar vídeo* y *De la galería*. Los dos primeros llevan el atributo `capture="environment"`, que
-es lo que hace que el móvil **abra la cámara directamente** en vez del explorador de archivos: se
-hace la foto en la caseta y se sube sin pasar por la galería del teléfono.
+> **Cambiado el 2026-07-27**: ya no existe la página `/subir` ni el botón "Subir" del header. Subir
+> vive **directamente en `/galeria` y en `/musica`**, con un botón propio arriba de cada página
+> (`PanelSubir.tsx`) que despliega el formulario justo debajo, cerrado por defecto para no ensuciar
+> la vista a quien solo entra a mirar. En `/galeria` también hay uno igual, ya con el año puesto,
+> dentro de la página de cada año.
+
+El selector de fotos es **un único botón**, sin el atributo `capture`: así es el propio móvil quien
+ofrece su desplegable nativo con *Cámara*, *Vídeo* y *Galería* juntos en un solo menú, en vez de que
+la web decida por él saltando directa a la cámara. Es el comportamiento de serie de Android/iOS
+cuando un campo de fichero acepta imagen y vídeo sin forzar la captura.
 
 Lo elegido se **acumula** en una lista con su tamaño y un botón para quitar cada cosa, así se pueden
-encadenar varias fotos seguidas sin perder las anteriores. En ordenador, `capture` se ignora y los
-tres botones abren el selector normal.
+encadenar varias fotos seguidas sin volver a abrir el selector.
 
 ---
 
@@ -177,7 +182,7 @@ bloqueado por el trigger; sigue sin acceso a `participantes`.
 **Interfaz de F2, hecha y desplegada** (`viciosyplaceres.com`): `/login`, `/registro` (con página
 de confirmación) y `/admin/miembros` (lista de miembros, aprobar/revocar). Autenticación con
 `@supabase/ssr`, sesión gestionada en `src/proxy.ts` (Next.js 16 renombró `middleware.ts` a
-`proxy.ts`), que protege `/admin/*` y `/subir` redirigiendo a `/login` si no hay sesión — probado en
+`proxy.ts`), que protege `/admin/*` redirigiendo a `/login` si no hay sesión — probado en
 producción (`curl` confirma el 307). La única cuenta con `rol = 'admin'` es
 `alvaroviniloo@gmail.com` (ver `CREDENCIALES.md`); el registro público siempre crea miembros sin
 aprobar, y el panel de miembros solo es visible si `rol = 'admin' y aprobado = true`, comprobado dos

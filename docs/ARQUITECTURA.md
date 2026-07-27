@@ -28,10 +28,9 @@ src/
   app/
     layout.tsx              Encabezado, navegación inferior, reproductor global, PWA
     page.tsx                Portada: carrusel de fotos, música compacta, mapa ("#donde"), invitación
-    galeria/                Años → cuadrícula → detalle con comentarios
-    musica/                 Lista de pistas (R2 + embeds externos)
+    galeria/                Años → cuadrícula → detalle con comentarios. Botón "Subir" propio (miembros)
+    musica/                 Lista de pistas (R2 + embeds externos). Botón "Subir música" propio (miembros)
     chat/                   Chat interno de miembros
-    subir/                  Subida de fotos/vídeos y música (solo miembros)
     cuenta/                 Perfil, avisos push, cerrar sesión
     admin/                  Participantes · compras · miembros (solo directiva)
     login/ registro/        Acceso y alta
@@ -42,6 +41,7 @@ src/
     ActivarAvisosAuto.tsx   Pide el permiso de avisos al abrir la app instalada
     CarruselFotos.tsx       Cinta en bucle infinito (CSS puro) de la portada
     MusicaCompacta.tsx      Últimas 5 pistas para la portada, sin iframes
+    PanelSubir.tsx          Botón desplegable genérico: cerrado por defecto, abre el formulario debajo
   lib/
     auth.ts                 getSesion / exigirMiembro / exigirAdmin
     supabase/{client,server,admin}.ts
@@ -64,8 +64,10 @@ public/                     manifest.webmanifest, sw.js, logos
 
 Cada regla se comprueba en más de un sitio a propósito. El orden importa:
 
-1. **`proxy.ts`** — redirige a `/login` si se entra sin sesión a `/admin/*` o `/subir`. Es comodidad,
-   no seguridad: solo evita ver una pantalla vacía.
+1. **`proxy.ts`** — redirige a `/login` si se entra sin sesión a `/admin/*`. En `/galeria` y
+   `/musica` el botón de subir simplemente no se pinta si no eres miembro (`PanelSubir` vive dentro
+   de un `{sesion?.esMiembro && ...}` en la propia página). Es comodidad, no seguridad: solo evita
+   ver un botón que no va a funcionar.
 2. **Server actions y páginas** — `exigirMiembro()` / `exigirAdmin()` antes de tocar nada. Aquí sí
    se corta de verdad, porque el navegador no puede saltárselo.
 3. **RLS en Postgres** — la última palabra. Aunque alguien llame a la API de Supabase directamente

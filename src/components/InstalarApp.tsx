@@ -2,15 +2,13 @@
 
 import { useEffect, useState } from "react";
 import Image from "next/image";
-import { Download, X, Share, Plus } from "lucide-react";
+import { Download, X, Share, Plus, MoreVertical } from "lucide-react";
 
 /** Evento propio de Chrome/Edge (no está en los tipos estándar). */
 type EventoInstalacion = Event & {
   prompt: () => Promise<void>;
   userChoice: Promise<{ outcome: "accepted" | "dismissed" }>;
 };
-
-const OCULTAR_HASTA = "vyp-instalar-oculto-hasta";
 
 declare global {
   interface Window {
@@ -40,33 +38,38 @@ function esIOS() {
  * Cartel de "instala la app", pensado para gente que no es de tecnología:
  * ocupa la pantalla, explica para qué sirve y solo tiene un botón grande.
  *
- * En Android/Chrome usa el instalador nativo del navegador (un toque y ya).
- * En iPhone no existe ese instalador, así que se enseñan los dos pasos con
- * dibujos de los iconos reales que verá en su móvil.
+ * A propósito NO se recuerda que se cerró: mientras se siga usando la web
+ * (no la app instalada), aparece en cada visita. En cuanto esté instalada y
+ * se abra como app, `estaInstalada()` corta esto de raíz.
+ *
+ * En Android/Chrome usa el instalador nativo del navegador si está
+ * disponible (un toque y ya). Si Chrome no ofrece ese evento (puede pasar:
+ * criterios no cumplidos, ya se rechazó varias veces en esta sesión y Chrome
+ * deja de ofrecerlo, o es otro navegador) se enseña igualmente cómo instalar
+ * a mano desde el menú del navegador. En iPhone nunca existe ese instalador,
+ * así que directamente se enseñan los dos pasos con los iconos reales.
  */
 export default function InstalarApp() {
   const [evento, setEvento] = useState<EventoInstalacion | null>(null);
   const [visible, setVisible] = useState(false);
-  const [ios, setIos] = useState(false);
+  const [modo, setModo] = useState<"nativo" | "ios" | "manual">("nativo");
 
   useEffect(() => {
     if (estaInstalada()) return;
-
-    // Si lo cerró hace poco, no dar la lata en cada visita.
-    const hasta = Number(localStorage.getItem(OCULTAR_HASTA) ?? 0);
-    if (Date.now() < hasta) return;
 
     const enIOS = esIOS();
 
     const alPoderInstalar = (e: Event) => {
       e.preventDefault();
       setEvento(e as EventoInstalacion);
+      setModo("nativo");
       setVisible(true);
     };
 
     const alEventoYaCapturado = () => {
       if (window.__vypInstallEvent) {
         setEvento(window.__vypInstallEvent);
+        setModo("nativo");
         setVisible(true);
       }
     };
@@ -79,28 +82,23 @@ export default function InstalarApp() {
     // en el cuerpo del efecto, para no encadenar renders de forma síncrona.
     queueMicrotask(alEventoYaCapturado);
 
-    // En iPhone el evento anterior no existe nunca: se enseña la guía manual.
-    let temporizador: ReturnType<typeof setTimeout> | undefined;
-    if (enIOS) {
-      temporizador = setTimeout(() => {
-        setIos(true);
-        setVisible(true);
-      }, 1500);
-    }
+    // Si no hay instalador nativo (iPhone, o Chrome que no dispara el evento),
+    // se enseña el camino manual pasado un momento en vez de no decir nada.
+    const temporizador = setTimeout(() => {
+      if (evento || window.__vypInstallEvent) return;
+      setModo(enIOS ? "ios" : "manual");
+      setVisible(true);
+    }, 1500);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", alPoderInstalar);
       window.removeEventListener("vyp-install-ready", alEventoYaCapturado);
-      if (temporizador) clearTimeout(temporizador);
+      clearTimeout(temporizador);
     };
+    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   function cerrar() {
-    // Una semana de tregua.
-    localStorage.setItem(
-      OCULTAR_HASTA,
-      String(Date.now() + 7 * 24 * 60 * 60 * 1000),
-    );
     setVisible(false);
   }
 
@@ -149,7 +147,7 @@ export default function InstalarApp() {
           avisa cuando alguien sube fotos o escribe en el chat.
         </p>
 
-        {ios ? (
+        {modo === "ios" && (
           <div className="mt-5 space-y-3">
             <p className="text-sm font-medium">Son dos pasos:</p>
             <ol className="space-y-3 text-sm text-white/70">
@@ -182,7 +180,42 @@ export default function InstalarApp() {
               Entendido
             </button>
           </div>
-        ) : (
+        )}
+
+        {modo === "manual" && (
+          <div className="mt-5 space-y-3">
+            <p className="text-sm font-medium">Son dos pasos:</p>
+            <ol className="space-y-3 text-sm text-white/70">
+              <li className="flex items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">
+                  1
+                </span>
+                <span className="flex items-center gap-1.5">
+                  Pulsa el menú
+                  <MoreVertical size={16} className="text-white" aria-hidden="true" />
+                  del navegador (arriba a la derecha)
+                </span>
+              </li>
+              <li className="flex items-center gap-3">
+                <span className="flex h-8 w-8 shrink-0 items-center justify-center rounded-full bg-white/10 text-xs font-semibold">
+                  2
+                </span>
+                <span className="text-white">
+                  Elige &quot;Instalar app&quot; o &quot;Añadir a pantalla de inicio&quot;
+                </span>
+              </li>
+            </ol>
+            <button
+              type="button"
+              onClick={cerrar}
+              className="mt-2 min-h-[48px] w-full cursor-pointer rounded-full border border-white/25 px-6 text-sm font-medium transition-colors duration-200 hover:bg-white/10"
+            >
+              Entendido
+            </button>
+          </div>
+        )}
+
+        {modo === "nativo" && (
           <>
             <button
               type="button"

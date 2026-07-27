@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { redirect } from "next/navigation";
 import type { Metadata } from "next";
-import { Upload, MessageCircle, LogOut, MapPin } from "lucide-react";
+import { Images, Music, MessageCircle, LogOut, MapPin } from "lucide-react";
 import { getSesion } from "@/lib/auth";
 import { cerrarSesion } from "@/app/actions/auth";
 import AvisosPush from "@/components/AvisosPush";
@@ -47,11 +47,18 @@ export default async function CuentaPage() {
 
             <nav className="mt-6 space-y-2">
               <Link
-                href="/subir"
+                href="/galeria"
                 className="flex min-h-[56px] cursor-pointer items-center gap-3 rounded-lg border border-white/15 px-4 transition-colors duration-200 hover:bg-white/5"
               >
-                <Upload size={18} className="text-white/60" aria-hidden="true" />
-                Subir fotos o música
+                <Images size={18} className="text-white/60" aria-hidden="true" />
+                Subir fotos o vídeos
+              </Link>
+              <Link
+                href="/musica"
+                className="flex min-h-[56px] cursor-pointer items-center gap-3 rounded-lg border border-white/15 px-4 transition-colors duration-200 hover:bg-white/5"
+              >
+                <Music size={18} className="text-white/60" aria-hidden="true" />
+                Subir música
               </Link>
               <Link
                 href="/chat"

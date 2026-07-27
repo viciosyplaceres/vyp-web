@@ -29,10 +29,9 @@ Público: todo el mundo ve y escucha. Solo los miembros suben, comentan y entran
 | Ruta | Quién entra | Qué hay |
 |---|---|---|
 | `/` | Todos | Carrusel de las últimas 10 fotos, últimas 5 pistas, mapa y cómo llegar |
-| `/galeria` · `/galeria/[año]` · `/galeria/[año]/[id]` | Todos | Años, cuadrícula y detalle con comentarios |
-| `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar |
+| `/galeria` · `/galeria/[año]` · `/galeria/[año]/[id]` | Todos | Años, cuadrícula y detalle con comentarios. **Miembros**: botón "Subir" arriba de la página |
+| `/musica` | Todos | Sesiones y canciones, con reproductor que no se corta al navegar. **Miembros**: botón "Subir música" arriba de la página |
 | `/chat` | **Miembros** | Chat interno en vivo, estilo grupo de WhatsApp |
-| `/subir` | **Miembros** | Fotos, vídeos y música |
 | `/cuenta` | Con sesión | Perfil, avisos push, cerrar sesión |
 | `/admin` · `/admin/compras` · `/admin/miembros` | **Directiva** | Pagos y tallas, lista de la compra, aprobar altas |
 
@@ -60,7 +59,8 @@ seguras del teléfono, y la web **se puede instalar como app** desde el propio n
 Pensado para gente poco tecnológica: al entrar sale un **cartel de instalación con un solo botón**
 (instalador nativo en Android; los dos pasos ilustrados en iPhone), y al abrir la app ya instalada
 **el permiso de notificaciones se pide solo**, sin que nadie tenga que buscar un ajuste. Para subir
-fotos hay tres botones directos: *Hacer foto*, *Grabar vídeo* y *De la galería*.
+fotos hay un único botón, sin forzar la cámara: el propio móvil ofrece elegir entre *Cámara*,
+*Vídeo* o *Galería* en su desplegable nativo.
 
 ## Configuración local
 

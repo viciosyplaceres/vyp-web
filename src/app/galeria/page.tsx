@@ -1,7 +1,11 @@
 import Image from "next/image";
 import Link from "next/link";
 import type { Metadata } from "next";
+import { ImagePlus } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { getSesion } from "@/lib/auth";
+import PanelSubir from "@/components/PanelSubir";
+import SubirMedia from "@/components/SubirMedia";
 
 export const dynamic = "force-dynamic";
 
@@ -19,6 +23,7 @@ type ResumenAnio = {
 
 export default async function GaleriaPage() {
   const supabase = await createClient();
+  const sesion = await getSesion();
 
   const { data: media } = await supabase
     .from("media")
@@ -46,14 +51,21 @@ export default async function GaleriaPage() {
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
       <div className="mx-auto max-w-5xl">
         <h1 className="text-2xl font-semibold sm:text-3xl">Galería</h1>
-        <p className="mt-2 text-sm text-white/50">
+        <p className="mt-2 mb-6 text-sm text-white/50">
           Las fiestas son una vez al año. Cada año, su carpeta.
         </p>
 
+        {sesion?.esMiembro && (
+          <PanelSubir etiqueta="Subir fotos o vídeos" Icono={ImagePlus}>
+            {(cerrar) => <SubirMedia onSubido={cerrar} />}
+          </PanelSubir>
+        )}
+
         {anios.length === 0 ? (
           <p className="mt-10 text-white/50">
-            Todavía no hay nada subido. Si eres de la peña, sube las primeras
-            fotos desde el botón <span className="text-white">Subir</span>.
+            {sesion?.esMiembro
+              ? "Todavía no hay nada subido. Sube las primeras fotos con el botón de arriba."
+              : "Todavía no hay nada subido."}
           </p>
         ) : (
           <ul className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">

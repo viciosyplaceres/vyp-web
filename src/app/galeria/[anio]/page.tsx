@@ -1,9 +1,12 @@
 import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
-import { ChevronLeft, Play } from "lucide-react";
+import { ChevronLeft, ImagePlus, Play } from "lucide-react";
 import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
+import { getSesion } from "@/lib/auth";
+import PanelSubir from "@/components/PanelSubir";
+import SubirMedia from "@/components/SubirMedia";
 
 export const dynamic = "force-dynamic";
 
@@ -26,6 +29,7 @@ export default async function AnioPage({ params }: Props) {
   }
 
   const supabase = await createClient();
+  const sesion = await getSesion();
   const { data: media } = await supabase
     .from("media")
     .select("id, tipo, url, thumb_url, descripcion")
@@ -43,9 +47,15 @@ export default async function AnioPage({ params }: Props) {
           Todos los años
         </Link>
 
-        <h1 className="mt-2 text-2xl font-semibold tabular-nums sm:text-3xl">
+        <h1 className="mt-2 mb-6 text-2xl font-semibold tabular-nums sm:text-3xl">
           Fiestas de {anioNum}
         </h1>
+
+        {sesion?.esMiembro && (
+          <PanelSubir etiqueta={`Subir a ${anioNum}`} Icono={ImagePlus}>
+            {(cerrar) => <SubirMedia anioInicial={anioNum} onSubido={cerrar} />}
+          </PanelSubir>
+        )}
 
         {!media?.length ? (
           <p className="mt-10 text-white/50">

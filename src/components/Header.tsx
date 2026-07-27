@@ -56,14 +56,6 @@ export default async function Header() {
         </nav>
 
         <div className="flex shrink-0 items-center gap-3 text-sm">
-          {sesion?.esMiembro && (
-            <Link
-              href="/subir"
-              className="cursor-pointer rounded-full bg-white px-3 py-1.5 text-xs font-medium text-black transition-opacity duration-200 hover:opacity-85 sm:text-sm"
-            >
-              Subir
-            </Link>
-          )}
           {sesion ? (
             <form action={cerrarSesion}>
               <button

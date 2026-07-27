@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { ImagePlus, Camera, Video, FolderOpen, X } from "lucide-react";
+import { ImagePlus, Camera, Video, X } from "lucide-react";
 import imageCompression from "browser-image-compression";
 import { registrarMedia, avisarSubidaGaleria } from "@/app/actions/media";
 
@@ -13,20 +13,27 @@ const ANIOS = Array.from(
   (_, i) => new Date().getFullYear() - i,
 );
 
-export default function SubirMedia() {
+/**
+ * Un único selector, sin `capture`: así el propio móvil abre su desplegable
+ * nativo (hacer foto, grabar vídeo o elegir de la galería) en vez de saltar
+ * directo a la cámara. Es justo lo que ofrece Android/iOS cuando el input
+ * acepta imagen y vídeo sin forzar la captura.
+ */
+export default function SubirMedia({
+  anioInicial,
+  onSubido,
+}: {
+  anioInicial?: number;
+  onSubido?: () => void;
+}) {
   const router = useRouter();
-  const [anio, setAnio] = useState(ANIOS[0]);
+  const [anio, setAnio] = useState(anioInicial ?? ANIOS[0]);
   const [ficheros, setFicheros] = useState<File[]>([]);
   const [descripcion, setDescripcion] = useState("");
   const [progreso, setProgreso] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [hechos, setHechos] = useState(0);
 
-  /**
-   * Suma lo elegido a lo que ya había, en vez de reemplazarlo: así se pueden
-   * encadenar varias fotos de la cámara sin perder las anteriores. Se limpia
-   * el input para poder volver a elegir el mismo archivo si hiciera falta.
-   */
   function anadirFicheros(e: React.ChangeEvent<HTMLInputElement>) {
     const nuevos = [...(e.target.files ?? [])];
     if (nuevos.length) setFicheros((prev) => [...prev, ...nuevos]);
@@ -134,6 +141,7 @@ export default function SubirMedia() {
     setProgreso(null);
     setFicheros([]);
     setDescripcion("");
+    onSubido?.();
     router.push(`/galeria/${anio}`);
     router.refresh();
   }
@@ -159,49 +167,19 @@ export default function SubirMedia() {
       </div>
 
       <div className="space-y-2">
-        <p className="text-sm text-white/70">Fotos o vídeos</p>
-
-        {/* Tres entradas distintas apuntando al mismo estado. El atributo
-            `capture` es lo que hace que el móvil abra la cámara directamente
-            en vez del explorador de archivos. En un ordenador, `capture` se
-            ignora y los tres botones abren el selector normal. */}
-        <div className="grid grid-cols-3 gap-2">
-          <label className="flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-2 text-center text-xs font-medium transition-colors duration-200 hover:border-white/40 hover:bg-white/10">
-            <Camera size={22} aria-hidden="true" />
-            Hacer foto
-            <input
-              type="file"
-              accept="image/*"
-              capture="environment"
-              className="sr-only"
-              onChange={anadirFicheros}
-            />
-          </label>
-
-          <label className="flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-2 text-center text-xs font-medium transition-colors duration-200 hover:border-white/40 hover:bg-white/10">
-            <Video size={22} aria-hidden="true" />
-            Grabar vídeo
-            <input
-              type="file"
-              accept="video/*"
-              capture="environment"
-              className="sr-only"
-              onChange={anadirFicheros}
-            />
-          </label>
-
-          <label className="flex min-h-[92px] cursor-pointer flex-col items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-2 text-center text-xs font-medium transition-colors duration-200 hover:border-white/40 hover:bg-white/10">
-            <FolderOpen size={22} aria-hidden="true" />
-            De la galería
-            <input
-              type="file"
-              accept="image/*,video/*"
-              multiple
-              className="sr-only"
-              onChange={anadirFicheros}
-            />
-          </label>
-        </div>
+        {/* Un único selector, sin `capture`: el móvil ofrece su propio
+            desplegable nativo con "Cámara", "Vídeo" y "Galería" a la vez. */}
+        <label className="flex min-h-[64px] cursor-pointer items-center justify-center gap-2 rounded-xl border border-white/20 bg-white/5 px-4 text-sm font-medium transition-colors duration-200 hover:border-white/40 hover:bg-white/10">
+          <ImagePlus size={20} aria-hidden="true" />
+          Elegir fotos o vídeos
+          <input
+            type="file"
+            accept="image/*,video/*"
+            multiple
+            className="sr-only"
+            onChange={anadirFicheros}
+          />
+        </label>
 
         {ficheros.length > 0 && (
           <ul className="space-y-1.5 pt-1">

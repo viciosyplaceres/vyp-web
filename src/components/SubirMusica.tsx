@@ -1,6 +1,6 @@
 "use client";
 
-import { useActionState, useState } from "react";
+import { useActionState, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { Music, Link2 } from "lucide-react";
 import { registrarPistaR2, registrarPistaEnlace } from "@/app/actions/musica";
@@ -28,7 +28,7 @@ function leerDuracion(fichero: File): Promise<number | null> {
   });
 }
 
-export default function SubirMusica() {
+export default function SubirMusica({ onSubido }: { onSubido?: () => void }) {
   const router = useRouter();
   const [modo, setModo] = useState<"fichero" | "enlace">("fichero");
 
@@ -46,6 +46,17 @@ export default function SubirMusica() {
     registrarPistaEnlace,
     null,
   );
+
+  // El estado inicial es `null`, así que esto no salta al montar: solo
+  // cuando el server action responde sin error, es decir, tras un envío real.
+  useEffect(() => {
+    if (estadoEnlace && !estadoEnlace.error) {
+      onSubido?.();
+      router.push("/musica");
+      router.refresh();
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [estadoEnlace]);
 
   async function subirFichero(e: React.FormEvent) {
     e.preventDefault();
@@ -96,6 +107,7 @@ export default function SubirMusica() {
       setFichero(null);
       setTitulo("");
       setArtista("");
+      onSubido?.();
       router.push("/musica");
       router.refresh();
     } catch (err) {
