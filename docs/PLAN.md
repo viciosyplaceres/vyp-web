@@ -140,6 +140,15 @@ escribir ni ver `participantes`/`lista_compra`; un miembro recién registrado (s
 subir nada; tras aprobarlo puede subir y comentar; su intento de autoascenderse a `admin` queda
 bloqueado por el trigger; sigue sin acceso a `participantes`.
 
+**Interfaz de F2, hecha y desplegada** (`viciosyplaceres.com`): `/login`, `/registro` (con página
+de confirmación) y `/admin/miembros` (lista de miembros, aprobar/revocar). Autenticación con
+`@supabase/ssr`, sesión gestionada en `src/proxy.ts` (Next.js 16 renombró `middleware.ts` a
+`proxy.ts`), que protege `/admin/*` y `/subir` redirigiendo a `/login` si no hay sesión — probado en
+producción (`curl` confirma el 307). La única cuenta con `rol = 'admin'` es
+`alvaroviniloo@gmail.com` (ver `CREDENCIALES.md`); el registro público siempre crea miembros sin
+aprobar, y el panel de miembros solo es visible si `rol = 'admin' y aprobado = true`, comprobado dos
+veces: en el propio código de la página y, por si acaso, en la política RLS de la base de datos.
+
 ---
 
 ## 6. Cómo se entra en la peña
@@ -212,7 +221,7 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 |---|---|---|
 | **F0** | Base: Next.js, dominio, despliegue | Hecho |
 | **F1** | Logo e identidad visual | Hecho |
-| **F2** | Auth + tablas + RLS + aprobación de miembros | **Hecho** (base de datos), falta la interfaz (login/registro/admin miembros) |
+| **F2** | Auth + tablas + RLS + aprobación de miembros | **Hecho** |
 | **F3** | Galería por años + subida con compresión (firmada) | Pendiente |
 | **F4** | Comentarios | Pendiente |
 | **F5** | Música y reproductor global | Pendiente (depende de decidir el almacenamiento) |
