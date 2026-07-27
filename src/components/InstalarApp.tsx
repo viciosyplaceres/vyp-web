@@ -12,6 +12,12 @@ type EventoInstalacion = Event & {
 
 const OCULTAR_HASTA = "vyp-instalar-oculto-hasta";
 
+declare global {
+  interface Window {
+    __vypInstallEvent?: EventoInstalacion;
+  }
+}
+
 function estaInstalada() {
   if (typeof window === "undefined") return true;
   return (
@@ -52,13 +58,28 @@ export default function InstalarApp() {
 
     const enIOS = esIOS();
 
+    // Puede que el evento ya haya llegado antes de montar este componente
+    // (capturado por el script del <head>): si es así, no hay que esperar más.
+    if (window.__vypInstallEvent) {
+      setEvento(window.__vypInstallEvent);
+      setVisible(true);
+    }
+
     const alPoderInstalar = (e: Event) => {
       e.preventDefault();
       setEvento(e as EventoInstalacion);
       setVisible(true);
     };
 
+    const alEventoYaCapturado = () => {
+      if (window.__vypInstallEvent) {
+        setEvento(window.__vypInstallEvent);
+        setVisible(true);
+      }
+    };
+
     window.addEventListener("beforeinstallprompt", alPoderInstalar);
+    window.addEventListener("vyp-install-ready", alEventoYaCapturado);
 
     // En iPhone el evento anterior no existe nunca: se enseña la guía manual.
     let temporizador: ReturnType<typeof setTimeout> | undefined;
@@ -71,6 +92,7 @@ export default function InstalarApp() {
 
     return () => {
       window.removeEventListener("beforeinstallprompt", alPoderInstalar);
+      window.removeEventListener("vyp-install-ready", alEventoYaCapturado);
       if (temporizador) clearTimeout(temporizador);
     };
   }, []);

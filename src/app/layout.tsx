@@ -76,6 +76,17 @@ export default async function RootLayout({
       lang="es"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
     >
+      <head>
+        {/* El navegador puede disparar "beforeinstallprompt" antes de que
+            React monte InstalarApp, y el evento se pierde para siempre si
+            nadie lo escucha a tiempo. Se captura aquí, lo antes posible, y
+            se guarda en window para que el componente lo recoja luego. */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `window.addEventListener('beforeinstallprompt',function(e){e.preventDefault();window.__vypInstallEvent=e;window.dispatchEvent(new Event('vyp-install-ready'));});`,
+          }}
+        />
+      </head>
       <body className="flex min-h-full flex-col bg-black text-white">
         <ReproductorProvider>
           <Header />
