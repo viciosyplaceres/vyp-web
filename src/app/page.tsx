@@ -9,6 +9,7 @@ import {
   ShieldCheck,
 } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
 import CarruselFotos, { type FotoCarrusel } from "@/components/CarruselFotos";
 import MusicaCompacta from "@/components/MusicaCompacta";
@@ -51,7 +52,12 @@ export default async function Home() {
         .order("created_at", { ascending: false })
         .limit(5),
       supabase.from("media").select("anio"),
-      supabase
+      // `perfiles` no es legible para `anon` (correcto: es donde vive el rol
+      // de cada uno), así que un visitante sin sesión nunca podría contar
+      // cuántos miembros hay. Es solo un número agregado, nada sensible, así
+      // que aquí se cuenta con el cliente de servicio en vez de dejar la
+      // estadística rota para todo el mundo salvo la directiva.
+      createAdminClient()
         .from("perfiles")
         .select("id", { count: "exact", head: true })
         .eq("aprobado", true),
@@ -83,10 +89,6 @@ export default async function Home() {
             Fuente Álamo &middot; Murcia
           </p>
 
-          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
-            Vicios &amp; Placeres
-          </h1>
-
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl">
             La peña de las fiestas. Diez días al año, y aquí queda todo el
             resto: las fotos, los vídeos, la música y lo que hay que
@@ -107,6 +109,13 @@ export default async function Home() {
             >
               <Music size={18} aria-hidden="true" />
               Escuchar música
+            </Link>
+            <Link
+              href="#donde"
+              className="inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-full border border-white/25 px-6 text-sm font-medium transition-colors duration-200 hover:bg-white/10"
+            >
+              <Navigation size={18} aria-hidden="true" />
+              Cómo llegar
             </Link>
           </div>
 
