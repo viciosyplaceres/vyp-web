@@ -93,6 +93,7 @@ export default async function PerfilPage() {
             nombre={sesion.nombre}
             usuario={sesion.usuario}
             avatarUrl={sesion.avatarUrl}
+            bio={sesion.bio}
           />
           <p className="mt-3 text-sm text-white/50">
             {sesion.esAdmin
@@ -101,6 +102,14 @@ export default async function PerfilPage() {
                 ? "Miembro de la peña"
                 : "Cuenta pendiente de que la directiva la apruebe"}
           </p>
+          {sesion.esMiembro && (
+            <Link
+              href="/miembros"
+              className="mt-3 inline-block cursor-pointer text-sm text-white/50 underline hover:text-white"
+            >
+              Ver miembros de la peña
+            </Link>
+          )}
         </section>
 
         {sesion.esMiembro && (

@@ -5,6 +5,7 @@ export type Sesion = {
   nombre: string | null;
   usuario: string | null;
   avatarUrl: string | null;
+  bio: string | null;
   esMiembro: boolean;
   esAdmin: boolean;
 };
@@ -24,7 +25,7 @@ export async function getSesion(): Promise<Sesion | null> {
 
   const { data: perfil } = await supabase
     .from("perfiles")
-    .select("nombre, usuario, avatar_url, rol, aprobado")
+    .select("nombre, usuario, avatar_url, bio, rol, aprobado")
     .eq("id", user.id)
     .single();
 
@@ -33,6 +34,7 @@ export async function getSesion(): Promise<Sesion | null> {
     nombre: perfil?.nombre ?? null,
     usuario: perfil?.usuario ?? null,
     avatarUrl: perfil?.avatar_url ?? null,
+    bio: perfil?.bio ?? null,
     esMiembro: perfil?.aprobado === true,
     esAdmin: perfil?.rol === "admin" && perfil?.aprobado === true,
   };

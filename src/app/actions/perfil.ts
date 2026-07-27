@@ -22,8 +22,10 @@ export async function guardarPerfil(
   const nombre = String(formData.get("nombre") ?? "").trim();
   const usuarioBruto = String(formData.get("usuario") ?? "").trim();
   const avatarUrl = String(formData.get("avatarUrl") ?? "").trim();
+  const bio = String(formData.get("bio") ?? "").trim();
 
   if (!nombre) return { error: "Pon tu nombre." };
+  if (bio.length > 300) return { error: "La bio no puede pasar de 300 caracteres." };
 
   // Nombre de usuario en minúsculas y sin rarezas: se usa como identificador
   // visible y así no hay dos que se parezcan sospechosamente.
@@ -41,6 +43,7 @@ export async function guardarPerfil(
     .update({
       nombre,
       usuario,
+      bio: bio || null,
       ...(avatarUrl ? { avatar_url: avatarUrl } : {}),
     })
     .eq("id", sesion.userId);

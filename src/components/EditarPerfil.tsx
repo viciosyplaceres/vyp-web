@@ -9,10 +9,12 @@ export default function EditarPerfil({
   nombre,
   usuario,
   avatarUrl,
+  bio,
 }: {
   nombre: string | null;
   usuario: string | null;
   avatarUrl: string | null;
+  bio: string | null;
 }) {
   const [estado, accion, pendiente] = useActionState(guardarPerfil, null);
   const [avatar, setAvatar] = useState(avatarUrl);
@@ -131,6 +133,21 @@ export default function EditarPerfil({
         <p className="text-xs text-white/40">
           Entre 3 y 20 caracteres. Solo letras, números, punto y guion bajo.
         </p>
+      </div>
+
+      <div className="space-y-1.5">
+        <label htmlFor="bioPerfil" className="text-sm text-white/70">
+          Bio
+        </label>
+        <textarea
+          id="bioPerfil"
+          name="bio"
+          defaultValue={bio ?? ""}
+          maxLength={300}
+          rows={3}
+          placeholder="Cuenta algo sobre ti (lo verán los demás miembros)"
+          className="w-full resize-none rounded-lg border border-white/20 bg-white/5 px-3 py-2.5 text-base outline-none focus:border-white"
+        />
       </div>
 
       {estado?.error && (

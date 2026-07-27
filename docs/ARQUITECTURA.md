@@ -299,6 +299,20 @@ propia con RLS:
 
 ---
 
+## 7sexies. Bio y directorio de miembros (migración `0009_bio_perfiles.sql`)
+
+- Columna `bio` en `perfiles` (máx. 300 caracteres), editable desde `EditarPerfil.tsx` /
+  `guardarPerfil`, e incluida en la vista `autores` (ya era pública el nombre/avatar, la bio es del
+  mismo nivel de sensibilidad).
+- `/miembros` y `/miembros/[id]` son de solo lectura para cualquier miembro aprobado: directorio y
+  perfil público (avatar, usuario, bio, sus últimas 9 fotos/pistas). **Gotcha real**: la política
+  RLS de `perfiles` es `id = auth.uid() or es_admin()` — un miembro normal no puede leer la fila de
+  otro por la vía normal. Estas dos páginas usan `createAdminClient()` a propósito, exponiendo solo
+  columnas no sensibles (nombre, usuario, avatar, bio, rol), igual que ya se hizo para el contador
+  de miembros de la home.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
