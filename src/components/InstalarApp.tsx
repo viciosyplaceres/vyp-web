@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { usePathname } from "next/navigation";
 import Image from "next/image";
 import { Download, X, Share, Plus, MoreVertical } from "lucide-react";
 
@@ -50,11 +51,15 @@ function esIOS() {
  * así que directamente se enseñan los dos pasos con los iconos reales.
  */
 export default function InstalarApp() {
+  const pathname = usePathname();
+  const enHome = pathname === "/";
+
   const [evento, setEvento] = useState<EventoInstalacion | null>(null);
   const [visible, setVisible] = useState(false);
   const [modo, setModo] = useState<"nativo" | "ios" | "manual">("nativo");
 
   useEffect(() => {
+    if (!enHome) return;
     if (estaInstalada()) return;
 
     const enIOS = esIOS();
@@ -96,7 +101,7 @@ export default function InstalarApp() {
       clearTimeout(temporizador);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []);
+  }, [enHome]);
 
   function cerrar() {
     setVisible(false);
@@ -111,7 +116,10 @@ export default function InstalarApp() {
     setEvento(null);
   }
 
-  if (!visible) return null;
+  // Por si estaba visible y el usuario navega a otra página sin cerrarlo:
+  // la web no remonta este componente entre rutas, así que se oculta aquí
+  // también, no solo dejando de abrirlo la próxima vez.
+  if (!visible || !enHome) return null;
 
   return (
     <div
