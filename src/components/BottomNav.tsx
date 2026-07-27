@@ -2,14 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import {
-  Home,
-  Images,
-  Music,
-  MessageCircle,
-  Settings,
-  User,
-} from "lucide-react";
+import { Home, Images, Music, MessageCircle, Settings } from "lucide-react";
 
 type Item = {
   href: string;
@@ -20,11 +13,9 @@ type Item = {
 export default function BottomNav({
   esMiembro,
   esAdmin,
-  haySesion,
 }: {
   esMiembro: boolean;
   esAdmin: boolean;
-  haySesion: boolean;
 }) {
   const pathname = usePathname();
 
@@ -42,11 +33,8 @@ export default function BottomNav({
     items.push({ href: "/admin", etiqueta: "Gestión", Icono: Settings });
   }
 
-  items.push({
-    href: haySesion ? "/perfil" : "/login",
-    etiqueta: haySesion ? "Perfil" : "Acceder",
-    Icono: User,
-  });
+  // El perfil ya se abre desde el avatar del header (visible en todas las
+  // pantallas, incluido móvil): repetirlo aquí sería redundante.
 
   return (
     <nav

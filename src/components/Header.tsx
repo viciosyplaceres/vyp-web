@@ -74,7 +74,7 @@ export default async function Header() {
           ) : (
             <Link
               href="/login"
-              className="hidden cursor-pointer text-white/60 transition-colors duration-200 hover:text-white md:block"
+              className="cursor-pointer text-white/60 transition-colors duration-200 hover:text-white"
             >
               Acceder
             </Link>

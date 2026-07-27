@@ -109,7 +109,6 @@ export default async function RootLayout({
           <BottomNav
             esMiembro={sesion?.esMiembro ?? false}
             esAdmin={sesion?.esAdmin ?? false}
-            haySesion={Boolean(sesion)}
           />
         </ReproductorProvider>
         <RegistrarSW />
