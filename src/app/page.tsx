@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import {
   Images,
@@ -80,14 +79,9 @@ export default async function Home() {
             Fuente Álamo &middot; Murcia
           </p>
 
-          <Image
-            src="/logo/vyp-wordmark.png"
-            alt="Vicios & Placeres"
-            width={1886}
-            height={182}
-            priority
-            className="h-auto w-full max-w-sm sm:max-w-lg"
-          />
+          <h1 className="text-4xl font-semibold tracking-tight sm:text-5xl">
+            Vicios &amp; Placeres
+          </h1>
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl">
             La peña de las fiestas. Diez días al año, y aquí queda todo el
