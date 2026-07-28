@@ -4,7 +4,9 @@ import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import ReproductorProvider from "@/components/ReproductorProvider";
 import BarraReproductor from "@/components/BarraReproductor";
-import ComplementosPWA from "@/components/ComplementosPWA";
+import RegistrarSW from "@/components/RegistrarSW";
+import InstalarApp from "@/components/InstalarApp";
+import ActivarAvisosAuto from "@/components/ActivarAvisosAuto";
 import { getSesion } from "@/lib/auth";
 import { obtenerContadoresNavegacion } from "@/app/actions/contadores";
 import "./globals.css";
@@ -118,7 +120,9 @@ export default async function RootLayout({
             noLeidosInicial={contadores.noLeidos}
           />
         </ReproductorProvider>
-        <ComplementosPWA haySesion={sesion?.esMiembro ?? false} />
+        <RegistrarSW />
+        <InstalarApp />
+        <ActivarAvisosAuto haySesion={sesion?.esMiembro ?? false} />
       </body>
     </html>
   );

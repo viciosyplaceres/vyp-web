@@ -40,10 +40,6 @@ function esMovil() {
   return esIOS() || /android|mobile/i.test(navigator.userAgent);
 }
 
-// Chrome necesita un instante tras registrar el service worker para decidir si
-// ofrece `beforeinstallprompt`. La guía manual no debe adelantarse a su botón.
-const RETRASO_RESPALDO_ANDROID_MS = 2_000;
-
 /**
  * Cartel de "instala la app", pensado para gente que no es de tecnología:
  * ocupa la pantalla, explica para qué sirve y solo tiene un botón grande.
@@ -98,13 +94,13 @@ export default function InstalarApp() {
     // en el cuerpo del efecto, para no encadenar renders de forma síncrona.
     queueMicrotask(alEventoYaCapturado);
 
-    // iPhone no dispone de instalador nativo. En Android esperamos brevemente
-    // el evento de Chrome para priorizar siempre el botón directo.
+    // Si no hay instalador nativo (iPhone, o Chrome que no dispara el evento),
+    // se enseña el camino manual pasado un momento en vez de no decir nada.
     const temporizador = setTimeout(() => {
       if (evento || window.__vypInstallEvent) return;
       setModo(enIOS ? "ios" : "manual");
       setVisible(true);
-    }, enIOS ? 0 : RETRASO_RESPALDO_ANDROID_MS);
+    }, 1500);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", alPoderInstalar);
