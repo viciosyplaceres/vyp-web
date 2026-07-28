@@ -88,7 +88,12 @@ export default async function LimpiezaPage() {
     porFecha.set(t.fecha, lista);
   }
 
-  const dias: DiaTurno[] = diasLimpieza(fechas.inicio, fechas.fin).map((d) => ({
+  const dias: DiaTurno[] = diasLimpieza(
+    fechas.inicio,
+    fechas.fin,
+    fechas.plazasLimpieza,
+    fechas.plazasDesmontaje,
+  ).map((d) => ({
     fecha: d.fecha,
     plazas: d.plazas,
     desmontaje: d.desmontaje,

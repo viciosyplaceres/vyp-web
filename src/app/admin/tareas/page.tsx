@@ -7,7 +7,7 @@ import { getSesion } from "@/lib/auth";
 import { listarMiembros, indiceMiembros } from "@/lib/miembros";
 import PanelTareas, { type TareaListada } from "@/components/PanelTareas";
 import type { MiembroSimple } from "@/components/SelectorMiembros";
-import { obtenerAnioActivo } from "@/app/actions/configuracion";
+import { obtenerAnioActivo, obtenerFechasFiestas } from "@/app/actions/configuracion";
 
 export const dynamic = "force-dynamic";
 
@@ -32,6 +32,9 @@ export default async function AdminTareasPage() {
 
   const supabase = await createClient();
   const anio = await obtenerAnioActivo();
+  const fechas = await obtenerFechasFiestas(anio);
+  const inicioRango = fechas?.inicio ?? `${anio}-01-01`;
+  const finRango = fechas?.fin ?? `${anio}-12-31`;
 
   const [{ data: tareas }, { data: asignaciones }, miembros, indice] =
     await Promise.all([
@@ -40,9 +43,9 @@ export default async function AdminTareasPage() {
         .select(
           "id, titulo, descripcion, fecha, hecha, documento_url, documento_nombre",
         )
-        // Solo las del año que se está gestionando ahora, más las que no
-        // tienen día fijado todavía (no pertenecen a ningún año en concreto).
-        .or(`fecha.is.null,and(fecha.gte.${anio}-01-01,fecha.lte.${anio}-12-31)`)
+        // El rango exacto configurado, aunque cruce de diciembre a enero,
+        // más las que todavía no tienen un día concreto.
+        .or(`fecha.is.null,and(fecha.gte.${inicioRango},fecha.lte.${finRango})`)
         .order("fecha", { ascending: true, nullsFirst: false })
         .order("created_at", { ascending: true }),
       // Solo los ids: un join anidado a `perfiles` devolvería vacío para
@@ -79,12 +82,13 @@ export default async function AdminTareasPage() {
           Tareas de las fiestas
         </h1>
         <p className="mt-1 text-sm text-white/50">
-          Reparte el trabajo de agosto entre la peña. Cada uno ve lo suyo en su
-          perfil.
+          Reparte el trabajo de los días de fiesta entre la peña. Cada uno ve lo
+          suyo en su perfil.
         </p>
 
         <PanelTareas
           anio={anio}
+          fechas={fechas}
           tareas={lista}
           miembros={miembros}
         />

@@ -4,11 +4,9 @@ import Header from "@/components/Header";
 import BottomNav from "@/components/BottomNav";
 import ReproductorProvider from "@/components/ReproductorProvider";
 import BarraReproductor from "@/components/BarraReproductor";
-import RegistrarSW from "@/components/RegistrarSW";
-import InstalarApp from "@/components/InstalarApp";
-import ActivarAvisosAuto from "@/components/ActivarAvisosAuto";
+import ComplementosPWA from "@/components/ComplementosPWA";
 import { getSesion } from "@/lib/auth";
-import { obtenerNoLeidos } from "@/app/actions/chat";
+import { obtenerContadoresNavegacion } from "@/app/actions/contadores";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -19,10 +17,11 @@ const geistSans = Geist({
 const geistMono = Geist_Mono({
   variable: "--font-geist-mono",
   subsets: ["latin"],
+  preload: false,
 });
 
 export const metadata: Metadata = {
-  metadataBase: new URL("https://viciosyplaceres.com"),
+  metadataBase: new URL("https://www.viciosyplaceres.com"),
   title: {
     default: "Vicios & Placeres (VYP)",
     template: "%s · Vicios & Placeres",
@@ -46,7 +45,7 @@ export const metadata: Metadata = {
     title: "Vicios & Placeres (VYP)",
     description:
       "Peña Vicios & Placeres — Fuente Álamo de Murcia. Galería de las fiestas, música y gestión de la peña.",
-    url: "https://viciosyplaceres.com",
+    url: "https://www.viciosyplaceres.com",
     siteName: "Vicios & Placeres",
     images: [
       {
@@ -81,8 +80,13 @@ export default async function RootLayout({
 }: Readonly<{
   children: React.ReactNode;
 }>) {
-  const sesion = await getSesion();
-  const noLeidos = sesion?.esMiembro ? await obtenerNoLeidos().catch(() => 0) : 0;
+  const [sesion, contadoresCalculados] = await Promise.all([
+    getSesion(),
+    obtenerContadoresNavegacion().catch(() => ({ noLeidos: 0, pendientes: 0 })),
+  ]);
+  const contadores = sesion?.esMiembro
+    ? contadoresCalculados
+    : { noLeidos: 0, pendientes: 0 };
 
   return (
     <html
@@ -102,7 +106,7 @@ export default async function RootLayout({
       </head>
       <body className="flex min-h-full flex-col bg-black text-white">
         <ReproductorProvider>
-          <Header />
+          <Header sesion={sesion} pendientesInicial={contadores.pendientes} />
           {/* Hueco inferior: barra de navegación (móvil) + reproductor */}
           <div className="flex flex-1 flex-col pb-[calc(72px+env(safe-area-inset-bottom))] md:pb-24">
             {children}
@@ -111,12 +115,10 @@ export default async function RootLayout({
           <BottomNav
             esMiembro={sesion?.esMiembro ?? false}
             userId={sesion?.userId ?? null}
-            noLeidosInicial={noLeidos}
+            noLeidosInicial={contadores.noLeidos}
           />
         </ReproductorProvider>
-        <RegistrarSW />
-        <InstalarApp />
-        <ActivarAvisosAuto haySesion={sesion?.esMiembro ?? false} />
+        <ComplementosPWA haySesion={sesion?.esMiembro ?? false} />
       </body>
     </html>
   );

@@ -47,10 +47,9 @@ const MESES = [
  * día es literal, no un instante en el tiempo.
  *
  * Antes esto era un `Number(fecha.slice(8, 10))} de agosto` repetido en tres
- * pantallas, con el mes escrito a mano. Hoy no da un resultado incorrecto
- * porque el panel de tareas solo deja elegir días de agosto, pero deriva el
- * mes de la propia fecha para que siga siendo cierto el día que se apunte
- * algo de otro mes (los preparativos de julio, por ejemplo).
+ * pantallas, con el mes escrito a mano. Ahora las tareas toman el rango real
+ * que configura la directiva, incluso si las fiestas cruzan de mes, y esta
+ * función deriva siempre el nombre correcto de la propia fecha.
  */
 export function diaLegible(fecha: string | null | undefined): string | null {
   if (!fecha) return null;

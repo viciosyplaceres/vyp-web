@@ -4,6 +4,22 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/auth";
 
+export type UbicacionPublica = {
+  nombre: string;
+  direccion: string;
+  mapsUrl: string;
+  latitud: number;
+  longitud: number;
+};
+
+const UBICACION_POR_DEFECTO: UbicacionPublica = {
+  nombre: "Fuente Álamo · Murcia",
+  direccion: "C. Asturias, 30320 Fuente Álamo, Murcia",
+  mapsUrl: "https://www.google.com/maps/dir/?api=1&destination=37.717352,-1.17391",
+  latitud: 37.717352,
+  longitud: -1.17391,
+};
+
 /**
  * El año en el que está trabajando la peña ahora mismo. Lo fija la directiva
  * una vez (normalmente al empezar a preparar las fiestas siguientes) y a
@@ -45,7 +61,83 @@ export async function actualizarAnioActivo(anio: number) {
   revalidatePath("/perfil");
 }
 
-export type FechasFiestas = { inicio: string; fin: string };
+/** La ubicación que se muestra públicamente en la portada. */
+export async function obtenerUbicacion(): Promise<UbicacionPublica> {
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("configuracion")
+    .select(
+      "ubicacion_nombre, ubicacion_direccion, ubicacion_maps_url, ubicacion_latitud, ubicacion_longitud",
+    )
+    .eq("id", true)
+    .maybeSingle();
+
+  if (!data) return UBICACION_POR_DEFECTO;
+  return {
+    nombre: data.ubicacion_nombre,
+    direccion: data.ubicacion_direccion,
+    mapsUrl: data.ubicacion_maps_url,
+    latitud: Number(data.ubicacion_latitud),
+    longitud: Number(data.ubicacion_longitud),
+  };
+}
+
+/** Cambia la sede sin tocar código; solo la directiva puede actualizarla. */
+export async function actualizarUbicacion(ubicacion: UbicacionPublica) {
+  await exigirAdmin();
+
+  const nombre = ubicacion.nombre.trim();
+  const direccion = ubicacion.direccion.trim();
+  if (!nombre || nombre.length > 120) throw new Error("Pon un nombre breve para la ubicación.");
+  if (!direccion || direccion.length > 300) throw new Error("Pon la dirección de la peña.");
+  if (!Number.isFinite(ubicacion.latitud) || ubicacion.latitud < -90 || ubicacion.latitud > 90) {
+    throw new Error("La latitud debe estar entre -90 y 90.");
+  }
+  if (!Number.isFinite(ubicacion.longitud) || ubicacion.longitud < -180 || ubicacion.longitud > 180) {
+    throw new Error("La longitud debe estar entre -180 y 180.");
+  }
+
+  let mapsUrl: URL;
+  try {
+    mapsUrl = new URL(ubicacion.mapsUrl.trim());
+  } catch {
+    throw new Error("La URL de Google Maps no es válida.");
+  }
+  const host = mapsUrl.hostname.toLowerCase();
+  const esGoogleMaps =
+    mapsUrl.protocol === "https:" &&
+    (host === "goo.gl" ||
+      host.endsWith(".goo.gl") ||
+      host === "google.com" ||
+      host.endsWith(".google.com") ||
+      host.startsWith("google.") ||
+      host.startsWith("www.google."));
+  if (!esGoogleMaps) throw new Error("Usa un enlace HTTPS de Google Maps.");
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("configuracion")
+    .update({
+      ubicacion_nombre: nombre,
+      ubicacion_direccion: direccion,
+      ubicacion_maps_url: mapsUrl.toString(),
+      ubicacion_latitud: ubicacion.latitud,
+      ubicacion_longitud: ubicacion.longitud,
+      ubicacion_actualizada_at: new Date().toISOString(),
+    })
+    .eq("id", true);
+
+  if (error) throw new Error(error.message);
+  revalidatePath("/");
+  revalidatePath("/admin");
+}
+
+export type FechasFiestas = {
+  inicio: string;
+  fin: string;
+  plazasLimpieza: number;
+  plazasDesmontaje: number;
+};
 
 /**
  * Las fechas de las fiestas de un año ("del 22 al 31 de agosto", o lo que
@@ -56,12 +148,17 @@ export async function obtenerFechasFiestas(anio: number): Promise<FechasFiestas 
   const supabase = await createClient();
   const { data } = await supabase
     .from("fiestas_fechas")
-    .select("fecha_inicio, fecha_fin")
+    .select("fecha_inicio, fecha_fin, plazas_limpieza, plazas_desmontaje")
     .eq("anio", anio)
     .maybeSingle();
 
   if (!data) return null;
-  return { inicio: data.fecha_inicio, fin: data.fecha_fin };
+  return {
+    inicio: data.fecha_inicio,
+    fin: data.fecha_fin,
+    plazasLimpieza: data.plazas_limpieza,
+    plazasDesmontaje: data.plazas_desmontaje,
+  };
 }
 
 /**
@@ -69,7 +166,13 @@ export async function obtenerFechasFiestas(anio: number): Promise<FechasFiestas 
  * falta tocar código para mover la limpieza a otras fechas: la directiva
  * elige el rango desde Gestión y ya.
  */
-export async function actualizarFechasFiestas(anio: number, inicio: string, fin: string) {
+export async function actualizarFechasFiestas(
+  anio: number,
+  inicio: string,
+  fin: string,
+  plazasLimpieza: number,
+  plazasDesmontaje: number,
+) {
   await exigirAdmin();
 
   if (!Number.isInteger(anio) || anio < 2010 || anio > 2100) {
@@ -82,12 +185,25 @@ export async function actualizarFechasFiestas(anio: number, inicio: string, fin:
   if (fin < inicio) {
     throw new Error("La fecha de fin no puede ser antes que la de inicio.");
   }
+  if (!Number.isInteger(plazasLimpieza) || plazasLimpieza < 1 || plazasLimpieza > 20) {
+    throw new Error("Las plazas de limpieza deben estar entre 1 y 20.");
+  }
+  if (!Number.isInteger(plazasDesmontaje) || plazasDesmontaje < 1 || plazasDesmontaje > 20) {
+    throw new Error("Las plazas de desmontaje deben estar entre 1 y 20.");
+  }
 
   const supabase = await createClient();
   const { error } = await supabase
     .from("fiestas_fechas")
     .upsert(
-      { anio, fecha_inicio: inicio, fecha_fin: fin, actualizado_at: new Date().toISOString() },
+      {
+        anio,
+        fecha_inicio: inicio,
+        fecha_fin: fin,
+        plazas_limpieza: plazasLimpieza,
+        plazas_desmontaje: plazasDesmontaje,
+        actualizado_at: new Date().toISOString(),
+      },
       { onConflict: "anio" },
     );
 

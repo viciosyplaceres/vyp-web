@@ -3,6 +3,7 @@ import { GetObjectCommand } from "@aws-sdk/client-s3";
 import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2, R2_BUCKET } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/admin";
+import { esClaveMusica } from "@/lib/r2-claves";
 
 /**
  * Redirige a una URL prefirmada de lectura del audio guardado en R2.
@@ -14,8 +15,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 export async function GET(request: Request) {
   const clave = new URL(request.url).searchParams.get("clave");
 
-  if (!clave) {
-    return NextResponse.json({ error: "Falta la clave." }, { status: 400 });
+  if (!esClaveMusica(clave)) {
+    return NextResponse.json({ error: "Clave no válida." }, { status: 400 });
   }
 
   const supabase = createAdminClient();

@@ -1,7 +1,6 @@
 import Image from "next/image";
 import Link from "next/link";
-import { getSesion } from "@/lib/auth";
-import { obtenerPendientesPerfil } from "@/app/actions/pendientes";
+import type { Sesion } from "@/lib/auth";
 import AvatarPendientes from "@/components/AvatarPendientes";
 
 /** Enlaces solo para pantallas grandes: en móvil manda la barra inferior. */
@@ -11,10 +10,13 @@ const ENLACES = [
   { href: "/#donde", texto: "Dónde" },
 ];
 
-export default async function Header() {
-  const sesion = await getSesion();
-  const pendientes = sesion?.esMiembro ? await obtenerPendientesPerfil().catch(() => 0) : 0;
-
+export default function Header({
+  sesion,
+  pendientesInicial,
+}: {
+  sesion: Sesion | null;
+  pendientesInicial: number;
+}) {
   return (
     <header className="sticky top-0 z-40 border-b border-white/10 bg-black/90 backdrop-blur-md">
       <div className="mx-auto flex h-14 max-w-5xl items-center justify-between gap-4 px-4 sm:h-16 sm:px-6">
@@ -25,6 +27,7 @@ export default async function Header() {
             width={1886}
             height={182}
             priority
+            sizes="(min-width: 640px) 497px, calc(100vw - 32px)"
             className="h-5 w-auto sm:h-6"
           />
         </Link>
@@ -71,7 +74,7 @@ export default async function Header() {
               avatarUrl={sesion.avatarUrl}
               userId={sesion.userId}
               esMiembro={sesion.esMiembro}
-              pendientesInicial={pendientes}
+              pendientesInicial={pendientesInicial}
             />
           ) : (
             <Link

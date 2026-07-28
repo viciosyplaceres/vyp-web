@@ -4,7 +4,7 @@ import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Home, Images, Music, MessageCircle, Users, Settings } from "lucide-react";
-import { suscribirRealtime, type Escucha } from "@/lib/realtime";
+import type { Escucha } from "@/lib/realtime";
 
 type Item = {
   href: string;
@@ -12,7 +12,10 @@ type Item = {
   Icono: typeof Home;
 };
 
-const ESCUCHAS: Escucha[] = [{ tabla: "mensajes", evento: "INSERT" }];
+const ESCUCHAS: Escucha[] = [
+  { tabla: "mensajes", evento: "INSERT" },
+  { tabla: "mensajes", evento: "DELETE" },
+];
 
 export default function BottomNav({
   esMiembro,
@@ -46,12 +49,28 @@ export default function BottomNav({
   useEffect(() => {
     if (!esMiembro || !userId) return;
 
-    return suscribirRealtime(ESCUCHAS, (_escucha, cambio) => {
-      const m = cambio.new as { autor_id?: string } | null;
-      if (!m?.autor_id || m.autor_id === userId) return;
-      if (enChatRef.current) return;
-      setNoLeidos((n) => n + 1);
-    });
+    let cancelado = false;
+    let darDeBaja: (() => void) | undefined;
+    void import("@/lib/realtime")
+      .then(({ suscribirRealtime }) => {
+        if (cancelado) return;
+        darDeBaja = suscribirRealtime(ESCUCHAS, (escucha, cambio) => {
+          if (escucha.evento === "DELETE") {
+            setNoLeidos(0);
+            return;
+          }
+          const mensaje = cambio.new as { autor_id?: string } | null;
+          if (!mensaje?.autor_id || mensaje.autor_id === userId) return;
+          if (enChatRef.current) return;
+          setNoLeidos((cantidad) => cantidad + 1);
+        });
+      })
+      .catch(() => undefined);
+
+    return () => {
+      cancelado = true;
+      darDeBaja?.();
+    };
   }, [esMiembro, userId]);
 
   const items: Item[] = [

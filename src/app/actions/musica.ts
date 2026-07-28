@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro } from "@/lib/auth";
 import { analizarEnlaceMusica } from "@/lib/embeds";
 import { avisarMiembros } from "@/lib/push";
+import { esClaveMusica } from "@/lib/r2-claves";
 
 /** Registra una pista propia ya subida a R2. */
 export async function registrarPistaR2(datos: {
@@ -20,6 +21,7 @@ export async function registrarPistaR2(datos: {
   const supabase = await createClient();
 
   if (!datos.titulo?.trim()) throw new Error("Hace falta un título.");
+  if (!esClaveMusica(datos.clave)) throw new Error("Clave de audio no válida.");
 
   const { error } = await supabase.from("pistas").insert({
     titulo: datos.titulo.trim(),

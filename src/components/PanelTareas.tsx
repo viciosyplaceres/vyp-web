@@ -2,11 +2,13 @@
 
 import { useMemo, useState, useTransition } from "react";
 import { Check, Trash2, Pencil, Plus, Paperclip } from "lucide-react";
-import { diaLegible } from "@/lib/formato";
+import { diaLegible, rangoLegible } from "@/lib/formato";
+import { fechasEntre } from "@/lib/fechas";
+import type { FechasFiestas } from "@/app/actions/configuracion";
 import Avatar from "./Avatar";
 import type { MiembroSimple } from "./SelectorMiembros";
-import FormularioTarea, { claveDia } from "./tareas/FormularioTarea";
-import CalendarioAgosto from "./tareas/CalendarioAgosto";
+import FormularioTarea from "./tareas/FormularioTarea";
+import CalendarioTareas from "./tareas/CalendarioTareas";
 import type { TareaListada } from "./tareas/tipos";
 import { marcarTarea, borrarTarea } from "@/app/actions/tareas";
 
@@ -17,16 +19,22 @@ type EstadoFormulario = "cerrado" | "nueva" | TareaListada;
 
 export default function PanelTareas({
   anio,
+  fechas,
   tareas,
   miembros,
 }: {
   anio: number;
+  fechas: FechasFiestas | null;
   tareas: TareaListada[];
   miembros: MiembroSimple[];
 }) {
   const [pendiente, startTransition] = useTransition();
-  const [diaActivo, setDiaActivo] = useState<number | null>(null);
+  const [diaActivo, setDiaActivo] = useState<string | null>(null);
   const [formulario, setFormulario] = useState<EstadoFormulario>("cerrado");
+  const dias = useMemo(
+    () => (fechas ? fechasEntre(fechas.inicio, fechas.fin) : []),
+    [fechas],
+  );
 
   const porDia = useMemo(() => {
     const mapa = new Map<string, TareaListada[]>();
@@ -39,8 +47,8 @@ export default function PanelTareas({
 
   const visibles = useMemo(() => {
     if (diaActivo === null) return tareas;
-    return porDia.get(claveDia(anio, diaActivo)) ?? [];
-  }, [diaActivo, porDia, tareas, anio]);
+    return porDia.get(diaActivo) ?? [];
+  }, [diaActivo, porDia, tareas]);
 
   const sinFecha = porDia.get("sin-fecha") ?? [];
   const hechas = tareas.filter((t) => t.hecha).length;
@@ -50,7 +58,10 @@ export default function PanelTareas({
     <div className="mt-6">
       <div className="flex flex-wrap items-baseline justify-between gap-3">
         <div>
-          <h2 className="text-lg font-semibold">Tareas de agosto {anio}</h2>
+          <h2 className="text-lg font-semibold">Tareas de las fiestas {anio}</h2>
+          {fechas && (
+            <p className="text-xs text-white/40">{rangoLegible(fechas.inicio, fechas.fin)}</p>
+          )}
           {tareas.length > 0 && (
             <p className="text-sm text-white/50">
               {hechas} de {tareas.length} hechas
@@ -70,7 +81,7 @@ export default function PanelTareas({
       {formulario !== "cerrado" && (
         <FormularioTarea
           key={tareaEditando?.id ?? "nueva"}
-          anio={anio}
+          dias={dias}
           miembros={miembros}
           tareaExistente={tareaEditando}
           onGuardada={() => setFormulario("cerrado")}
@@ -78,8 +89,8 @@ export default function PanelTareas({
         />
       )}
 
-      <CalendarioAgosto
-        anio={anio}
+      <CalendarioTareas
+        dias={dias}
         porDia={porDia}
         diaActivo={diaActivo}
         onElegirDia={setDiaActivo}
@@ -90,7 +101,7 @@ export default function PanelTareas({
         {visibles.length === 0 && (
           <li className="text-sm text-white/40">
             {diaActivo !== null
-              ? `No hay tareas para el ${diaActivo} de agosto.`
+              ? `No hay tareas para el ${diaLegible(diaActivo)}.`
               : "Todavía no hay tareas."}
           </li>
         )}

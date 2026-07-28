@@ -17,6 +17,8 @@ declare global {
   }
 }
 
+const RETRASO_CARTEL_MS = 10_000;
+
 function estaInstalada() {
   if (typeof window === "undefined") return true;
   return (
@@ -63,19 +65,25 @@ export default function InstalarApp() {
     if (estaInstalada()) return;
 
     const enIOS = esIOS();
+    let temporizadorMostrar: ReturnType<typeof setTimeout> | undefined;
+
+    const mostrarConRetraso = () => {
+      clearTimeout(temporizadorMostrar);
+      temporizadorMostrar = setTimeout(() => setVisible(true), RETRASO_CARTEL_MS);
+    };
 
     const alPoderInstalar = (e: Event) => {
       e.preventDefault();
       setEvento(e as EventoInstalacion);
       setModo("nativo");
-      setVisible(true);
+      mostrarConRetraso();
     };
 
     const alEventoYaCapturado = () => {
       if (window.__vypInstallEvent) {
         setEvento(window.__vypInstallEvent);
         setModo("nativo");
-        setVisible(true);
+        mostrarConRetraso();
       }
     };
 
@@ -88,17 +96,19 @@ export default function InstalarApp() {
     queueMicrotask(alEventoYaCapturado);
 
     // Si no hay instalador nativo (iPhone, o Chrome que no dispara el evento),
-    // se enseña el camino manual pasado un momento en vez de no decir nada.
+    // se prepara el camino manual. El cartel se retrasa para no tapar la página
+    // justo al abrirla, antes de que la persona haya podido orientarse.
     const temporizador = setTimeout(() => {
       if (evento || window.__vypInstallEvent) return;
       setModo(enIOS ? "ios" : "manual");
-      setVisible(true);
+      mostrarConRetraso();
     }, 1500);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", alPoderInstalar);
       window.removeEventListener("vyp-install-ready", alEventoYaCapturado);
       clearTimeout(temporizador);
+      clearTimeout(temporizadorMostrar);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enHome]);
@@ -236,7 +246,7 @@ export default function InstalarApp() {
             <button
               type="button"
               onClick={cerrar}
-              className="mt-2 min-h-[44px] w-full cursor-pointer text-sm text-white/40 transition-colors duration-200 hover:text-white"
+              className="mt-2 min-h-[44px] w-full cursor-pointer text-sm text-white/60 transition-colors duration-200 hover:text-white"
             >
               Ahora no
             </button>

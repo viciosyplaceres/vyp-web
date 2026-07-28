@@ -8,6 +8,7 @@ import type { InfoAutor, Mensaje, Reaccion } from "./tipos";
 const ESCUCHAS: Escucha[] = [
   { tabla: "mensajes", evento: "INSERT" },
   { tabla: "mensajes", evento: "UPDATE" },
+  { tabla: "mensajes", evento: "DELETE" },
   { tabla: "mensaje_reacciones", evento: "*" },
   { tabla: "chat_lecturas", evento: "*" },
 ];
@@ -102,6 +103,18 @@ export function useRealtimeChat({
         return;
       }
 
+      if (escucha.tabla === "mensajes" && escucha.evento === "DELETE") {
+        const m = cambio.old as { id?: string } | null;
+        if (!m?.id) return;
+        setMensajes((prev) => prev.filter((mensaje) => mensaje.id !== m.id));
+        setReacciones((prev) => {
+          const siguientes = { ...prev };
+          delete siguientes[m.id!];
+          return siguientes;
+        });
+        return;
+      }
+
       if (escucha.tabla === "mensaje_reacciones") {
         const fila = (cambio.new ?? cambio.old) as {
           mensaje_id?: string;
@@ -129,9 +142,22 @@ export function useRealtimeChat({
         return;
       }
 
-      const fila = cambio.new as { perfil_id?: string; ultimo_leido_at?: string } | null;
-      if (!fila?.perfil_id || !fila.ultimo_leido_at) return;
-      const { perfil_id: perfilId, ultimo_leido_at: marca } = fila;
+      const fila = (cambio.new ?? cambio.old) as {
+        perfil_id?: string;
+        ultimo_leido_at?: string;
+      } | null;
+      if (!fila?.perfil_id) return;
+      const perfilId = fila.perfil_id;
+      if (cambio.eventType === "DELETE") {
+        setLecturas((prev) => {
+          const siguientes = { ...prev };
+          delete siguientes[perfilId];
+          return siguientes;
+        });
+        return;
+      }
+      if (!fila.ultimo_leido_at) return;
+      const marca = fila.ultimo_leido_at;
       setLecturas((prev) => ({ ...prev, [perfilId]: marca }));
     }
 

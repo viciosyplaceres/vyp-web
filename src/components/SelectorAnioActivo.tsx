@@ -4,13 +4,6 @@ import { useState, useTransition } from "react";
 import { CalendarCheck, Loader2 } from "lucide-react";
 import { actualizarAnioActivo } from "@/app/actions/configuracion";
 
-const PRIMER_ANIO = 2026;
-const ULTIMO_ANIO = 2040;
-const ANIOS = Array.from(
-  { length: ULTIMO_ANIO - PRIMER_ANIO + 1 },
-  (_, i) => PRIMER_ANIO + i,
-);
-
 /**
  * Se fija una vez (normalmente al empezar a preparar las fiestas siguientes)
  * y a partir de ahí Tareas, Participantes y la Compra lo usan por defecto,
@@ -19,6 +12,10 @@ const ANIOS = Array.from(
 export default function SelectorAnioActivo({ anioActivo }: { anioActivo: number }) {
   const [anio, setAnio] = useState(anioActivo);
   const [pendiente, startTransition] = useTransition();
+  const actual = new Date().getFullYear();
+  const primero = Math.min(actual - 1, anioActivo);
+  const ultimo = Math.max(actual + 10, anioActivo);
+  const anios = Array.from({ length: ultimo - primero + 1 }, (_, i) => primero + i);
 
   return (
     <div className="mb-6 flex items-center gap-3 rounded-xl border border-white/15 bg-white/5 px-4 py-3">
@@ -30,6 +27,7 @@ export default function SelectorAnioActivo({ anioActivo }: { anioActivo: number 
         </p>
       </div>
       <select
+        aria-label="Año de gestión"
         value={anio}
         onChange={(e) => {
           const nuevo = Number(e.target.value);
@@ -41,7 +39,7 @@ export default function SelectorAnioActivo({ anioActivo }: { anioActivo: number 
         disabled={pendiente}
         className="min-h-[44px] cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white disabled:opacity-50"
       >
-        {ANIOS.map((a) => (
+        {anios.map((a) => (
           <option key={a} value={a} className="bg-black">
             {a}
           </option>

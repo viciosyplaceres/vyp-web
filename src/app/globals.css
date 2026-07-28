@@ -79,6 +79,25 @@ input[type="range"]::-moz-range-thumb {
   }
 }
 
+/* Indicador de transición: solo compone transform/opacity, sin recalcular el
+   diseño de la página mientras se resuelve la ruta. */
+@keyframes respirar-logo {
+  0%,
+  100% {
+    opacity: 0.72;
+    transform: scale(0.92);
+  }
+  50% {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+.vyp-loader-logo {
+  animation: respirar-logo 2.4s ease-in-out infinite;
+  will-change: transform, opacity;
+}
+
 /* El dado del sorteo de la limpieza: cada tirada entra dando un cuarto de
    vuelta y creciendo, para que se note que ha rodado de verdad y no que
    simplemente ha cambiado el número. */

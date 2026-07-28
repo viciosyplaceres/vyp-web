@@ -4,6 +4,7 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2, R2_BUCKET } from "@/lib/r2";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
+import { esClaveDocumento } from "@/lib/r2-claves";
 
 /**
  * Redirige a una URL prefirmada de lectura de un documento adjunto de tarea o
@@ -21,17 +22,34 @@ export async function GET(request: Request) {
   }
 
   const clave = new URL(request.url).searchParams.get("clave");
-  if (!clave) {
-    return NextResponse.json({ error: "Falta la clave." }, { status: 400 });
+  if (!esClaveDocumento(clave)) {
+    return NextResponse.json({ error: "Clave no válida." }, { status: 400 });
   }
 
   const supabase = createAdminClient();
-  const [{ data: tarea }, { data: compra }] = await Promise.all([
-    supabase.from("tareas").select("id").eq("documento_url", clave).maybeSingle(),
-    supabase.from("lista_compra").select("id").eq("documento_url", clave).maybeSingle(),
+  const [resultadoTarea, resultadoCompra] = await Promise.all([
+    supabase
+      .from("tareas")
+      .select("id")
+      .eq("documento_url", clave)
+      .limit(1)
+      .maybeSingle(),
+    supabase
+      .from("lista_compra")
+      .select("id")
+      .eq("documento_url", clave)
+      .limit(1)
+      .maybeSingle(),
   ]);
 
-  if (!tarea && !compra) {
+  if (resultadoTarea.error || resultadoCompra.error) {
+    return NextResponse.json(
+      { error: "No se pudo comprobar el documento." },
+      { status: 500 },
+    );
+  }
+
+  if (!resultadoTarea.data && !resultadoCompra.data) {
     return NextResponse.json(
       { error: "Documento no encontrado." },
       { status: 404 },

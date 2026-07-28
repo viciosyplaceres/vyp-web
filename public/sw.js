@@ -2,8 +2,19 @@
 // Hace dos cosas: permitir instalar la web como app (PWA) y recibir los avisos
 // del chat cuando la app está cerrada.
 
-const CACHE = "vyp-v4";
+const CACHE = "vyp-v5";
 const ESENCIALES = ["/manifest.webmanifest", "/logo/vyp-icon-192.png"];
+
+/** Solo recursos públicos e independientes de la sesión. */
+function esRecursoCacheable(url) {
+  return (
+    url.pathname.startsWith("/_next/static/") ||
+    url.pathname.startsWith("/logo/") ||
+    ESENCIALES.includes(url.pathname) ||
+    url.pathname === "/favicon.ico" ||
+    url.pathname === "/og-image.png"
+  );
+}
 
 /**
  * Página de respaldo cuando una navegación no llega al servidor.
@@ -63,17 +74,9 @@ self.addEventListener("fetch", (event) => {
 
   const url = new URL(req.url);
   if (url.origin !== self.location.origin) return;
-  // Nunca cachear API ni audio: siempre en vivo.
-  if (url.pathname.startsWith("/api/")) return;
-
-  // Las páginas (HTML y las peticiones RSC de la navegación de Next.js) no se
-  // cachean NUNCA: su contenido depende de quién ha iniciado sesión (aprobado
-  // o no, admin o no...). Si se guardara una y luego la red fallara un
-  // instante, el service worker podía servírsela después a otra sesión, o a
-  // la misma persona ya aprobada la respuesta vieja de "cuenta pendiente" que
-  // vio antes de que se le aprobara — justo lo que le pasó de verdad a un
-  // miembro real. Solo se cachean los recursos estáticos (JS, CSS, iconos),
-  // que son iguales para todo el mundo.
+  // Las páginas no se cachean NUNCA: su contenido depende de quién ha iniciado
+  // sesión. Si falla la red, se enseña un aviso genérico en vez de una copia
+  // potencialmente perteneciente a otra sesión.
   const esDocumento = req.mode === "navigate" || req.destination === "document";
   if (esDocumento) {
     // Sin caché de respaldo a propósito: sin conexión, que se vea un aviso
@@ -88,21 +91,27 @@ self.addEventListener("fetch", (event) => {
     return;
   }
 
+  // Next identifica las navegaciones internas con una petición RSC, que no
+  // tiene destination="document". Una lista blanca evita guardar tanto esas
+  // respuestas como cualquier futura ruta de datos que no hayamos inventariado.
+  if (!esRecursoCacheable(url)) return;
+
+  // Los chunks de Next llevan hash y los demás recursos cambian de versión al
+  // cambiar CACHE. Cache-first evita red innecesaria sin guardar datos privados.
   event.respondWith(
-    fetch(req)
-      .then((res) => {
-        if (res.ok && req.destination !== "audio" && req.destination !== "video") {
-          const copia = res.clone();
-          caches.open(CACHE).then((cache) => cache.put(req, copia)).catch(() => undefined);
+    caches
+      .match(req)
+      .then(async (guardada) => {
+        if (guardada) return guardada;
+
+        const res = await fetch(req);
+        if (res.ok) {
+          const cache = await caches.open(CACHE);
+          await cache.put(req, res.clone());
         }
         return res;
       })
-      // `caches.match` devuelve `undefined` cuando ese recurso no estaba
-      // guardado, y `respondWith(undefined)` revienta con "Failed to convert
-      // value to 'Response'". Hay que acabar siempre en una Response de
-      // verdad: `Response.error()` es un fallo de red normal, que el navegador
-      // ya sabe manejar.
-      .catch(() => caches.match(req).then((guardada) => guardada ?? Response.error())),
+      .catch(() => Response.error()),
   );
 });
 

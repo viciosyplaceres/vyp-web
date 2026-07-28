@@ -11,6 +11,7 @@ import {
 import { asignarCompra } from "@/app/actions/tareas";
 import SelectorMiembros, { type MiembroSimple } from "./SelectorMiembros";
 import Avatar from "./Avatar";
+import { MAX_ARTICULOS_POR_TANDA } from "@/lib/compra";
 
 export type ItemCompra = {
   id: string;
@@ -23,6 +24,8 @@ export type ItemCompra = {
   documento_nombre: string | null;
   asignados: MiembroSimple[];
 };
+
+type LineaCompra = { id: number; item: string; cantidad: number };
 
 async function subirDocumento(archivo: File) {
   const res = await fetch("/api/r2/subir", {
@@ -65,10 +68,16 @@ export default function PanelCompras({
   const [documentoNuevo, setDocumentoNuevo] = useState<File | null>(null);
   const [subiendoDoc, setSubiendoDoc] = useState(false);
   const [errorDoc, setErrorDoc] = useState<string | null>(null);
+  const [lineas, setLineas] = useState<LineaCompra[]>([{ id: 0, item: "", cantidad: 1 }]);
+  const siguienteLinea = useRef(1);
 
   const [estado, accion, pendiente] = useActionState(
     async (prev: { error?: string } | null, formData: FormData) => {
       formData.set("asignados", nuevosAsignados.join(","));
+      formData.set(
+        "items",
+        JSON.stringify(lineas.map(({ item, cantidad }) => ({ item, cantidad }))),
+      );
       if (documentoNuevo) {
         try {
           const clave = await subirDocumento(documentoNuevo);
@@ -82,6 +91,7 @@ export default function PanelCompras({
       if (resultado && !resultado.error) {
         setNuevosAsignados([]);
         setDocumentoNuevo(null);
+        setLineas([{ id: siguienteLinea.current++, item: "", cantidad: 1 }]);
       }
       return resultado;
     },
@@ -134,33 +144,91 @@ export default function PanelCompras({
         action={accion}
         className="mt-4 space-y-2 rounded-xl border border-white/15 p-4"
       >
-        <div className="flex flex-col gap-2 sm:flex-row">
-          <div className="flex-1">
-            <label htmlFor="itemC" className="sr-only">
-              Qué hay que comprar
-            </label>
-            <input
-              id="itemC"
-              name="item"
-              required
-              placeholder="Qué hay que comprar"
-              className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
-            />
-          </div>
-          <div className="w-full sm:w-24">
-            <label htmlFor="cantidadC" className="sr-only">
-              Cantidad
-            </label>
-            <input
-              id="cantidadC"
-              name="cantidad"
-              type="number"
-              min="1"
-              inputMode="numeric"
-              defaultValue={1}
-              className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
-            />
-          </div>
+        <div className="space-y-2">
+          {lineas.map((linea, indice) => (
+            <div key={linea.id} className="flex items-center gap-2">
+              <div className="min-w-0 flex-1">
+                <label htmlFor={`itemC-${linea.id}`} className="sr-only">
+                  Artículo {indice + 1}
+                </label>
+                <input
+                  id={`itemC-${linea.id}`}
+                  value={linea.item}
+                  onChange={(e) =>
+                    setLineas((actuales) =>
+                      actuales.map((actual) =>
+                        actual.id === linea.id ? { ...actual, item: e.target.value } : actual,
+                      ),
+                    )
+                  }
+                  required
+                  maxLength={200}
+                  placeholder={indice === 0 ? "Qué hay que comprar" : `Otro artículo (${indice + 1})`}
+                  className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
+                />
+              </div>
+              <div className="w-20 shrink-0 sm:w-24">
+                <label htmlFor={`cantidadC-${linea.id}`} className="sr-only">
+                  Cantidad del artículo {indice + 1}
+                </label>
+                <input
+                  id={`cantidadC-${linea.id}`}
+                  value={linea.cantidad}
+                  onChange={(e) =>
+                    setLineas((actuales) =>
+                      actuales.map((actual) =>
+                        actual.id === linea.id
+                          ? { ...actual, cantidad: Number(e.target.value) }
+                          : actual,
+                      ),
+                    )
+                  }
+                  type="number"
+                  min="1"
+                  max="9999"
+                  inputMode="numeric"
+                  required
+                  aria-label={`Cantidad del artículo ${indice + 1}`}
+                  className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
+                />
+              </div>
+              {lineas.length > 1 && (
+                <button
+                  type="button"
+                  onClick={() =>
+                    setLineas((actuales) => actuales.filter((actual) => actual.id !== linea.id))
+                  }
+                  aria-label={`Quitar artículo ${indice + 1}`}
+                  className="flex h-12 w-12 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/40 transition-colors duration-200 hover:bg-white/10 hover:text-red-400"
+                >
+                  <X size={17} aria-hidden="true" />
+                </button>
+              )}
+            </div>
+          ))}
+
+          <button
+            type="button"
+            onClick={() =>
+              setLineas((actuales) =>
+                actuales.length >= MAX_ARTICULOS_POR_TANDA
+                  ? actuales
+                  : [
+                      ...actuales,
+                      { id: siguienteLinea.current++, item: "", cantidad: 1 },
+                    ],
+              )
+            }
+            disabled={lineas.length >= MAX_ARTICULOS_POR_TANDA}
+            className="inline-flex min-h-[44px] cursor-pointer items-center gap-2 rounded-full border border-white/20 px-4 text-sm text-white/70 transition-colors duration-200 hover:bg-white/10 hover:text-white disabled:cursor-not-allowed disabled:opacity-50"
+          >
+            <Plus size={16} aria-hidden="true" />
+            Añadir otro artículo
+          </button>
+          <p className="text-xs leading-relaxed text-white/60">
+            Puedes añadir hasta {MAX_ARTICULOS_POR_TANDA} artículos por tanda. Los encargados y el
+            documento se aplicarán a todos; si necesitas más, crea otra tanda.
+          </p>
         </div>
 
         {/* El año no se elige aquí: es el que la directiva fijó en Gestión. */}

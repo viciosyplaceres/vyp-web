@@ -34,8 +34,30 @@ export default function NavegadorFoto({
 
   useEffect(() => {
     const alPulsar = (event: KeyboardEvent) => {
-      if (event.key === "ArrowLeft") navegar(anterior);
-      if (event.key === "ArrowRight") navegar(siguiente);
+      const elemento = event.target;
+      if (
+        event.defaultPrevented ||
+        event.isComposing ||
+        event.altKey ||
+        event.ctrlKey ||
+        event.metaKey ||
+        event.shiftKey ||
+        (elemento instanceof Element &&
+          elemento.closest("input, textarea, select, [contenteditable], [role='slider']"))
+      ) {
+        return;
+      }
+
+      const destino =
+        event.key === "ArrowLeft"
+          ? anterior
+          : event.key === "ArrowRight"
+            ? siguiente
+            : null;
+      if (destino) {
+        event.preventDefault();
+        navegar(destino);
+      }
     };
     window.addEventListener("keydown", alPulsar);
     return () => window.removeEventListener("keydown", alPulsar);

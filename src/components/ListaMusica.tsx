@@ -73,6 +73,7 @@ export default function ListaMusica({ pistas }: { pistas: PistaListada[] }) {
     <>
       <div className="mt-6 flex flex-wrap items-center gap-3">
         <select
+          aria-label="Filtrar música por miembro"
           value={filtroId ?? ""}
           onChange={(e) => setFiltroId(e.target.value || null)}
           className="min-h-[44px] cursor-pointer rounded-full border border-white/20 bg-transparent px-4 text-sm text-white [color-scheme:dark]"

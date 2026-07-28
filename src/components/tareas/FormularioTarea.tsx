@@ -4,15 +4,8 @@ import { useState } from "react";
 import { Paperclip, Loader2, X } from "lucide-react";
 import SelectorMiembros, { type MiembroSimple } from "../SelectorMiembros";
 import { crearTarea, editarTarea } from "@/app/actions/tareas";
+import { diaLegible } from "@/lib/formato";
 import type { TareaListada } from "./tipos";
-
-/** Las fiestas son siempre en agosto: 31 días, del 1 al 31. */
-export const MES = 8;
-export const DIAS_AGOSTO = 31;
-
-export function claveDia(anio: number, dia: number) {
-  return `${anio}-${String(MES).padStart(2, "0")}-${String(dia).padStart(2, "0")}`;
-}
 
 /**
  * El formulario de tarea, con su subida de documento a R2. Sirve tanto para
@@ -26,19 +19,23 @@ export function claveDia(anio: number, dia: number) {
  * borrar la tarea entera y volver a escribirla de cero.
  */
 export default function FormularioTarea({
-  anio,
+  dias,
   miembros,
   tareaExistente,
   onGuardada,
   onCancelar,
 }: {
-  anio: number;
+  dias: string[];
   miembros: MiembroSimple[];
   tareaExistente?: TareaListada | null;
   onGuardada: () => void;
   onCancelar?: () => void;
 }) {
   const editando = Boolean(tareaExistente);
+  const diasDisponibles =
+    tareaExistente?.fecha && !dias.includes(tareaExistente.fecha)
+      ? [tareaExistente.fecha, ...dias]
+      : dias;
 
   const [titulo, setTitulo] = useState(tareaExistente?.titulo ?? "");
   const [descripcion, setDescripcion] = useState(tareaExistente?.descripcion ?? "");
@@ -163,7 +160,7 @@ export default function FormularioTarea({
 
       <div className="space-y-1.5">
         <label htmlFor="fechaTarea" className="text-sm text-white/70">
-          Día de agosto (opcional)
+          Día de las fiestas (opcional)
         </label>
         <select
           id="fechaTarea"
@@ -174,12 +171,17 @@ export default function FormularioTarea({
           <option value="" className="bg-black">
             Sin día concreto
           </option>
-          {Array.from({ length: DIAS_AGOSTO }, (_, i) => i + 1).map((d) => (
-            <option key={d} value={claveDia(anio, d)} className="bg-black">
-              {d} de agosto de {anio}
+          {diasDisponibles.map((dia) => (
+            <option key={dia} value={dia} className="bg-black">
+              {diaLegible(dia)}
             </option>
           ))}
         </select>
+        {dias.length === 0 && (
+          <p className="text-xs text-amber-300/70">
+            Configura primero las fechas de las fiestas desde la portada de Gestión.
+          </p>
+        )}
       </div>
 
       <SelectorMiembros miembros={miembros} seleccionados={asignados} onCambio={setAsignados} />

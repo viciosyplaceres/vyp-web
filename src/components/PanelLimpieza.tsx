@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Dices, Loader2, SkipForward, Trash2, Wrench } from "lucide-react";
 import Avatar from "./Avatar";
 import { tirarDadosLimpieza, borrarSorteoLimpieza } from "@/app/actions/limpieza";
-import { PLAZAS_DESMONTAJE, type Tirada } from "@/lib/limpieza";
+import type { Tirada } from "@/lib/limpieza";
 import { diaLegible } from "@/lib/formato";
 
 export type MiembroTurno = {
@@ -119,7 +119,8 @@ export default function PanelLimpieza({
   const diasNormales = dias.filter((d) => !d.desmontaje);
   const diaDesmontaje = dias.find((d) => d.desmontaje);
   const totalTurnos = dias.reduce((s, d) => s + d.plazas, 0);
-  const faltanMiembros = Math.max(0, PLAZAS_DESMONTAJE - miembros.length);
+  const plazasMaximas = Math.max(0, ...dias.map((dia) => dia.plazas));
+  const faltanMiembros = Math.max(0, plazasMaximas - miembros.length);
 
   return (
     <div className="mt-6">
@@ -189,13 +190,17 @@ export default function PanelLimpieza({
             <>
               Del {diaLegible(diasNormales[0].fecha)} al{" "}
               {diaLegible(diasNormales[diasNormales.length - 1].fecha)} limpian{" "}
-              <strong>2 personas cada día</strong>.{" "}
+              <strong>
+                {diasNormales[0].plazas} {diasNormales[0].plazas === 1 ? "persona" : "personas"}
+                cada día
+              </strong>.{" "}
             </>
           )}
           {diaDesmontaje && (
             <>
               El {diaLegible(diaDesmontaje.fecha)} es{" "}
-              <strong>limpieza y desmontaje</strong>, y ahí van <strong>3</strong>.
+              <strong>limpieza y desmontaje</strong>, y ahí van{" "}
+              <strong>{diaDesmontaje.plazas}</strong>.
             </>
           )}
         </p>
@@ -203,16 +208,15 @@ export default function PanelLimpieza({
           Son {totalTurnos} turnos entre {miembros.length}{" "}
           {miembros.length === 1 ? "miembro" : "miembros"}, así que no toca a
           todos por igual. El sorteo reparte de la forma más equilibrada posible:
-          nadie termina con más de un turno de diferencia respecto al resto. Con
-          los 9 miembros previstos, todos limpian dos días y solo tres repiten el
-          día de desmontaje. Cada uno tiene su número; si el dado saca un número
-          que no es de nadie, o de alguien que ya va servido, se vuelve a tirar.
+          nadie termina con más de un turno de diferencia respecto al resto. Cada
+          uno tiene su número; si el dado saca un número que no es de nadie, o de
+          alguien que ya va servido, se vuelve a tirar.
         </p>
 
         {faltanMiembros > 0 && (
           <p role="status" className="mt-3 text-sm text-amber-300">
             Ahora hay {miembros.length} miembros aprobados. Falta{faltanMiembros > 1 ? "n" : ""}{" "}
-            {faltanMiembros} para poder cubrir las 3 plazas de limpieza y desmontaje.
+            {faltanMiembros} para poder cubrir las {plazasMaximas} plazas del turno más grande.
           </p>
         )}
 

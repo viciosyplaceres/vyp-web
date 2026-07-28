@@ -26,7 +26,12 @@ export type DiaLimpieza = {
  * hora, y sumar un día de calendario con el reloj local podría saltarse o
  * repetir un día según en qué zona horaria corra el servidor.
  */
-export function diasLimpieza(fechaInicio: string, fechaFin: string): DiaLimpieza[] {
+export function diasLimpieza(
+  fechaInicio: string,
+  fechaFin: string,
+  plazasNormal = PLAZAS_NORMAL,
+  plazasDesmontaje = PLAZAS_DESMONTAJE,
+): DiaLimpieza[] {
   const [anioI, mesI, diaI] = fechaInicio.split("-").map(Number);
   const [anioF, mesF, diaF] = fechaFin.split("-").map(Number);
   const inicio = Date.UTC(anioI, mesI - 1, diaI);
@@ -39,7 +44,7 @@ export function diasLimpieza(fechaInicio: string, fechaFin: string): DiaLimpieza
     const desmontaje = t === fin;
     dias.push({
       fecha,
-      plazas: desmontaje ? PLAZAS_DESMONTAJE : PLAZAS_NORMAL,
+      plazas: desmontaje ? plazasDesmontaje : plazasNormal,
       desmontaje,
     });
   }
@@ -96,9 +101,10 @@ export function sortearLimpieza(
   dias: DiaLimpieza[],
   aleatorio: () => number = Math.random,
 ): ResultadoSorteo {
-  if (numMiembros < PLAZAS_DESMONTAJE) {
+  const maximoPlazas = Math.max(0, ...dias.map((dia) => dia.plazas));
+  if (numMiembros < maximoPlazas) {
     throw new Error(
-      `Para sortear la limpieza hacen falta al menos ${PLAZAS_DESMONTAJE} miembros aprobados.`,
+      `Para sortear la limpieza hacen falta al menos ${maximoPlazas} miembros aprobados.`,
     );
   }
 

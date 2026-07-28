@@ -1,7 +1,11 @@
 # Auditoría de calidad y rendimiento
 
-Auditoría continua del código de la web de la peña. Solo calidad y rendimiento:
-la parte de seguridad queda fuera por decisión del señor.
+La auditoría transversal más reciente (producción, PWA, accesibilidad, SEO
+técnico, dependencias y cambios pendientes) está en
+[`AUDITORIA-INTEGRAL-2026-07-28.md`](./AUDITORIA-INTEGRAL-2026-07-28.md).
+
+Auditoría continua del código de la web de la peña. Desde la ronda 4 incluye
+también seguridad, RLS, accesibilidad, SEO y PWA.
 
 Regla de la casa: **nada entra aquí sin medirlo antes y después**. Si una
 mejora no se puede demostrar con un número, se dice que no se ha podido
@@ -211,3 +215,160 @@ y comprobados a cero.
 **Pendiente para la ronda 3:** revisar los 29 componentes con `"use client"`,
 `SubirMusica.tsx` (347) y `SubirMedia.tsx` (299), y buscar `await` encadenados
 en las páginas de galería y música.
+
+---
+
+## Ronda 3 — 2026-07-28
+
+### R3.1 · La ruta crítica global cruzaba el Atlántico varias veces · RENDIMIENTO
+
+La inspección de cabeceras mostró funciones Vercel en `iad1` (Washington) y Supabase en
+Europa/Madrid. Además, cada navegación autenticada esperaba la validación de Auth en el proxy,
+otra llamada a Auth desde `getSesion()`, la consulta de perfil, dos consultas secuenciales para el
+chat y dos consultas para pendientes.
+
+- **Medido antes en producción, Chromium con sesión real:** portada **859 ms** de TTFB; galería
+  **1469 ms**; música **781 ms**; chat **925 ms**; miembros **957 ms**; gestión **1145 ms**; perfil
+  **1008 ms**. Las páginas anónimas estaban entre **0,18 y 0,57 s**, lo que aisló el coste en el
+  camino autenticado.
+- **Arreglo de red:** `vercel.json` fija `cdg1` (París), una región permitida en Hobby y cercana a
+  la base europea.
+- **Arreglo de Auth:** después de validar/refrescar el JWT, `proxy.ts` reenvía su `sub` mediante una
+  cabecera interna y elimina antes cualquier valor homónimo enviado por el navegador. `getSesion()`
+  evita la segunda llamada a Auth y la autorización sigue dependiendo de `perfiles` con RLS.
+- **Arreglo de consultas:** la migración `20260728005711_contadores_navegacion.sql` añade una RPC
+  `SECURITY INVOKER` que calcula mensajes no leídos, tareas y compra en una única llamada. El layout
+  la ejecuta en paralelo con el perfil y pasa sesión y pendientes al header, eliminando su trabajo
+  servidor duplicado. Las visitas anónimas no llaman a la RPC.
+- **Respuesta percibida:** `app/loading.tsx` muestra el emblema circular de VYP durante la espera
+  de las rutas dinámicas, con una animación de respiración basada solo en `transform`/`opacity` y
+  desactivada para quien prefiere reducir movimiento.
+- **Verificación disponible antes del despliegue:** RPC aplicada y ejecutada correctamente bajo
+  rol `authenticated`; las siete rutas autenticadas responden 200 en un build local de producción;
+  una petición anónima a `/perfil` con `x-vyp-user-id` falsificada sigue redirigiendo a login;
+  `tsc --noEmit`, ESLint y build correctos. En ese build local, los TTFB quedaron entre **74 y
+  127 ms**, pero no se comparan con producción porque la máquina y el trayecto de red son distintos.
+- **Resultado medido después:** pendiente. Vercel bloqueó temporalmente más builds por el límite
+  del plan Hobby; no se presenta como mejora demostrada hasta repetir exactamente la medición en
+  producción con la nueva región.
+
+---
+
+## Ronda 4 — 2026-07-28
+
+### R4.1 · El service worker todavía podía cachear respuestas de sesión · SEGURIDAD / PWA
+
+- **Reproducción:** una navegación App Router usa RSC (`RSC: 1`, `text/x-component`) y llega con
+  `destination` vacío. Por tanto no entraba en la exclusión de documentos y acababa en el caché GET
+  genérico. Cache Storage no separa por usuario ni obedece por sí solo el `private/no-store` HTTP.
+- **Arreglo:** `sw.js` usa una lista blanca de recursos estáticos; ninguna respuesta desconocida se
+  cachea. La versión sube a `vyp-v5` para borrar la caché anterior al activar el nuevo worker.
+- **Regresión:** `tests/service-worker.test.mjs` cubre RSC/API, caché estática y fallback offline.
+
+### R4.2 · Un documento interno podía registrarse como música pública · SEGURIDAD / RLS
+
+- **Reproducción:** `registrarPistaR2` aceptaba cualquier clave y la ruta pública de reproducción
+  solo comprobaba que existiera en `pistas`. Un miembro podía registrar una clave `documentos/` que
+  conociera y obtener después una URL pública prefirmada.
+- **Arreglo:** validación estricta en action y rutas, más tres restricciones `CHECK` en Postgres para
+  música, documentos de tareas y documentos de compra. La migración está aplicada en Supabase.
+- **Evidencia:** las 2 pistas R2 existentes cumplen el formato; las 3 restricciones están validadas;
+  una inserción válida dentro de una transacción con rollback fue aceptada y una clave cruzada fue
+  rechazada. `tests/r2-claves.test.mjs` cubre ambos namespaces.
+
+### R4.3 · URLs duplicadas y bloqueos de accesibilidad · SEO / ACCESIBILIDAD
+
+- El detalle de galería valida el año y filtra por `(id, anio)`: una URL mal formada o con el año de
+  otra foto ya no puede renderizar contenido duplicado con canonical falso.
+- Portada y detalle tienen `h1`; el `<dl>` de estadísticas vuelve a ser semánticamente válido; los
+  textos que Lighthouse señaló suben a contraste suficiente y los selectores reciben nombre.
+- Las flechas de una foto dejan de navegar cuando el foco está en el formulario de comentarios.
+
+### R4.4 · Dependencias de producción sin avisos corregibles · SEGURIDAD
+
+- Next 16.2.12 incluye `postcss@8.4.31` y `sharp@0.34.5`; la rama oficial 16.3 ya usa PostCSS
+  8.5.x y Sharp 0.35.3. Se fijan `postcss@8.5.23` y `sharp@0.35.3` sin cambiar Next estable.
+- **Resultado:** `npm audit --omit=dev` pasa de 3 avisos altos a **0 vulnerabilidades**. Sharp 0.35.3
+  procesó el wordmark real con libvips 8.18.3 y el build completo sigue siendo correcto.
+- La auditoría con dependencias de desarrollo conserva 9 avisos altos en ESLint/minimatch. No hay
+  parche compatible: los plugins publicados más recientes exigen `minimatch ^3.1.2` y la primera
+  rama corregida es 10.0.3+. Forzar ese salto violaría su API; no afecta al bundle ni al servidor.
+
+Validación local de esta ronda: 4/4 pruebas, TypeScript, ESLint, build y auditoría npm de
+dependencias de producción correctos. Lighthouse y la comprobación funcional postcambio siguen
+pendientes de despliegue.
+
+**Estado de producción a las 05:00 CEST:** todavía sirve `sw.js` con `vyp-v4`, devuelve 404 en
+`/robots.txt` y `/sitemap.xml`, y acepta con 200 los años de galería falso y no numérico usados en
+la reproducción. No se atribuye a producción ninguna corrección local. La tarea automática #71 se
+actualizó inicialmente para verificar el lote completo mediante Deploys a las 07:14 CEST; la #74 se
+eliminó por ser un segundo intento duplicado que consumiría otra compilación de Vercel. Al consultar
+después la ventana móvil real de la API, el único reintento se trasladó a las 16:05 CEST.
+
+---
+
+## Ronda 5 — 2026-07-28
+
+### R5.1 · La compra por lotes podía quedar a medias · INTEGRIDAD / RLS
+
+- **Reproducción:** el action insertaba primero `lista_compra` y después `compra_miembros`. Ante un
+  fallo del segundo paso intentaba compensar borrando, pero ignoraba un posible error del borrado.
+- **Arreglo:** `crear_items_compra()` es una RPC `SECURITY INVOKER`; limita a 100 artículos y 100
+  encargados, comprueba miembros aprobados, cantidades, año y documento, y deja que el RLS proteja
+  ambas tablas. Toda la llamada es una única transacción PostgreSQL.
+- **Defensa adicional:** tres restricciones `CHECK` impiden artículos vacíos, cantidades fuera de
+  1–9999 y documentos incompletos incluso mediante la Data API directa.
+- **Prueba remota con rollback:** una directiva creó 2 artículos × 2 encargados dentro de una
+  transacción; se observaron 2 filas y 4 asignaciones. Un miembro y `anon` fueron rechazados. Se
+  forzó un fallo en `compra_miembros` y se comprobaron 0 artículos huérfanos. Todos los ensayos se
+  revirtieron y el recuento residual fue 0.
+- **Regresión local:** `tests/compra.test.mjs` cubre normalización, límites, cantidades, UUID y
+  deduplicación. La suite pasa ahora de 4 a 7 pruebas.
+
+Producción web continúa sin este lote y la tarea Deploys #71 sigue pendiente para las 16:05 CEST;
+la migración de Supabase sí está aplicada y es compatible con el frontend actualmente servido.
+
+---
+
+## Ronda 6 — 2026-07-28
+
+### R6.1 · Publicación autorizada y estado real de producción
+
+- Se añadió `scripts/vercel-api-deploy.mjs`: sube únicamente fuentes no sensibles por SHA-1 a la
+  API de Vercel, crea el deployment de producción y espera a `READY`. Así el flujo
+  `/api/deploys/launch` no depende del CLI de Vercel, que abría listeners aleatorios rechazados por
+  el control de puertos de JARVIS.
+- El deployment `dpl_4FcsuzW54wRES5u5mgcnZv5QnUbA` quedó `READY` y asociado a
+  `www.viciosyplaceres.com`. Producción sirve `sw.js` `vyp-v5`, `/robots.txt` y `/sitemap.xml` con
+  200. La vista previa del host permanece registrada en el puerto cedido 20441.
+- La última promoción fue rechazada literalmente por Vercel con: `Resource is limited - try again
+  in 24 hours (more than 100, code: "api-deployments-young-hobby-team-24h")`. El deployment previo
+  sigue sano. A las 07:02 CEST, la API aún devolvía 100 deployments dentro de la ventana móvil; el
+  más antiguo de esos 100 vence a las 16:02:56 CEST. La tarea automática #71 conserva un único
+  intento, reprogramado con margen para las 16:05 CEST.
+
+### R6.2 · Ruta crítica de portada
+
+- El hero se envía sin esperar las consultas de galería, música, estadísticas y sesión. Las
+  secciones inferiores usan fronteras de `Suspense` pequeñas y coordinadas; el experimento de
+  liberar consultas fuera de orden produjo `CLS 0,096` y se descartó.
+- El iframe de OpenStreetMap no hace ninguna petición hasta pulsar “Ver mapa interactivo”; en la
+  prueba funcional pasó de 0 a 1 petición y no produjo errores de consola.
+- Supabase Realtime se importa dinámicamente solo para miembros. En anónimo desaparece el chunk de
+  66 KiB que Lighthouse marcaba 95% sin usar. Registro SW, instalación y avisos se difieren ocho
+  segundos; el SW seguía registrado a los 12 s y el cartel no interrumpió la primera interacción.
+- El wordmark conserva su relación de aspecto y la portada limita la cinta a seis fotos. Webpack
+  reduce el conjunto JS inicial medido de 554 a 473 KiB sin comprimir.
+
+### R6.3 · Verificación final y límite restante
+
+- Producción Webpack: escritorio **100/100/100/100**; móvil **98–99/100/100/100** en ejecuciones
+  limpias de Lighthouse 13.4.1. La mejor pasada móvil midió FCP 1,1 s, LCP 1,6 s, TBT 80 ms,
+  CLS 0, 40 peticiones y ~315 KiB. El punto residual varía con la ejecución del runtime React en
+  el host ARM y ya no corresponde a una oportunidad concreta de aplicación.
+- La revisión final del host devuelve 404 real para `/galeria/1900` y `/galeria/02024`, y 200 para
+  `/galeria/2024`. Producción aún devuelve 200 + `noindex` para el año falso porque esa corrección
+  temprana de `proxy.ts` es exactamente la promoción bloqueada por la cuota de 24 horas.
+- Validación final: 7/7 pruebas, TypeScript, ESLint, `git diff --check`, build Webpack y
+  `npm audit --omit=dev` sin vulnerabilidades de producción. La validación completa se repitió a
+  las 07:01 CEST antes de calcular la nueva ventana y obtuvo el mismo resultado.

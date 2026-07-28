@@ -2,7 +2,10 @@
 
 import { useState, useTransition } from "react";
 import { CalendarRange, Loader2 } from "lucide-react";
-import { actualizarFechasFiestas } from "@/app/actions/configuracion";
+import {
+  actualizarFechasFiestas,
+  type FechasFiestas,
+} from "@/app/actions/configuracion";
 
 /**
  * Las fechas de las fiestas del año activo, para que la limpieza (y lo que
@@ -15,21 +18,34 @@ export default function SelectorFechasFiestas({
   fechas,
 }: {
   anio: number;
-  fechas: { inicio: string; fin: string } | null;
+  fechas: FechasFiestas | null;
 }) {
   const [inicio, setInicio] = useState(fechas?.inicio ?? "");
   const [fin, setFin] = useState(fechas?.fin ?? "");
+  const [plazasLimpieza, setPlazasLimpieza] = useState(fechas?.plazasLimpieza ?? 2);
+  const [plazasDesmontaje, setPlazasDesmontaje] = useState(fechas?.plazasDesmontaje ?? 3);
   const [pendiente, startTransition] = useTransition();
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
 
-  function guardar(nuevoInicio: string, nuevoFin: string) {
+  function guardar(
+    nuevoInicio: string,
+    nuevoFin: string,
+    nuevasPlazasLimpieza: number,
+    nuevasPlazasDesmontaje: number,
+  ) {
     if (!nuevoInicio || !nuevoFin) return;
     setError(null);
     setGuardado(false);
     startTransition(async () => {
       try {
-        await actualizarFechasFiestas(anio, nuevoInicio, nuevoFin);
+        await actualizarFechasFiestas(
+          anio,
+          nuevoInicio,
+          nuevoFin,
+          nuevasPlazasLimpieza,
+          nuevasPlazasDesmontaje,
+        );
         setGuardado(true);
       } catch (e) {
         setError(e instanceof Error ? e.message : "No se pudieron guardar las fechas.");
@@ -57,7 +73,7 @@ export default function SelectorFechasFiestas({
             value={inicio}
             onChange={(e) => {
               setInicio(e.target.value);
-              guardar(e.target.value, fin);
+              guardar(e.target.value, fin, plazasLimpieza, plazasDesmontaje);
             }}
             className="min-h-[44px] w-full cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-sm text-white outline-none focus:border-white [color-scheme:dark]"
           />
@@ -70,7 +86,7 @@ export default function SelectorFechasFiestas({
             value={fin}
             onChange={(e) => {
               setFin(e.target.value);
-              guardar(inicio, e.target.value);
+              guardar(inicio, e.target.value, plazasLimpieza, plazasDesmontaje);
             }}
             className="min-h-[44px] w-full cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-sm text-white outline-none focus:border-white [color-scheme:dark]"
           />
@@ -80,8 +96,36 @@ export default function SelectorFechasFiestas({
         )}
       </div>
 
+      <div className="mt-3 grid grid-cols-2 gap-2">
+        <label className="space-y-1.5">
+          <span className="text-xs text-white/50">Personas por día</span>
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={plazasLimpieza}
+            onChange={(e) => setPlazasLimpieza(Number(e.target.value))}
+            onBlur={() => guardar(inicio, fin, plazasLimpieza, plazasDesmontaje)}
+            className="min-h-[44px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
+          />
+        </label>
+        <label className="space-y-1.5">
+          <span className="text-xs text-white/50">Personas para desmontar</span>
+          <input
+            type="number"
+            min="1"
+            max="20"
+            value={plazasDesmontaje}
+            onChange={(e) => setPlazasDesmontaje(Number(e.target.value))}
+            onBlur={() => guardar(inicio, fin, plazasLimpieza, plazasDesmontaje)}
+            className="min-h-[44px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
+          />
+        </label>
+      </div>
+
       <p className="mt-2 text-xs text-white/40">
-        El último día es el de <strong>limpieza y desmontaje</strong> (van 3 en vez de 2).
+        El último día es el de <strong>limpieza y desmontaje</strong>; los demás usan las plazas
+        normales.
       </p>
 
       {error && (

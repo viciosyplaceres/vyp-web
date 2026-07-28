@@ -117,7 +117,8 @@ encadenar varias fotos seguidas sin volver a abrir el selector.
 
 ```
 perfiles          id (→ auth.users), nombre, usuario (único), avatar_url,
-                  rol ('miembro'|'admin'), aprobado, created_at
+                  rol ('miembro'|'tesorero'|'admin'), aprobado,
+                  puede_asignar_roles, created_at
 media             id, tipo ('foto'|'video'), anio, storage_id, url, thumb_url,
                   ancho, alto, duracion_s, descripcion, subido_por, created_at
 pistas            id, titulo, artista, tipo ('sesion'|'cancion'), anio,
@@ -125,7 +126,8 @@ pistas            id, titulo, artista, tipo ('sesion'|'cancion'), anio,
                   duracion_s, subido_por, created_at
 comentarios       id, media_id (nullable), pista_id (nullable), autor_id, texto, created_at
 participantes     id, perfil_id (único junto a anio), talla_camiseta, pagado, importe, anio
-lista_compra      id, item, cantidad, comprado, anio, notas
+lista_compra      id, item, cantidad, comprado, anio, notas,
+                  documento_url, documento_nombre
 deudas            id, deudor_id, acreedor_id (NULL en cualquiera de los dos = "VYP"),
                   cantidad, descripcion, pagada, creado_por, created_at
 mensajes          id, autor_id, texto, created_at            (chat interno, solo miembros)
@@ -134,8 +136,9 @@ tareas            id, titulo, descripcion, fecha, hecha, hecha_por, hecha_en,
 tareas_miembros   tarea_id + perfil_id   (quién se encarga; puede ser más de uno)
 compra_miembros   item_id  + perfil_id   (quién compra cada cosa)
 push_subs         id, user_id, endpoint (único), p256dh, auth, created_at
-configuracion     id (siempre true, fila única), anio_activo
-autores (vista)   id, nombre                                  (solo esas dos columnas)
+configuracion     id (siempre true, fila única), anio_activo y ubicación pública
+fiestas_fechas    anio, fecha_inicio, fecha_fin, plazas_limpieza, plazas_desmontaje
+autores (vista)   id, nombre, usuario, avatar_url
 ```
 
 `autores` es una **vista** que expone únicamente `id` y `nombre` de `perfiles`. Existe porque los
@@ -162,7 +165,8 @@ Esta es la pieza que hace cumplir el requisito, y va en la base de datos, no en 
 | `media`, `pistas` | todo el mundo | solo miembro aprobado |
 | `comentarios` | todo el mundo | solo miembro aprobado (y solo puede borrar el suyo, o un admin) |
 | `perfiles` | el propio + admin | solo admin cambia rol y aprobación |
-| `participantes`, `lista_compra` | **solo admin** | solo admin |
+| `lista_compra` | miembros aprobados | directiva crea/borra; encargados marcan lo suyo |
+| `compra_miembros` | miembros aprobados | solo directiva reparte |
 | `mensajes` (chat) | **solo miembro aprobado** | solo miembro aprobado |
 | `push_subs` | solo las propias | solo las propias |
 
@@ -219,8 +223,8 @@ cualquiera a subir cosas.
 | `/musica` | público | Sesiones y canciones, con el reproductor |
 | `/subir` | **miembros** | Hacer foto · grabar vídeo · elegir de la galería, y subida de música |
 | `/login` · `/registro` | público | Acceso y alta |
-| `/admin` | **directiva** | Participantes: pagado, importe, talla de camiseta, notas |
-| `/admin/compras` | **directiva** | Lista de la compra con casillas |
+| `/admin` | **miembros** | Gestión compartida; configuración sensible solo para directiva |
+| `/admin/compras` | **miembros** | Lista de la compra; crear, borrar y repartir solo directiva |
 | `/admin/miembros` | **directiva** | Aprobar o revocar miembros |
 
 ---
@@ -245,14 +249,20 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
 > sección de `/` (con ancla `#donde`; el enlace "Dónde" del menú apunta a `/#donde`). La página
 > `/donde` se eliminó.
 
-- Dirección: **C. Asturias, 30320 Fuente Álamo, Murcia**
-- Coordenadas: **37.717352, -1.173910** (37°43'02.5"N 1°10'26.1"W)
+- La dirección, el nombre breve, la URL de Google Maps y las coordenadas se guardan en
+  `configuracion` y la directiva los cambia desde Gestión → Solo la directiva → Ubicación de la
+  peña. Los valores iniciales siguen siendo **C. Asturias, 30320 Fuente Álamo, Murcia** y
+  **37.717352, -1.173910**.
 - **Mapa incrustado con OpenStreetMap** (`openstreetmap.org/export/embed.html`), interactivo de
   verdad (se puede mover y hacer zoom), teñido en blanco y negro con un filtro CSS
-  (`grayscale invert`) para que encaje con el resto de la web. Sin clave de API.
-- Botón grande **"Cómo llegar"** que abre Google Maps con la ruta ya puesta hacia la peña:
-  `https://www.google.com/maps/dir/?api=1&destination=37.717352,-1.173910`
+  (`grayscale invert`) para que encaje con el resto de la web. Sin clave de API. El bloque técnico
+  de atribución que añade MapLibre dentro del iframe se recorta y se sustituye por una única
+  atribución visible y obligatoria: “© Colaboradores de OpenStreetMap”.
+- Botón grande **"Cómo llegar"** que abre la URL exacta de Google Maps guardada por la directiva.
 - En móvil abre directamente la app de Google Maps.
+- El propio formulario explica cómo obtenerlo: mantener pulsado el punto exacto en Google Maps,
+  copiar el enlace desde “Compartir” y copiar la pareja decimal `latitud, longitud` de la ficha.
+  El mapa OpenStreetMap se vuelve a construir automáticamente con esas coordenadas.
 
 > **Corregido el 2026-07-27**: el primer intento usaba el embed de Google Maps sin clave
 > (`/maps?q=...&output=embed`). Google cambió su comportamiento y esa URL ahora redirige a un
@@ -273,7 +283,8 @@ tiene, iniciales sobre fondo gris si no).
   carrusel de la portada lleva la misma insignia en miniatura. En el detalle de una foto, se pasa
   a la anterior o siguiente del mismo año deslizando horizontalmente en móvil, con flechas y
   teclas izquierda/derecha en escritorio. El selector al subir fotos o vídeos admite de 2010 a
-  2040, para no requerir cambios anuales.
+  un año por delante del actual y crece automáticamente, usando el año de gestión como valor
+  inicial para no requerir cambios anuales.
 - **Música**: cada pista de `/musica` y de la portada lleva el avatar de quien la subió (o pegó el
   enlace de Mixcloud/SoundCloud) al final de la fila.
 - **Comentarios**: el avatar aparece junto al nombre que ya se mostraba.
@@ -379,13 +390,13 @@ Solo directiva, igual que `participantes`.
 
 ---
 
-## 9-pre. Tareas de agosto y perfil personal (2026-07-27)
+## 9-pre. Tareas de las fiestas y perfil personal (2026-07-27; actualizado 2026-07-28)
 
 ### Tareas (`/admin/tareas`)
 
-Reparto del trabajo de las fiestas, con **calendario de agosto de 2026**: los 31 días en cuadrícula,
-cada uno con un punto si tiene tareas (apagado si ya están todas hechas). Al tocar un día se filtra
-la lista; se vuelve a tocar y se ven todas otra vez.
+Reparto del trabajo con el **rango real de las fiestas** configurado por la directiva. Ya no presupone
+agosto ni 31 días: si las fechas cruzan de mes, el calendario muestra ambos meses. Cada día lleva un
+punto si tiene tareas (apagado si ya están todas hechas); al tocarlo se filtra la lista.
 
 Cada tarea tiene **nombre, descripción, día, uno o varios encargados y un documento adjunto**
 opcional (PDF, imagen, Word, Excel o texto, hasta 20 MB, guardado en R2 bajo `documentos/`).
@@ -410,6 +421,13 @@ Verificado en vivo: un miembro intentó renombrar su tarea y el título se qued�
 toca) y puedan marcar comprado **lo que tienen asignado**, con el mismo trigger de protección.
 Crear y borrar sigue siendo de la directiva. **`participantes` (pagos y tallas) no cambia: sigue
 siendo solo-admin.**
+
+El formulario de compra admite una lista dinámica: el botón “Añadir otro artículo” crea hasta 100
+líneas por tanda, cada una con su propia cantidad. Los encargados y el documento opcional se aplican
+a toda la tanda; después cada artículo conserva sus controles independientes. La RPC
+`crear_items_compra()` (`SECURITY INVOKER`) valida año, artículos, cantidades, encargados aprobados y
+documento, y escribe `lista_compra` + `compra_miembros` en una única transacción. Si falla cualquier
+asignación, no queda ningún artículo huérfano.
 
 ### Perfil (`/perfil`)
 
@@ -437,6 +455,9 @@ Un único grupo, estilo WhatsApp, **invisible para quien no sea miembro aprobado
 - Burbujas propias en blanco a la derecha, ajenas en gris a la izquierda, con separadores de día
   ("Hoy", "Ayer", fecha) y hora en cada mensaje.
 - Enviar con Enter; Mayús+Enter hace salto de línea.
+- En Gestión → Solo la directiva hay una zona de peligro para **borrar físicamente todo el
+  historial**. Un modal explica que no se puede deshacer. La función SQL elimina en una transacción
+  mensajes, reacciones (por cascada) y marcas de lectura; solo acepta un JWT de directiva.
 
 > **Corregido el 2026-07-27 — "Invalid Date" al escribir.** Cada mensaje enviado aparecía como una
 > burbuja rota: sin texto, con autor "Miembro" y fecha "Invalid Date". La causa se vio espiando el
@@ -468,9 +489,10 @@ Un único grupo, estilo WhatsApp, **invisible para quien no sea miembro aprobado
 **Instalable como app**: `public/manifest.webmanifest` (modo `standalone`, iconos 192/512 y uno
 `maskable`, atajos directos a Galería/Música/Chat) y `public/sw.js` como service worker.
 
-La estrategia de caché es deliberadamente conservadora — **la red manda siempre**, y solo se tira de
-caché si no hay conexión. Con una caché agresiva, alguien vería fotos o mensajes viejos, que es peor
-que esperar un segundo. Nunca se cachean `/api/` ni audio/vídeo.
+La estrategia de caché es deliberadamente conservadora: solo `/_next/static/`, logos, manifest,
+favicon y la imagen Open Graph entran en una lista blanca cache-first. HTML, RSC, `/api/`, imágenes
+optimizadas y cualquier ruta desconocida van siempre a red. Así Cache Storage no puede mezclar
+contenido ligado a dos sesiones; `tests/service-worker.test.mjs` protege esta regla.
 
 ### Instalación guiada (`InstalarApp.tsx`)
 
@@ -618,7 +640,9 @@ Sobre la base de datos y el despliegue reales, no en local:
   mensaje real ya guardado en la tabla, **lo ve como lista vacía**. Tras aprobarlo desde la
   directiva, ese mismo mensaje sí aparece. Aprobado y todo, sigue sin ver `participantes`.
 - **R2**: subida con URL prefirmada (200), lectura del contenido correcto (200) y borrado (404
-  después). El bucket `vyp` funciona de verdad.
+  después). El bucket `vyp` funciona de verdad. Desde la migración
+  `20260728024741_aislar_namespaces_r2.sql`, Postgres y la aplicación exigen además
+  `musica/<uuid>.<ext>` para pistas públicas y `documentos/<uuid>.<ext>` para adjuntos internos.
 - **Comentarios públicos**: un visitante anónimo lee el comentario y el nombre de quien lo escribió
   a través de la vista `autores`.
 - **Rutas**: las 7 públicas responden 200; las 5 privadas (`/subir`, `/cuenta`, `/admin`,

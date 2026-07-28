@@ -11,6 +11,7 @@ export const metadata: Metadata = {
   title: "Música",
   description:
     "Sesiones y canciones de la peña Vicios & Placeres. Escucha sin parar mientras navegas.",
+  alternates: { canonical: "/musica" },
 };
 
 export default async function MusicaPage() {

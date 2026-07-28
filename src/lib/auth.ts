@@ -1,4 +1,5 @@
 import { cache } from "react";
+import { headers } from "next/headers";
 import { createClient } from "@/lib/supabase/server";
 
 export type Sesion = {
@@ -14,6 +15,11 @@ export type Sesion = {
   /** Solo quien tiene esto puede cambiar el rol de otra cuenta (dar o quitar directiva/tesorero). */
   puedeAsignarRoles: boolean;
 };
+
+/** Identidad validada por el proxy para esta petición, nunca por el navegador. */
+export async function getUserIdValidado(): Promise<string | null> {
+  return (await headers()).get("x-vyp-user-id");
+}
 
 /**
  * Devuelve la sesión con el rol ya resuelto, o null si no hay usuario.
@@ -35,23 +41,27 @@ export type Sesion = {
  * clara: lo dominan otras cosas.
  */
 export const getSesion = cache(async (): Promise<Sesion | null> => {
+  // `proxy.ts` elimina cualquier valor enviado por el navegador y solo añade
+  // esta cabecera tras validar el JWT con getClaims(). Así evitamos una
+  // segunda llamada a Auth sin confiar en el contenido local de la cookie.
+  const userId = await getUserIdValidado();
+  if (!userId) return null;
+
   const supabase = await createClient();
-  const {
-    data: { user },
-  } = await supabase.auth.getUser();
-
-  if (!user) return null;
-
   const { data: perfil } = await supabase
     .from("perfiles")
     .select("nombre, usuario, avatar_url, bio, rol, aprobado, puede_asignar_roles")
-    .eq("id", user.id)
-    .single();
+    .eq("id", userId)
+    .maybeSingle();
+
+  // La cabecera solo sirve como pista para la búsqueda. RLS valida de nuevo
+  // el JWT al consultar Postgres; sin un perfil visible no existe sesión.
+  if (!perfil) return null;
 
   const aprobado = perfil?.aprobado === true;
 
   return {
-    userId: user.id,
+    userId,
     nombre: perfil?.nombre ?? null,
     usuario: perfil?.usuario ?? null,
     avatarUrl: perfil?.avatar_url ?? null,

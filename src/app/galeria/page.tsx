@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import PanelSubirGaleria from "@/components/PanelSubirGaleria";
+import { obtenerAnioActivo } from "@/app/actions/configuracion";
 
 export const dynamic = "force-dynamic";
 
@@ -11,6 +12,7 @@ export const metadata: Metadata = {
   title: "Galería",
   description:
     "Fotos y vídeos de las fiestas de la peña Vicios & Placeres, año por año.",
+  alternates: { canonical: "/galeria" },
 };
 
 type ResumenAnio = {
@@ -21,12 +23,14 @@ type ResumenAnio = {
 
 export default async function GaleriaPage() {
   const supabase = await createClient();
-  const sesion = await getSesion();
-
-  const { data: media } = await supabase
-    .from("media")
-    .select("anio, url, thumb_url, created_at")
-    .order("created_at", { ascending: false });
+  const [sesion, anioActivo, { data: media }] = await Promise.all([
+    getSesion(),
+    obtenerAnioActivo(),
+    supabase
+      .from("media")
+      .select("anio, url, thumb_url, created_at")
+      .order("created_at", { ascending: false }),
+  ]);
 
   // Se agrupa por año en el servidor: son pocas filas y evita una vista extra.
   const porAnio = new Map<number, ResumenAnio>();
@@ -53,7 +57,7 @@ export default async function GaleriaPage() {
           Las fiestas son una vez al año. Cada año, su carpeta.
         </p>
 
-        {sesion?.esMiembro && <PanelSubirGaleria />}
+        {sesion?.esMiembro && <PanelSubirGaleria anioInicial={anioActivo} />}
 
         {anios.length === 0 ? (
           <p className="mt-10 text-white/50">

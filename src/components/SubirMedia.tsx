@@ -7,8 +7,6 @@ import { registrarMedia, finalizarSubidaGaleria } from "@/app/actions/media";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // tope real de la cuenta de Cloudinary
 
-const ANIOS = Array.from({ length: 2040 - 2010 + 1 }, (_, i) => 2040 - i);
-
 /**
  * Tres botones, no uno: es más fiable que un único selector con `multiple`.
  *
@@ -29,7 +27,11 @@ export default function SubirMedia({
   onSubido?: () => void;
 }) {
   const router = useRouter();
-  const [anio, setAnio] = useState(anioInicial ?? ANIOS[0]);
+  const actual = new Date().getFullYear();
+  const [anio, setAnio] = useState(anioInicial ?? actual);
+  const anios = Array.from({ length: actual + 1 - 2010 + 1 }, (_, i) => actual + 1 - i);
+  if (!anios.includes(anio)) anios.push(anio);
+  anios.sort((a, b) => b - a);
   const [ficheros, setFicheros] = useState<File[]>([]);
   const [descripcion, setDescripcion] = useState("");
   const [progreso, setProgreso] = useState<string | null>(null);
@@ -171,7 +173,7 @@ export default function SubirMedia({
           onChange={(e) => setAnio(Number(e.target.value))}
           className="min-h-[48px] w-full cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
         >
-          {ANIOS.map((a) => (
+          {anios.map((a) => (
             <option key={a} value={a} className="bg-black">
               {a}
             </option>

@@ -13,9 +13,15 @@ import {
   Dices,
 } from "lucide-react";
 import { getSesion } from "@/lib/auth";
-import { obtenerAnioActivo, obtenerFechasFiestas } from "@/app/actions/configuracion";
+import {
+  obtenerAnioActivo,
+  obtenerFechasFiestas,
+  obtenerUbicacion,
+} from "@/app/actions/configuracion";
 import SelectorAnioActivo from "@/components/SelectorAnioActivo";
 import SelectorFechasFiestas from "@/components/SelectorFechasFiestas";
+import ConfiguracionUbicacion from "@/components/ConfiguracionUbicacion";
+import VaciarChat from "@/components/VaciarChat";
 
 export const dynamic = "force-dynamic";
 
@@ -59,7 +65,9 @@ export default async function AdminPage() {
   }
 
   const anioActivo = await obtenerAnioActivo();
-  const fechasFiestas = sesion.esAdmin ? await obtenerFechasFiestas(anioActivo) : null;
+  const [fechasFiestas, ubicacion] = sesion.esAdmin
+    ? await Promise.all([obtenerFechasFiestas(anioActivo), obtenerUbicacion()])
+    : [null, null];
 
   return (
     <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
@@ -96,6 +104,8 @@ export default async function AdminPage() {
               Solo la directiva
             </h2>
             <SelectorFechasFiestas anio={anioActivo} fechas={fechasFiestas} />
+            {ubicacion && <ConfiguracionUbicacion ubicacion={ubicacion} />}
+            <VaciarChat />
             <ul className="grid gap-2 sm:grid-cols-2">
               {SECCIONES_DIRECTIVA.map(({ href, texto, Icono }) => (
                 <li key={href}>

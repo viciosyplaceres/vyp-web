@@ -14,13 +14,25 @@ export const dynamic = "force-dynamic";
 type Props = { params: Promise<{ anio: string; id: string }> };
 
 export async function generateMetadata({ params }: Props): Promise<Metadata> {
-  const { anio } = await params;
-  return { title: `Fiestas de ${anio}` };
+  const { anio, id } = await params;
+  const anioNum = Number(anio);
+  if (!Number.isInteger(anioNum) || anioNum < 2010 || anioNum > 2100) {
+    return { title: "Archivo no encontrado", robots: { index: false } };
+  }
+
+  return {
+    title: `Fiestas de ${anioNum}`,
+    alternates: { canonical: `/galeria/${anioNum}/${id}` },
+  };
 }
 
 export default async function DetalleMediaPage({ params }: Props) {
   const { anio, id } = await params;
   const anioNum = Number(anio);
+
+  if (!Number.isInteger(anioNum) || anioNum < 2010 || anioNum > 2100) {
+    notFound();
+  }
 
   const supabase = await createClient();
   const sesion = await getSesion();
@@ -35,6 +47,7 @@ export default async function DetalleMediaPage({ params }: Props) {
         "id, tipo, anio, url, ancho, alto, descripcion, created_at, autores(nombre, avatar_url)",
       )
       .eq("id", id)
+      .eq("anio", anioNum)
       .maybeSingle(),
     supabase
       .from("comentarios")
@@ -85,6 +98,8 @@ export default async function DetalleMediaPage({ params }: Props) {
   return (
     <main className="flex-1 px-4 py-6 sm:px-6 sm:py-10">
       <div className="mx-auto max-w-3xl">
+        <h1 className="sr-only">Archivo de las fiestas de {media.anio}</h1>
+
         <Link
           href={`/galeria/${media.anio}`}
           className="inline-flex min-h-[44px] cursor-pointer items-center gap-1 text-sm text-white/60 transition-colors duration-200 hover:text-white"
@@ -134,7 +149,7 @@ export default async function DetalleMediaPage({ params }: Props) {
 
         <Comentarios
           mediaId={media.id}
-          anio={anioNum}
+          anio={media.anio}
           comentarios={comentarios}
           esMiembro={sesion?.esMiembro ?? false}
           haySesion={Boolean(sesion)}

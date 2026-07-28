@@ -2,7 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { suscribirRealtime, type Escucha } from "@/lib/realtime";
+import type { Escucha } from "@/lib/realtime";
 import { obtenerPendientesPerfil } from "@/app/actions/pendientes";
 import Avatar from "./Avatar";
 
@@ -52,17 +52,23 @@ export default function AvatarPendientes({
     if (!esMiembro) return;
 
     let cancelado = false;
-    const baja = suscribirRealtime(escuchas, () => {
-      obtenerPendientesPerfil()
-        .then((n) => {
-          if (!cancelado) setPendientes(n);
-        })
-        .catch(() => undefined);
-    });
+    let darDeBaja: (() => void) | undefined;
+    void import("@/lib/realtime")
+      .then(({ suscribirRealtime }) => {
+        if (cancelado) return;
+        darDeBaja = suscribirRealtime(escuchas, () => {
+          obtenerPendientesPerfil()
+            .then((cantidad) => {
+              if (!cancelado) setPendientes(cantidad);
+            })
+            .catch(() => undefined);
+        });
+      })
+      .catch(() => undefined);
 
     return () => {
       cancelado = true;
-      baja();
+      darDeBaja?.();
     };
   }, [escuchas, esMiembro]);
 

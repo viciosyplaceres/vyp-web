@@ -18,6 +18,7 @@ export async function generateMetadata({ params }: Props): Promise<Metadata> {
   return {
     title: `Fiestas de ${anio}`,
     description: `Fotos y vídeos de las fiestas de ${anio} de la peña Vicios & Placeres.`,
+    alternates: { canonical: `/galeria/${anio}` },
   };
 }
 

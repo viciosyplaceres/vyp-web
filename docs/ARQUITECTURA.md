@@ -3,7 +3,20 @@
 Documento de referencia para mantener o ampliar la web. El *qué* y el *por qué* del producto están
 en `PLAN.md`; aquí está el *cómo*.
 
-Actualizado: 2026-07-27
+Actualizado: 2026-07-28
+
+---
+
+## Descubrimiento público
+
+- `app/robots.ts` permite rastrear portada, galería y música, bloqueando las
+  zonas privadas, autenticación y API; enlaza el sitemap oficial.
+- `app/sitemap.ts` publica portada, música, índice de galería, años y archivos
+  públicos. Consulta `media` con la clave pública y conserva las rutas estáticas
+  si Supabase no responde, evitando un sitemap con error 500. Se regenera como
+  máximo cada hora para incorporar nuevas subidas sin desplegar de nuevo.
+- Las páginas públicas declaran canonical bajo `www.viciosyplaceres.com`; las
+  páginas privadas mantienen `noindex` en su metadata.
 
 ---
 
@@ -27,6 +40,7 @@ Nada de esto corre en el VPS: son cuentas propias del señor.
 src/
   app/
     layout.tsx              Encabezado, navegación inferior, reproductor global, PWA
+    loading.tsx             Estado inmediato mientras termina una navegación dinámica
     page.tsx                Portada: carrusel de fotos, música compacta, mapa ("#donde"), invitación
     galeria/                Años → cuadrícula → detalle con comentarios. Botón "Subir" propio (miembros)
     musica/                 Lista de pistas (R2 + embeds externos). Botón "Subir música" propio (miembros)
@@ -35,7 +49,7 @@ src/
     admin/                  Año de gestión activo · participantes · deudas · tareas · compras ·
                             miembros · almacenamiento
     login/ registro/        Acceso y alta
-    actions/                Server actions (toda la escritura pasa por aquí)
+    actions/                Server actions + lectura combinada de contadores de navegación
     api/                    Rutas que el navegador llama directamente
   components/               Interfaz (los que llevan "use client" son interactivos)
     InstalarApp.tsx         Cartel de "instala la app" (nativo en Android, guiado en iPhone)
@@ -47,12 +61,14 @@ src/
     auth.ts                 getSesion / exigirMiembro / exigirAdmin
     supabase/{client,server,admin}.ts
     r2.ts                   Cliente S3 apuntando a R2
+    r2-claves.ts            Valida los namespaces y el formato de las claves R2
     embeds.ts               Mixcloud/SoundCloud + formato de duración
     push.ts                 Envío de avisos con web-push (filtra por rol)
     push-cliente.ts         Conversión de la clave VAPID en el navegador
   proxy.ts                  Refresco de sesión + protección de rutas
-supabase/migrations/        Historial del esquema (0001, 0002)
+supabase/migrations/        Historial completo del esquema y funciones SQL
 public/                     manifest.webmanifest, sw.js, logos
+tests/                      Pruebas Node del service worker y los namespaces R2
 ```
 
 > **Ojo con `proxy.ts`**: en Next.js 16 el fichero `middleware.ts` pasó a llamarse `proxy.ts`, y la
@@ -86,11 +102,13 @@ Ni Cloudinary ni R2 reciben ficheros del navegador sin permiso previo:
 - **Música**: `/api/r2/subir` devuelve una URL prefirmada de 30 minutos. **La clave del objeto la
   decide el servidor**, no el cliente: así nadie elige dónde escribe dentro del bucket.
 - **Escuchar**: `/api/r2/reproducir?clave=…` redirige a una URL prefirmada de lectura. Antes
-  comprueba que esa clave corresponde a una pista registrada, para que nadie use la ruta como
-  visor del bucket entero.
+  comprueba que la clave tiene el formato `musica/<uuid>.<ext>` y corresponde a una pista
+  registrada, para que nadie use la ruta como visor del bucket entero.
 - **Documentos de tareas y de la compra**: `/api/r2/documento?clave=…` hace lo mismo pero
-  comprobando que la clave está en `tareas.documento_url` **o** en `lista_compra.documento_url`
-  (una sola ruta para las dos, añadido al meter documentos en la compra).
+  exige `documentos/<uuid>.<ext>` y comprueba que la clave está en `tareas.documento_url` **o** en
+  `lista_compra.documento_url` (una sola ruta para las dos). La migración
+  `20260728024741_aislar_namespaces_r2.sql`, aplicada el 28-07-2026, impone las mismas reglas en
+  Postgres: una llamada directa a la Data API tampoco puede publicar un documento como música.
 
 ### CORS del bucket R2 — imprescindible, y no está en el código
 
@@ -167,6 +185,7 @@ Cualquier variable que empiece por `NEXT_PUBLIC_` **llega al navegador**. Nunca 
 
 ```bash
 npm run dev                 # desarrollo en local
+npm test                    # service worker y separación de namespaces R2
 npx tsc --noEmit            # comprobar tipos
 npx eslint src              # comprobar estilo y errores de React
 npm run build               # build de producción
@@ -180,6 +199,14 @@ node --env-file=.env.local scripts/configurar-cors-r2.mjs
 con la Management API de Supabase usando el token `sbp_…`. No editar tablas a mano por el panel sin
 dejar el SQL en el repositorio, o la próxima persona no sabrá por qué la base de datos no coincide
 con el código.
+
+### Dependencias corregidas antes que Next estable
+
+`package.json` fija mediante `overrides` `postcss@8.5.23` y `sharp@0.35.3`. Next 16.2.12 todavía
+declara versiones vulnerables, pero la rama oficial 16.3 ya usa esas mismas ramas corregidas. Se
+mantiene Next estable y se verifican build y transformación real con Sharp. `npm audit --omit=dev`
+queda en cero; la auditoría completa conserva los avisos de `minimatch` del ecosistema ESLint hasta
+que sus plugins publiquen una versión compatible.
 
 ---
 
@@ -263,9 +290,10 @@ en tiempo real con el total de **tareas asignadas sin marcar como hechas** más 
 lista de la compra asignados sin marcar como comprados**. A propósito no cuenta nada de música ni
 fotos: ahí no existe un estado "pendiente", solo "subido".
 
-- El número inicial se calcula en el servidor (`obtenerPendientesPerfil`) con **dos `count` exactos**
-  (`head: true`) filtrando por la tabla relacionada (`tareas.hecha = false`), y se pasa como prop,
-  igual que la burbuja de no leídos del chat. Antes se descargaba cada asignación del miembro para
+- El número inicial se calcula junto al de mensajes no leídos mediante
+  `contadores_navegacion()` (ver el apartado 7septvicies). Los refrescos de Realtime siguen usando
+  `obtenerPendientesPerfil`: son eventos aislados posteriores al render y ahí los dos `count`
+  exactos (`head: true`) evitan descargar las asignaciones. Antes se descargaba cada fila para
   contarlas con un `filter().length` en memoria.
 - En el cliente escucha `UPDATE` en `tareas` y `lista_compra` (cualquier cambio de cualquiera,
   porque no se puede filtrar por "asignado a mí" directamente en esas tablas) y `*` en
@@ -437,6 +465,13 @@ navegador muestre su aviso de siempre en vez de arriesgarse a enseñar la págin
 se siguen cacheando los recursos estáticos (JS, CSS, iconos), que son iguales para todo el mundo.
 Se subió además la versión de caché (`vyp-v2` → `vyp-v3`) para que el `activate` del service worker
 borre cualquier caché vieja ya guardada en los móviles de la gente.
+
+**Segunda corrección, auditoría del 28-07-2026:** las navegaciones internas de Next.js no son
+documentos, sino respuestas RSC con `destination` vacío. La condición anterior no las cubría y el
+bloque genérico de GET podía guardarlas. La política final (`vyp-v5`) ya no intenta enumerar qué es
+privado: solo permite en caché `/_next/static/`, logos, manifest, favicon y Open Graph. HTML, RSC,
+API, imágenes optimizadas y cualquier futura ruta de datos quedan en red por defecto. Cuatro pruebas
+con `node:test` verifican la exclusión de RSC/API, la lista blanca y el fallback sin conexión.
 
 ---
 
@@ -995,8 +1030,118 @@ dejando las fechas como estaban (22-31 de agosto) al terminar.
 
 ---
 
+## 7septvicies. Ruta crítica del render global (migración `20260728005711`)
+
+Cada página pasaba antes por demasiadas esperas globales: el proxy validaba el JWT contra Auth,
+`getSesion()` volvía a llamar a Auth, el layout contaba los mensajes no leídos con dos consultas y
+`Header` resolvía de nuevo la sesión más otros dos contadores de pendientes. Aunque `cache()` ya
+deduplicaba `getSesion()`, las consultas seguían formando una cadena antes de poder enviar HTML.
+
+- Después de `getClaims()`, `proxy.ts` pasa el `sub` ya validado a Server Components mediante una
+  cabecera interna. Primero borra siempre cualquier `x-vyp-user-id` enviado por el navegador, por
+  lo que no se puede suplantar. `getSesion()` evita así una segunda llamada a Auth y consulta el
+  perfil mediante PostgREST/RLS; sin una fila visible devuelve `null`.
+- `RootLayout` resuelve el perfil y `contadores_navegacion()` en paralelo. La función SQL
+  `SECURITY INVOKER` devuelve los no leídos y pendientes juntos respetando las políticas del
+  usuario y sustituye cuatro peticiones REST por una. Sin identidad validada no hace esa llamada.
+  El layout pasa la sesión y el contador inicial a `Header`, que deja de ser un componente servidor
+  asíncrono y no vuelve a consultar nada.
+- `vercel.json` fija la única región Hobby en `cdg1` (París). Las respuestas anteriores mostraban
+  que la función corría en `iad1` (Washington) mientras Supabase estaba en Europa/Madrid; acercarlas
+  evita que cada consulta cruce el Atlántico.
+- `app/loading.tsx` da respuesta visual inmediata mientras una navegación dinámica termina. Usa el
+  emblema circular original (`vyp-logo-192.png`) con una respiración suave que solo anima
+  `transform` y `opacity`; no añade JavaScript ni bloquea la carga. `prefers-reduced-motion` ya
+  desactiva estas animaciones globalmente. No reduce el TTFB del servidor, pero evita que un toque
+  parezca ignorado.
+
+La migración se aplicó y se ejecutó como rol `authenticated` contra la base real: ambos contadores
+devolvieron valores no negativos. Tipos, ESLint y build están limpios. La medición posterior de
+producción queda pendiente del siguiente despliegue por el límite temporal de Vercel Hobby.
+
+---
+
+## 7octovicies. Configuración sin tocar código y operaciones en lote (migración `20260728012324`)
+
+La revisión de valores que podían caducar cada año dejó cuatro cambios operativos:
+
+- **Ubicación pública:** `configuracion` guarda nombre breve, dirección, URL exacta de Google Maps,
+  latitud y longitud. `ConfiguracionUbicacion.tsx` permite a la directiva cambiarlos y contiene las
+  instrucciones para obtenerlos. La portada genera el iframe de OpenStreetMap desde las coordenadas
+  y usa la URL guardada en “Cómo llegar”. El pie técnico de MapLibre se oculta mediante recorte del
+  iframe, pero la atribución mínima enlazada a OpenStreetMap queda visible fuera de él. La fila es
+  legible por `anon` porque todo su contenido ya es público; su `UPDATE` sigue protegido por
+  `private.es_admin()` y RLS.
+- **Calendario anual real:** Tareas consume `fiestas_fechas`, igual que Limpieza, mediante
+  `lib/fechas.ts`. `CalendarioTareas.tsx` no presupone agosto, admite rangos que cruzan de mes y el
+  selector de año crece respecto al año actual. `SubirMedia` usa el año de gestión y dejó de arrancar
+  por error en 2040.
+- **Reglas de limpieza:** `fiestas_fechas` guarda también `plazas_limpieza` y
+  `plazas_desmontaje`. La directiva las cambia junto a las fechas; el sorteo, sus validaciones y los
+  textos derivan las cifras de esos datos. Se eliminó la frase fija de “9 miembros previstos”.
+- **Compra por lotes:** `PanelCompras` mantiene hasta 100 líneas de artículo/cantidad y
+  `crearItemCompra()` llama a `crear_items_compra()` (migración
+  `20260728031256_compra_atomica.sql`). La función es `SECURITY INVOKER`: valida año, cantidades,
+  documento y hasta 100 miembros aprobados, mientras las políticas RLS siguen siendo la autoridad.
+  Inserta `lista_compra` y `compra_miembros` en la misma transacción; ya no existe una compensación
+  posterior cuyo borrado pudiera fallar.
+
+### Purga irreversible del chat
+
+`VaciarChat.tsx` vive en “Solo la directiva” y exige una segunda confirmación en un modal. Llama a
+`vaciar_historial_chat()`, función `SECURITY DEFINER` necesaria para borrar también
+`chat_lecturas`, pero cerrada de tres formas: comprobación interna `private.es_admin()`, `EXECUTE`
+revocado a `PUBLIC`/`anon` y concedido solo a `authenticated`. El borrado de `mensajes`, reacciones
+por `ON DELETE CASCADE` y lecturas ocurre en una sola transacción. Realtime escucha ahora `DELETE`
+en `mensajes`, así que un chat abierto se vacía sin recargar.
+
+La revisión dejó fuera deliberadamente los límites de Cloudinary/R2 y los permisos de roles: son
+controles técnicos o de seguridad, no datos que deban editarse desde una web. El catálogo de tallas
+y el máximo de camisetas sí podrían variar por proveedor; se mantienen como posible configuración
+anual si la peña confirma que cambian de un año a otro.
+
+Verificado en build local de producción con sesión de directiva y viewport móvil: guardado real de
+la ubicación sin alterar sus valores, alta conjunta de dos compras con cantidades 2 y 5, calendario
+sin referencias fijas a agosto, apertura/cancelación del modal y mapa público. Las compras de prueba
+se eliminaron y la base confirmó cero restos. La purga se ejecutó dentro de una transacción revertida:
+la función y sus cascadas se comprobaron sin borrar el chat real.
+
+---
+
+## 7novovicies. Portada progresiva y despliegue sin CLI (2026-07-28)
+
+La portada ya no espera todas sus consultas antes de enviar el hero. Estadísticas, galería, música,
+ubicación e invitación viven tras fronteras `Suspense` pequeñas; comparten la misma tanda de datos
+para aparecer en orden y conservar `CLS 0`. Liberarlas según terminaba cada consulta se midió y se
+descartó porque desplazaba contenido (`CLS 0,096`). La cinta muestra seis fotos en portada; la
+galería completa no cambia.
+
+`MapaDiferido.tsx` sustituye el iframe inicial por un botón: OpenStreetMap pasa de una petición antes
+de interactuar a ninguna. `BottomNav` y `AvatarPendientes` importan `lib/realtime` solo cuando hay un
+miembro, por lo que visitantes anónimos no descargan Supabase Realtime. `ComplementosPWA.tsx`
+retrasa ocho segundos el registro, instalación y avisos; después registra `vyp-v5` y conserva el
+flujo nativo. El cartel de instalación espera además diez segundos para no cubrir la primera acción.
+
+El build de producción usa `next build --webpack`: en esta aplicación reduce los ficheros JS
+iniciales de 554 a 473 KiB sin comprimir y la medición de red de 65 peticiones/~850 KiB a
+40/~315 KiB. Lighthouse 13.4.1 da 100/100/100/100 en escritorio y 98–99/100/100/100 en móvil;
+el TBT móvil restante (80–130 ms) varía en el runtime React bajo CPU simulada.
+
+`scripts/vercel-api-deploy.mjs` permite que `/api/deploys/launch` publique sin ejecutar el CLI de
+Vercel: omite secretos y artefactos, sube fuentes por digest SHA-1, crea un deployment de producción
+y espera a `READY`. El deployment Webpack publicado es `dpl_4FcsuzW54wRES5u5mgcnZv5QnUbA`.
+La siguiente revisión añade en `proxy.ts` un 404 anterior al streaming para años no canónicos o
+fuera de 2010–2100; está validada en el host, pero Vercel rechazó su promoción al superar el límite
+Hobby de 100 deployments/24 h. La API confirmó que el primer hueco posible de la ventana móvil es
+el 28 de julio a las 16:02:56 CEST; la tarea automática #71 conserva un único reintento autorizado
+a las 16:05 CEST.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
 - Borrar el fichero de Cloudinary/R2 al borrar la fila (hoy se borra el registro, no el archivo).
 - Página de perfil editable (cambiar nombre y foto).
+- Si el proveedor cambia cada año, hacer configurables por año las tallas disponibles y el máximo
+  de camisetas por miembro.

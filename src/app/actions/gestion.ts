@@ -5,6 +5,8 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirMiembro, exigirDirectivaOTesorero } from "@/lib/auth";
 import { avisarAdmins } from "@/lib/push";
 import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
+import { validarArticulosCompra, validarAsignadosCompra } from "@/lib/compra";
+import { esClaveDocumento } from "@/lib/r2-claves";
 
 // `participantes` (talla + pago + importe en una sola ficha) se retiró: se
 // partió en `Camisetas` y `Pagos`, que es como se usa de verdad. Sus acciones
@@ -120,55 +122,60 @@ export async function crearItemCompra(
   try {
     const sesion = await exigirAdmin();
 
-    const item = String(formData.get("item") ?? "").trim();
     const anio = Number(formData.get("anio"));
-    const cantidad = Number(formData.get("cantidad") || 1);
+    const resultadoArticulos = validarArticulosCompra(
+      String(formData.get("items") ?? "[]"),
+    );
+    if (!resultadoArticulos.datos) return { error: resultadoArticulos.error };
+    const entradas = resultadoArticulos.datos;
+
     // Quién lo compra se elige ya al apuntarlo, sin tener que crear el
     // artículo primero y repartirlo después en otro paso.
-    const asignados = String(formData.get("asignados") ?? "")
-      .split(",")
-      .map((x) => x.trim())
-      .filter(Boolean);
+    const resultadoAsignados = validarAsignadosCompra(
+      String(formData.get("asignados") ?? ""),
+    );
+    if (!resultadoAsignados.datos) return { error: resultadoAsignados.error };
+    const asignados = resultadoAsignados.datos;
+
     // El documento (si se adjuntó) ya está subido a R2 cuando llega aquí:
     // el formulario solo trae su clave y su nombre, igual que en tareas.
     const documentoClave = String(formData.get("documentoClave") ?? "").trim();
     const documentoNombre = String(formData.get("documentoNombre") ?? "").trim();
 
-    if (!item) return { error: "Pon qué hay que comprar." };
     if (!Number.isInteger(anio) || anio < 2010 || anio > 2100) {
       return { error: "Año no válido." };
     }
+    if (Boolean(documentoClave) !== Boolean(documentoNombre)) {
+      return { error: "El documento adjunto está incompleto." };
+    }
+    if (documentoClave && !esClaveDocumento(documentoClave)) {
+      return { error: "La clave del documento no es válida." };
+    }
+    if (documentoNombre.length > 255) {
+      return { error: "El nombre del documento es demasiado largo." };
+    }
 
     const supabase = await createClient();
-    const { data: creado, error } = await supabase
-      .from("lista_compra")
-      .insert({
-        item,
-        anio,
-        cantidad: Number.isFinite(cantidad) && cantidad > 0 ? cantidad : 1,
-        comprado: false,
-        documento_url: documentoClave || null,
-        documento_nombre: documentoNombre || null,
-      })
-      .select("id")
-      .single();
+    const { error } = await supabase.rpc("crear_items_compra", {
+      p_anio: anio,
+      p_items: entradas,
+      p_asignados: asignados,
+      p_documento_url: documentoClave || null,
+      p_documento_nombre: documentoNombre || null,
+    });
 
     if (error) return { error: error.message };
-
-    if (creado && asignados.length) {
-      const { error: errorAsignar } = await supabase
-        .from("compra_miembros")
-        .insert(asignados.map((perfilId) => ({ item_id: creado.id, perfil_id: perfilId })));
-      if (errorAsignar) return { error: errorAsignar.message };
-    }
 
     revalidatePath("/admin/compras");
     revalidatePath("/perfil");
 
     await avisarAdmins(
       {
-        titulo: "Nuevo apunte en la compra",
-        cuerpo: `Hay que comprar: ${item}.`,
+        titulo: entradas.length === 1 ? "Nuevo apunte en la compra" : "Nuevos apuntes en la compra",
+        cuerpo:
+          entradas.length === 1
+            ? `Hay que comprar: ${entradas[0].item}.`
+            : `Se han añadido ${entradas.length} artículos a la lista.`,
         url: "/admin/compras",
         tag: "compras",
       },

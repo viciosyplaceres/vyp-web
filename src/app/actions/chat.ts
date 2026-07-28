@@ -1,7 +1,8 @@
 "use server";
 
+import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
-import { exigirMiembro } from "@/lib/auth";
+import { exigirAdmin, exigirMiembro } from "@/lib/auth";
 import { avisarMiembros } from "@/lib/push";
 import { autorDe } from "@/lib/relaciones";
 
@@ -132,6 +133,16 @@ export async function borrarMensaje(id: string) {
     .update({ borrado: true })
     .eq("id", id);
   if (error) throw new Error(error.message);
+}
+
+/** Borra físicamente todo el chat, sus reacciones y las marcas de lectura. */
+export async function vaciarHistorialChat(): Promise<number> {
+  await exigirAdmin();
+  const supabase = await createClient();
+  const { data, error } = await supabase.rpc("vaciar_historial_chat");
+  if (error) throw new Error(error.message);
+  revalidatePath("/chat");
+  return Number(data ?? 0);
 }
 
 /** Pone o quita tu reacción a un mensaje (una por persona, como WhatsApp). */

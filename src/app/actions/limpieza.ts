@@ -6,7 +6,6 @@ import { exigirAdmin } from "@/lib/auth";
 import { listarMiembros } from "@/lib/miembros";
 import {
   diasLimpieza,
-  PLAZAS_DESMONTAJE,
   sortearLimpieza,
   type Tirada,
 } from "@/lib/limpieza";
@@ -45,14 +44,20 @@ export async function tirarDadosLimpieza(anio: number): Promise<ResultadoTirada>
   }
 
   const miembros = await listarMiembros();
-  if (miembros.length < PLAZAS_DESMONTAJE) {
+  const plazasMaximas = Math.max(fechas.plazasLimpieza, fechas.plazasDesmontaje);
+  if (miembros.length < plazasMaximas) {
     return {
       ok: false,
-      error: `Hay ${miembros.length} miembros aprobados y hacen falta al menos ${PLAZAS_DESMONTAJE} para el día de desmontaje.`,
+      error: `Hay ${miembros.length} miembros aprobados y hacen falta al menos ${plazasMaximas} para cubrir el turno más grande.`,
     };
   }
 
-  const dias = diasLimpieza(fechas.inicio, fechas.fin);
+  const dias = diasLimpieza(
+    fechas.inicio,
+    fechas.fin,
+    fechas.plazasLimpieza,
+    fechas.plazasDesmontaje,
+  );
   const resultado = sortearLimpieza(miembros.length, dias);
 
   const supabase = await createClient();
