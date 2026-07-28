@@ -501,8 +501,8 @@ pantalla de inicio" en el menú del navegador**. Al abrir la web sale un cartel 
 con el icono, una frase de para qué sirve y un solo botón grande:
 
 - **Android/Chrome**: usa el instalador nativo del navegador (evento `beforeinstallprompt`). Un
-  toque y la app queda en el móvil. La guía manual solo aparece como respaldo si Chrome no entrega
-  ese evento.
+  toque y la app queda en el móvil. Si Chrome no entrega ese evento, no se muestra ningún cartel
+  alternativo para no sustituir el botón directo por una guía manual.
 - **iPhone**: ese instalador no existe, así que se enseñan los **dos pasos con los iconos reales**
   que verá (Compartir → Añadir a inicio), en vez de describirlos con palabras.
 - Solo aparece en iPhone/iPad o Android; nunca en PC, aunque el navegador soporte PWA.
