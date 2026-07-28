@@ -763,6 +763,11 @@ solo, y sigue funcionando si la peña crece o mengua (con 12 miembros sale 1-2 t
 con 6, 3-4). Además, quien va rezagado entra con prioridad natural en el desmontaje, porque los
 que ya van servidos no pueden subir mientras quede alguien por debajo.
 
+El mínimo técnico son **3 miembros aprobados**, porque el desmontaje exige tres personas distintas.
+Si todavía hay menos, el botón queda desactivado y muestra cuántas faltan. La acción del servidor
+devuelve ese estado como resultado controlado en vez de lanzar una excepción: antes, con los 2
+miembros aprobados que había, Next convertía el aviso esperado en un error 500 sin explicación.
+
 **Por qué un dado de 10 caras y no dos de seis.** Con dos dados sumados el resultado NO es
 uniforme: el 7 sale seis veces más que el 2, así que quien tuviera los números centrales limpiaría
 muchísimo más. Se usa un solo dado con más caras que miembros (con 9 → d10), y el número que no es

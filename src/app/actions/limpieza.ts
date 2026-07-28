@@ -4,16 +4,24 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/auth";
 import { listarMiembros } from "@/lib/miembros";
-import { diasLimpieza, sortearLimpieza, type Tirada } from "@/lib/limpieza";
+import {
+  diasLimpieza,
+  PLAZAS_DESMONTAJE,
+  sortearLimpieza,
+  type Tirada,
+} from "@/lib/limpieza";
 import { obtenerFechasFiestas } from "./configuracion";
 
-export type ResultadoTirada = {
-  /** El guion de tiradas, para animar los dados tal y como cayeron. */
-  tiradas: Tirada[];
-  caras: number;
-  /** Qué número le tocó a cada miembro en el dado. */
-  numeros: { perfilId: string; nombre: string | null; numero: number }[];
-};
+export type ResultadoTirada =
+  | {
+      ok: true;
+      /** El guion de tiradas, para animar los dados tal y como cayeron. */
+      tiradas: Tirada[];
+      caras: number;
+      /** Qué número le tocó a cada miembro en el dado. */
+      numeros: { perfilId: string; nombre: string | null; numero: number }[];
+    }
+  | { ok: false; error: string };
 
 /**
  * Tira los dados y guarda el reparto de la limpieza.
@@ -30,12 +38,20 @@ export async function tirarDadosLimpieza(anio: number): Promise<ResultadoTirada>
 
   const fechas = await obtenerFechasFiestas(anio);
   if (!fechas) {
-    throw new Error(
-      `Todavía no se han fijado las fechas de las fiestas de ${anio}. Se hace desde Gestión.`,
-    );
+    return {
+      ok: false,
+      error: `Todavía no se han fijado las fechas de las fiestas de ${anio}. Se hace desde Gestión.`,
+    };
   }
 
   const miembros = await listarMiembros();
+  if (miembros.length < PLAZAS_DESMONTAJE) {
+    return {
+      ok: false,
+      error: `Hay ${miembros.length} miembros aprobados y hacen falta al menos ${PLAZAS_DESMONTAJE} para el día de desmontaje.`,
+    };
+  }
+
   const dias = diasLimpieza(fechas.inicio, fechas.fin);
   const resultado = sortearLimpieza(miembros.length, dias);
 
@@ -70,7 +86,7 @@ export async function tirarDadosLimpieza(anio: number): Promise<ResultadoTirada>
   revalidatePath("/admin/limpieza");
   revalidatePath("/perfil");
 
-  return { tiradas: resultado.tiradas, caras: resultado.caras, numeros };
+  return { ok: true, tiradas: resultado.tiradas, caras: resultado.caras, numeros };
 }
 
 /** Borra el reparto de un año, por si hay que empezar de cero. */

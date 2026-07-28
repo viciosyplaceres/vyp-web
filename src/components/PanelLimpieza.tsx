@@ -5,7 +5,7 @@ import { useRouter } from "next/navigation";
 import { Dices, Loader2, SkipForward, Trash2, Wrench } from "lucide-react";
 import Avatar from "./Avatar";
 import { tirarDadosLimpieza, borrarSorteoLimpieza } from "@/app/actions/limpieza";
-import type { Tirada } from "@/lib/limpieza";
+import { PLAZAS_DESMONTAJE, type Tirada } from "@/lib/limpieza";
 import { diaLegible } from "@/lib/formato";
 
 export type MiembroTurno = {
@@ -89,6 +89,10 @@ export default function PanelLimpieza({
     setTirando(true);
     try {
       const r = await tirarDadosLimpieza(anio);
+      if (!r.ok) {
+        setError(r.error);
+        return;
+      }
       setIndice(0);
       setGuion({ tiradas: r.tiradas, numeros: r.numeros });
     } catch (e) {
@@ -115,6 +119,7 @@ export default function PanelLimpieza({
   const diasNormales = dias.filter((d) => !d.desmontaje);
   const diaDesmontaje = dias.find((d) => d.desmontaje);
   const totalTurnos = dias.reduce((s, d) => s + d.plazas, 0);
+  const faltanMiembros = Math.max(0, PLAZAS_DESMONTAJE - miembros.length);
 
   return (
     <div className="mt-6">
@@ -197,19 +202,26 @@ export default function PanelLimpieza({
         <p className="mt-2 text-xs text-white/50">
           Son {totalTurnos} turnos entre {miembros.length}{" "}
           {miembros.length === 1 ? "miembro" : "miembros"}, así que no toca a
-          todos por igual. El sorteo reparte de la forma más equilibrada que se
-          puede: nadie limpia más de dos días, y los turnos que sobran caen en
-          el desmontaje, que es donde no queda otra. Cada uno tiene su número; si
-          el dado saca un número que no es de nadie, o de alguien que ya va
-          servido, se vuelve a tirar.
+          todos por igual. El sorteo reparte de la forma más equilibrada posible:
+          nadie termina con más de un turno de diferencia respecto al resto. Con
+          los 9 miembros previstos, todos limpian dos días y solo tres repiten el
+          día de desmontaje. Cada uno tiene su número; si el dado saca un número
+          que no es de nadie, o de alguien que ya va servido, se vuelve a tirar.
         </p>
+
+        {faltanMiembros > 0 && (
+          <p role="status" className="mt-3 text-sm text-amber-300">
+            Ahora hay {miembros.length} miembros aprobados. Falta{faltanMiembros > 1 ? "n" : ""}{" "}
+            {faltanMiembros} para poder cubrir las 3 plazas de limpieza y desmontaje.
+          </p>
+        )}
 
         {esAdmin && (
           <div className="mt-4 flex flex-wrap gap-2">
             <button
               type="button"
               onClick={tirar}
-              disabled={tirando}
+              disabled={tirando || faltanMiembros > 0}
               className="inline-flex min-h-[48px] flex-1 cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-5 font-medium text-black transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
             >
               {tirando ? (
@@ -217,7 +229,13 @@ export default function PanelLimpieza({
               ) : (
                 <Dices size={18} aria-hidden="true" />
               )}
-              {tirando ? "Tirando…" : hayReparto ? "Volver a sortear" : "Tirar los dados"}
+              {tirando
+                ? "Tirando…"
+                : faltanMiembros > 0
+                  ? "Faltan miembros"
+                  : hayReparto
+                    ? "Volver a sortear"
+                    : "Tirar los dados"}
             </button>
             {hayReparto && (
               <button
