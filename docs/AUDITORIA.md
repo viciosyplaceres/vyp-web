@@ -352,11 +352,11 @@ la migración de Supabase sí está aplicada y es compatible con el frontend act
 - El hero se envía sin esperar las consultas de galería, música, estadísticas y sesión. Las
   secciones inferiores usan fronteras de `Suspense` pequeñas y coordinadas; el experimento de
   liberar consultas fuera de orden produjo `CLS 0,096` y se descartó.
-- El iframe de OpenStreetMap no hace ninguna petición hasta pulsar “Ver mapa interactivo”; en la
-  prueba funcional pasó de 0 a 1 petición y no produjo errores de consola.
+- El iframe de OpenStreetMap se muestra directamente en portada por decisión de producto; mantiene
+  `loading="lazy"`, por lo que no bloquea la parte superior de la página.
 - Supabase Realtime se importa dinámicamente solo para miembros. En anónimo desaparece el chunk de
-  66 KiB que Lighthouse marcaba 95% sin usar. Registro SW, instalación y avisos se difieren ocho
-  segundos; el SW seguía registrado a los 12 s y el cartel no interrumpió la primera interacción.
+  66 KiB que Lighthouse marcaba 95% sin usar. Registro SW, instalación y avisos conservan carga
+  diferida de código, pero el aviso se activa en cuanto el navegador permite instalarlo.
 - El wordmark conserva su relación de aspecto y la portada limita la cinta a seis fotos. Webpack
   reduce el conjunto JS inicial medido de 554 a 473 KiB sin comprimir.
 

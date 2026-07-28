@@ -17,8 +17,6 @@ declare global {
   }
 }
 
-const RETRASO_CARTEL_MS = 10_000;
-
 function estaInstalada() {
   if (typeof window === "undefined") return true;
   return (
@@ -65,25 +63,18 @@ export default function InstalarApp() {
     if (estaInstalada()) return;
 
     const enIOS = esIOS();
-    let temporizadorMostrar: ReturnType<typeof setTimeout> | undefined;
-
-    const mostrarConRetraso = () => {
-      clearTimeout(temporizadorMostrar);
-      temporizadorMostrar = setTimeout(() => setVisible(true), RETRASO_CARTEL_MS);
-    };
-
     const alPoderInstalar = (e: Event) => {
       e.preventDefault();
       setEvento(e as EventoInstalacion);
       setModo("nativo");
-      mostrarConRetraso();
+      setVisible(true);
     };
 
     const alEventoYaCapturado = () => {
       if (window.__vypInstallEvent) {
         setEvento(window.__vypInstallEvent);
         setModo("nativo");
-        mostrarConRetraso();
+        setVisible(true);
       }
     };
 
@@ -96,19 +87,17 @@ export default function InstalarApp() {
     queueMicrotask(alEventoYaCapturado);
 
     // Si no hay instalador nativo (iPhone, o Chrome que no dispara el evento),
-    // se prepara el camino manual. El cartel se retrasa para no tapar la página
-    // justo al abrirla, antes de que la persona haya podido orientarse.
+    // se muestra la guía nada más montar el componente.
     const temporizador = setTimeout(() => {
       if (evento || window.__vypInstallEvent) return;
       setModo(enIOS ? "ios" : "manual");
-      mostrarConRetraso();
-    }, 1500);
+      setVisible(true);
+    }, 0);
 
     return () => {
       window.removeEventListener("beforeinstallprompt", alPoderInstalar);
       window.removeEventListener("vyp-install-ready", alEventoYaCapturado);
       clearTimeout(temporizador);
-      clearTimeout(temporizadorMostrar);
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enHome]);
