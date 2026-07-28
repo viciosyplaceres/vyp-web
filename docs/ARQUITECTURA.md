@@ -244,7 +244,18 @@ dejando el texto tal cual en la base de datos; la ocultación es solo de interfa
 
 ---
 
-## 7ter. Burbuja de pendientes en el avatar
+## 7ter. Actividad diaria de Supabase
+
+`vercel.json` programa a las 04:17 UTC la ruta `GET /api/mantenimiento/supabase` mediante Vercel
+Cron, fuera del VPS. La ruta ejecuta tres lecturas de una fila (`media`, `pistas` y `comentarios`)
+con la clave anónima pública, no devuelve contenido y nunca escribe ni borra datos. Mantiene la
+actividad diaria que Supabase recomienda para que un proyecto Free no se pause tras siete días sin
+uso. Se desactiva automáticamente si se elimina ese cron del despliegue o se sube el proyecto a un
+plan de pago, donde Supabase no aplica la pausa automática.
+
+---
+
+## 7quater. Burbuja de pendientes en el avatar
 
 `components/AvatarPendientes.tsx` + `app/actions/pendientes.ts`: el avatar del header (única
 puerta a `/perfil` desde que se quitó el botón redundante del menú inferior) lleva una burbuja roja
