@@ -1,3 +1,4 @@
+import Image from "next/image";
 import Link from "next/link";
 import {
   Images,
@@ -103,6 +104,15 @@ export default async function Home() {
           <p className="mb-5 inline-flex items-center gap-2 rounded-full border border-white/15 px-3 py-1 text-xs uppercase tracking-[0.25em] text-white/60">
             Fuente Álamo &middot; Murcia
           </p>
+
+          <Image
+            src="/logo/vyp-logo.svg"
+            alt="Vicios & Placeres"
+            width={2048}
+            height={2048}
+            priority
+            className="h-28 w-28 sm:h-36 sm:w-36"
+          />
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl">
             La peña de las fiestas. Diez días al año, y aquí queda todo el
