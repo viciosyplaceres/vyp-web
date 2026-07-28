@@ -4,9 +4,11 @@ export type OrigenPista = "r2" | "mixcloud" | "soundcloud";
  * Detecta si una URL es de Mixcloud o SoundCloud y calcula su URL de embed.
  * Devuelve null si no es ninguna de las dos (entonces no se acepta como enlace).
  */
-export function analizarEnlaceMusica(
+export async function analizarEnlaceMusica(
   urlTexto: string,
-): { origen: Exclude<OrigenPista, "r2">; url: string; embedUrl: string } | null {
+): Promise<
+  { origen: Exclude<OrigenPista, "r2">; url: string; embedUrl: string } | null
+> {
   let url: URL;
   try {
     url = new URL(urlTexto.trim());
@@ -16,7 +18,21 @@ export function analizarEnlaceMusica(
 
   if (url.protocol !== "https:" && url.protocol !== "http:") return null;
 
-  const host = url.hostname.replace(/^www\./, "").toLowerCase();
+  let host = url.hostname.replace(/^www\./, "").toLowerCase();
+
+  // Los enlaces que comparte SoundCloud desde su app son cortos y redirigen a
+  // una pista. El reproductor oficial no admite esa URL intermedia, así que se
+  // resuelve en el servidor antes de guardarla.
+  if (host === "on.soundcloud.com") {
+    try {
+      const respuesta = await fetch(url, { redirect: "follow" });
+      url = new URL(respuesta.url);
+      host = url.hostname.replace(/^www\./, "").toLowerCase();
+    } catch {
+      return null;
+    }
+  }
+
   const limpia = `https://${host}${url.pathname}`;
 
   if (host === "mixcloud.com" || host.endsWith(".mixcloud.com")) {

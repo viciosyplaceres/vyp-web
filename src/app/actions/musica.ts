@@ -65,7 +65,7 @@ export async function registrarPistaEnlace(
 
     if (!titulo) return { error: "Pon un título." };
 
-    const analizado = analizarEnlaceMusica(enlace);
+    const analizado = await analizarEnlaceMusica(enlace);
     if (!analizado) {
       return {
         error: "El enlace debe ser de Mixcloud o de SoundCloud.",

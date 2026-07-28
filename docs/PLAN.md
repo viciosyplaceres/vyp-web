@@ -66,6 +66,9 @@ Reparto propuesto:
 - El reproductor global de la web solo controla la reproducción de las pistas propias (R2); las
   pistas externas abren su propio mini-reproductor embebido (iframe oficial), porque Mixcloud y
   SoundCloud no permiten controlar su audio desde fuera de su embed.
+- Los enlaces cortos que genera SoundCloud al compartir (`on.soundcloud.com/...`) se resuelven en el
+  servidor a la URL canónica antes de guardarlos: el enlace corto abre bien en un navegador, pero el
+  iframe oficial rechaza esa URL intermedia.
 
 > **Corregido el 2026-07-27**: subir música fallaba en el navegador con un error de CORS. El bucket
 > de R2 no tenía política CORS, así que el navegador cancelaba la subida antes de empezar (el
