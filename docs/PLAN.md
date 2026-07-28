@@ -510,10 +510,12 @@ con el icono, una frase de para qué sirve y un solo botón grande:
 
 ### Permiso de avisos (`ActivarAvisosAuto.tsx`)
 
-Al iniciar sesión como miembro, la web muestra un cartel pequeño con el botón **"Activar avisos"**
-si el permiso aún no se ha decidido. El diálogo del sistema solo se abre al tocarlo: Chrome y Safari
-requieren ese gesto explícito y pueden ignorar una petición automática. No depende de que la web se
-haya instalado antes como PWA, así que Android y escritorio pueden suscribirse desde el navegador.
+Al iniciar sesión como miembro desde móvil, la web muestra un cartel pequeño con el botón
+**"Activar avisos"** si el permiso aún no se ha decidido. El diálogo del sistema solo se abre al
+tocarlo: Chrome y Safari requieren ese gesto explícito y pueden ignorar una petición automática. No
+depende de que la web se haya instalado antes como PWA. En escritorio no aparece el cartel flotante,
+para que un fallo del servicio Push del navegador no bloquee contenido; allí se gestiona manualmente
+desde Ajustes del perfil.
 
 Si se concede el permiso, se registra inmediatamente la suscripción Push. Si se deniega, el
 navegador no vuelve a ofrecerla hasta que se restaure manualmente desde los ajustes del sitio.

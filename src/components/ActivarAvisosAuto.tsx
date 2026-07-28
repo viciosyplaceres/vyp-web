@@ -4,12 +4,20 @@ import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { urlBase64ToUint8Array } from "@/lib/push-cliente";
 
+function esMovil() {
+  return (
+    /android|iphone|ipad|ipod|mobile/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 /**
- * Ofrece activar los avisos a cualquier miembro conectado.
+ * Ofrece activar los avisos a cualquier miembro conectado desde móvil.
  *
  * Chrome y Safari solo muestran el permiso tras un gesto explícito. El botón
  * evita depender de que la web esté instalada como PWA para poder suscribir el
- * dispositivo y recibir avisos.
+ * dispositivo y recibir avisos. En escritorio no se muestra este cartel
+ * flotante; los avisos se pueden gestionar manualmente desde el perfil.
  */
 export default function ActivarAvisosAuto({
   haySesion,
@@ -67,7 +75,7 @@ export default function ActivarAvisosAuto({
   }, [suscribir]);
 
   useEffect(() => {
-    if (!haySesion) return;
+    if (!haySesion || !esMovil()) return;
     if (
       !("serviceWorker" in navigator) ||
       !("PushManager" in window) ||
