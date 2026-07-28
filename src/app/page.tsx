@@ -106,12 +106,12 @@ export default async function Home() {
           </p>
 
           <Image
-            src="/logo/vyp-logo.svg"
+            src="/logo/vyp-wordmark.png"
             alt="Vicios & Placeres"
-            width={2048}
-            height={2048}
+            width={1886}
+            height={182}
             priority
-            className="h-28 w-28 sm:h-36 sm:w-36"
+            className="h-10 w-auto sm:h-12"
           />
 
           <p className="mt-6 max-w-2xl text-lg leading-relaxed text-white/60 sm:text-xl">

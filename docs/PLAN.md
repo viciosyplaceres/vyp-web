@@ -577,8 +577,8 @@ El uso mayoritario será desde el móvil en la calle, así que la interfaz se di
 Las tarjetas de "acceso a Galería/Música/Chat" del primer rediseño se sustituyeron por vista previa
 real del contenido, y el mapa se trajo aquí desde `/donde` (sección anterior):
 
-- **Hero**: el logotipo principal cuadrado se muestra justo debajo de "Fuente Álamo · Murcia",
-  antes del texto de presentación.
+- **Hero**: el mismo wordmark horizontal del encabezado se muestra justo debajo de "Fuente Álamo ·
+  Murcia", antes del texto de presentación.
 - **Galería**: `CarruselFotos.tsx`, cinta horizontal con las **últimas 10 fotos/vídeos en bucle
   infinito**, sin JavaScript — la lista se duplica una vez y una animación CSS (`@keyframes
   carrusel` en `globals.css`) desplaza el conjunto exactamente el 50% de su ancho, así el final del
