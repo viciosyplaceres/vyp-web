@@ -24,10 +24,6 @@ export type ItemCompra = {
   asignados: MiembroSimple[];
 };
 
-// Hasta 2040, igual que en Participantes: para poder anotar la compra de una
-// fiesta que se prepara con tiempo, no solo la del año en curso.
-const ANIOS = Array.from({ length: 2040 - 2010 + 1 }, (_, i) => 2010 + i).reverse();
-
 async function subirDocumento(archivo: File) {
   const res = await fetch("/api/r2/subir", {
     method: "POST",
@@ -165,24 +161,10 @@ export default function PanelCompras({
               className="min-h-[48px] w-full rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
             />
           </div>
-          <div className="w-full sm:w-28">
-            <label htmlFor="anioC" className="sr-only">
-              Año
-            </label>
-            <select
-              id="anioC"
-              name="anio"
-              defaultValue={anioActivo}
-              className="min-h-[48px] w-full cursor-pointer rounded-lg border border-white/20 bg-white/5 px-3 text-base outline-none focus:border-white"
-            >
-              {ANIOS.map((a) => (
-                <option key={a} value={a} className="bg-black">
-                  {a}
-                </option>
-              ))}
-            </select>
-          </div>
         </div>
+
+        {/* El año no se elige aquí: es el que la directiva fijó en Gestión. */}
+        <input type="hidden" name="anio" value={anioActivo} />
 
         {estado?.error && (
           <p role="alert" className="text-sm text-red-400">

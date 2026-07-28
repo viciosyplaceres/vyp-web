@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Shirt, Wallet, Coins, Sparkles, Wrench, ArrowRight } from "lucide-react";
 import Avatar from "./Avatar";
+import { diaLegible } from "@/lib/formato";
 
 export type DeudaResumen = {
   id: string;
@@ -22,7 +23,6 @@ export type DeudaResumen = {
  */
 export type TurnoLimpieza = {
   fecha: string;
-  dia: number;
   desmontaje: boolean;
   /** Si ya pasó, para no anunciarlo como "el próximo". */
   pasado: boolean;
@@ -115,8 +115,8 @@ export default function MiResumenPena({
               {proximaLimpieza ? (
                 <>
                   Te toca el{" "}
-                  <span className="font-semibold tabular-nums text-white">
-                    {proximaLimpieza.dia} de agosto
+                  <span className="font-semibold text-white">
+                    {diaLegible(proximaLimpieza.fecha)}
                   </span>
                   {proximaLimpieza.desmontaje && " (y desmontaje)"}
                 </>
@@ -129,7 +129,7 @@ export default function MiResumenPena({
               {limpieza.map((t) => (
                 <li
                   key={t.fecha}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm tabular-nums ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${
                     t.pasado
                       ? "border-white/10 text-white/30 line-through"
                       : t.fecha === proximaLimpieza?.fecha
@@ -138,7 +138,7 @@ export default function MiResumenPena({
                   }`}
                 >
                   {t.desmontaje && <Wrench size={12} aria-hidden="true" />}
-                  {t.dia} de agosto
+                  {diaLegible(t.fecha)}
                 </li>
               ))}
             </ul>

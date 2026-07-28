@@ -6,7 +6,7 @@ import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import { aplanarRelacion } from "@/lib/relaciones";
 import { indiceMiembros } from "@/lib/miembros";
-import { obtenerAnioActivo } from "@/app/actions/configuracion";
+import { obtenerAnioActivo, obtenerFechasFiestas } from "@/app/actions/configuracion";
 import { cerrarSesion } from "@/app/actions/auth";
 import AvisosPush from "@/components/AvisosPush";
 import EditarPerfil from "@/components/EditarPerfil";
@@ -20,7 +20,6 @@ import MiResumenPena, {
   type DeudaResumen,
   type TurnoLimpieza,
 } from "@/components/MiResumenPena";
-import { diasLimpieza } from "@/lib/limpieza";
 
 export const dynamic = "force-dynamic";
 
@@ -170,15 +169,14 @@ export default async function PerfilPage() {
   }));
 
   // "Hoy" en hora de aquí, para decidir qué turnos ya pasaron sin que la
-  // zona del servidor (UTC en Vercel) adelante o atrase el día.
+  // zona del servidor (UTC en Vercel) adelante o atrase el día. El último día
+  // del rango que fijó la directiva es el de desmontaje: no hace falta
+  // recorrer todo el calendario, basta con comparar contra el fin.
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
-  const desmontajePorFecha = new Map(
-    diasLimpieza(anio).map((d) => [d.fecha, d.desmontaje]),
-  );
+  const fechasFiestas = sesion.esMiembro ? await obtenerFechasFiestas(anio) : null;
   const turnosLimpieza: TurnoLimpieza[] = (misLimpiezas?.data ?? []).map((t) => ({
     fecha: t.fecha,
-    dia: Number(t.fecha.slice(8, 10)),
-    desmontaje: desmontajePorFecha.get(t.fecha) ?? false,
+    desmontaje: t.fecha === fechasFiestas?.fin,
     pasado: t.fecha < hoy,
   }));
 

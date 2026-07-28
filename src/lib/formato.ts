@@ -64,6 +64,23 @@ export function diaLegible(fecha: string | null | undefined): string | null {
   return nombreMes ? `${numeroDia} de ${nombreMes}` : null;
 }
 
+/**
+ * Un rango de fechas legible ("del 22 al 31 de agosto" o, si cruza de mes,
+ * "del 30 de agosto al 3 de septiembre"). Para las fechas de las fiestas,
+ * que la directiva fija cada año y ya no están atadas a agosto.
+ */
+export function rangoLegible(inicio: string, fin: string): string {
+  const [, mesI, diaI] = inicio.split("-");
+  const [, mesF, diaF] = fin.split("-");
+
+  if (inicio === fin) return diaLegible(inicio) ?? "";
+  if (mesI === mesF) {
+    const nombreMes = MESES[Number(mesF) - 1];
+    return `del ${Number(diaI)} al ${Number(diaF)} de ${nombreMes}`;
+  }
+  return `del ${diaLegible(inicio)} al ${diaLegible(fin)}`;
+}
+
 /** La hora de un instante ("14:05"), para los mensajes del chat. */
 export function horaCorta(iso: string): string {
   const f = new Date(iso);

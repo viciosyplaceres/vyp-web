@@ -20,9 +20,8 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
 import { aplanarRelacion } from "@/lib/relaciones";
 import { diaLegible } from "@/lib/formato";
-import { obtenerAnioActivo } from "@/app/actions/configuracion";
+import { obtenerAnioActivo, obtenerFechasFiestas } from "@/app/actions/configuracion";
 import { indiceMiembros } from "@/lib/miembros";
-import { diasLimpieza } from "@/lib/limpieza";
 import Avatar from "@/components/Avatar";
 
 export const dynamic = "force-dynamic";
@@ -122,11 +121,10 @@ export default async function PerfilPublicoPage({
   const haPagado = pago?.pagado ?? false;
 
   const hoy = new Date().toLocaleDateString("en-CA", { timeZone: "Europe/Madrid" });
-  const desmontajePorFecha = new Map(diasLimpieza(anio).map((d) => [d.fecha, d.desmontaje]));
+  const fechasFiestas = await obtenerFechasFiestas(anio);
   const turnosLimpieza = (limpiezaFilas ?? []).map((t) => ({
     fecha: t.fecha,
-    dia: Number(t.fecha.slice(8, 10)),
-    desmontaje: desmontajePorFecha.get(t.fecha) ?? false,
+    desmontaje: t.fecha === fechasFiestas?.fin,
     pasado: t.fecha < hoy,
   }));
 
@@ -236,12 +234,12 @@ export default async function PerfilPublicoPage({
               {turnosLimpieza.map((t) => (
                 <li
                   key={t.fecha}
-                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm tabular-nums ${
+                  className={`inline-flex items-center gap-1.5 rounded-full border px-3 py-1 text-sm ${
                     t.pasado ? "border-white/10 text-white/30 line-through" : "border-white/25 text-white/70"
                   }`}
                 >
                   {t.desmontaje && <Wrench size={12} aria-hidden="true" />}
-                  {t.dia} de agosto
+                  {diaLegible(t.fecha)}
                 </li>
               ))}
             </ul>

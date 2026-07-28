@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/auth";
 import { listarMiembros } from "@/lib/miembros";
-import { sortearLimpieza, type Tirada } from "@/lib/limpieza";
+import { diasLimpieza, sortearLimpieza, type Tirada } from "@/lib/limpieza";
+import { obtenerFechasFiestas } from "./configuracion";
 
 export type ResultadoTirada = {
   /** El guion de tiradas, para animar los dados tal y como cayeron. */
@@ -27,8 +28,16 @@ export type ResultadoTirada = {
 export async function tirarDadosLimpieza(anio: number): Promise<ResultadoTirada> {
   await exigirAdmin();
 
+  const fechas = await obtenerFechasFiestas(anio);
+  if (!fechas) {
+    throw new Error(
+      `Todavía no se han fijado las fechas de las fiestas de ${anio}. Se hace desde Gestión.`,
+    );
+  }
+
   const miembros = await listarMiembros();
-  const resultado = sortearLimpieza(miembros.length, anio);
+  const dias = diasLimpieza(fechas.inicio, fechas.fin);
+  const resultado = sortearLimpieza(miembros.length, dias);
 
   const supabase = await createClient();
 

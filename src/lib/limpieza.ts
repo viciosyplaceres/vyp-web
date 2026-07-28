@@ -1,37 +1,44 @@
 /**
  * El reparto de la limpieza de las fiestas, sorteado a dados.
  *
- * Del 22 al 30 de agosto limpian 2 personas cada día; el 31 no es solo
- * limpieza sino **limpieza y desmontaje**, y ahí van 3. Son 21 turnos en
- * total.
+ * Del primer día al penúltimo limpian 2 personas cada día; el último no es
+ * solo limpieza sino **limpieza y desmontaje**, y ahí van 3.
  *
- * Con 9 miembros eso sale a 21 / 9 = 2 turnos y pico por cabeza: no hay
- * forma de que toque a todos por igual. Lo más justo posible es que **todos
- * limpien 2 días**, y que los 3 turnos que sobran caigan justo en el
- * desmontaje —el único sitio donde no queda otra— en vez de repartir terceros
- * turnos sueltos por días normales.
+ * Las fechas de las fiestas las fija la directiva cada año desde Gestión
+ * (tabla `fiestas_fechas`): este módulo no sabe nada de agosto ni de ningún
+ * mes en concreto, solo recibe un rango de fechas y reparte los turnos
+ * dentro de él. Así el año que viene no hace falta tocar código, solo elegir
+ * las fechas nuevas.
  */
 
-export const MES_LIMPIEZA = 8;
-export const DIA_INICIO = 22;
-export const DIA_FIN = 31;
 export const PLAZAS_NORMAL = 2;
 export const PLAZAS_DESMONTAJE = 3;
 
 export type DiaLimpieza = {
-  dia: number;
   fecha: string;
   plazas: number;
   desmontaje: boolean;
 };
 
-export function diasLimpieza(anio: number): DiaLimpieza[] {
+/**
+ * Todos los días entre `fechaInicio` y `fechaFin` (ambos incluidos), como
+ * cadenas "AAAA-MM-DD". Se opera en UTC a propósito: son fechas sueltas sin
+ * hora, y sumar un día de calendario con el reloj local podría saltarse o
+ * repetir un día según en qué zona horaria corra el servidor.
+ */
+export function diasLimpieza(fechaInicio: string, fechaFin: string): DiaLimpieza[] {
+  const [anioI, mesI, diaI] = fechaInicio.split("-").map(Number);
+  const [anioF, mesF, diaF] = fechaFin.split("-").map(Number);
+  const inicio = Date.UTC(anioI, mesI - 1, diaI);
+  const fin = Date.UTC(anioF, mesF - 1, diaF);
+
   const dias: DiaLimpieza[] = [];
-  for (let d = DIA_INICIO; d <= DIA_FIN; d++) {
-    const desmontaje = d === DIA_FIN;
+  for (let t = inicio; t <= fin; t += 24 * 60 * 60 * 1000) {
+    const f = new Date(t);
+    const fecha = `${f.getUTCFullYear()}-${String(f.getUTCMonth() + 1).padStart(2, "0")}-${String(f.getUTCDate()).padStart(2, "0")}`;
+    const desmontaje = t === fin;
     dias.push({
-      dia: d,
-      fecha: `${anio}-${String(MES_LIMPIEZA).padStart(2, "0")}-${String(d).padStart(2, "0")}`,
+      fecha,
       plazas: desmontaje ? PLAZAS_DESMONTAJE : PLAZAS_NORMAL,
       desmontaje,
     });
@@ -74,7 +81,8 @@ export type ResultadoSorteo = {
 };
 
 /**
- * Sortea el reparto entero.
+ * Sortea el reparto entero para los `dias` que se le pasen (normalmente el
+ * resultado de `diasLimpieza` con las fechas que fijó la directiva).
  *
  * La regla que lo mantiene justo es una sola: **nadie puede llevar más de un
  * turno por encima de quien menos lleva**. Con eso, el propio sorteo se
@@ -85,7 +93,7 @@ export type ResultadoSorteo = {
  */
 export function sortearLimpieza(
   numMiembros: number,
-  anio: number,
+  dias: DiaLimpieza[],
   aleatorio: () => number = Math.random,
 ): ResultadoSorteo {
   if (numMiembros < PLAZAS_DESMONTAJE) {
@@ -104,7 +112,7 @@ export function sortearLimpieza(
     const tiradas: Tirada[] = [];
     let bloqueado = false;
 
-    for (const d of diasLimpieza(anio)) {
+    for (const d of dias) {
       const delDia: number[] = [];
 
       for (let plaza = 0; plaza < d.plazas; plaza++) {

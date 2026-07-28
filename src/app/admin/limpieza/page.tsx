@@ -5,8 +5,9 @@ import { ChevronLeft } from "lucide-react";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
 import { listarMiembros, indiceMiembros } from "@/lib/miembros";
-import { obtenerAnioActivo } from "@/app/actions/configuracion";
+import { obtenerAnioActivo, obtenerFechasFiestas } from "@/app/actions/configuracion";
 import { diasLimpieza } from "@/lib/limpieza";
+import { rangoLegible } from "@/lib/formato";
 import PanelLimpieza, {
   type DiaTurno,
   type MiembroTurno,
@@ -35,6 +36,31 @@ export default async function LimpiezaPage() {
 
   const supabase = await createClient();
   const anio = await obtenerAnioActivo();
+  const fechas = await obtenerFechasFiestas(anio);
+
+  if (!fechas) {
+    return (
+      <main className="flex-1 px-4 py-8 sm:px-6 sm:py-12">
+        <div className="mx-auto max-w-3xl">
+          <Link
+            href="/admin"
+            className="inline-flex min-h-[44px] cursor-pointer items-center gap-1 text-sm text-white/60 transition-colors duration-200 hover:text-white"
+          >
+            <ChevronLeft size={18} aria-hidden="true" />
+            Gestión
+          </Link>
+
+          <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Limpieza</h1>
+          <p className="mt-4 text-sm text-white/60">
+            Todavía no se han fijado las fechas de las fiestas de {anio}.
+            {sesion.esAdmin
+              ? " Puedes ponerlas en Gestión, justo debajo del año de gestión."
+              : " La directiva tiene que ponerlas primero desde Gestión."}
+          </p>
+        </div>
+      </main>
+    );
+  }
 
   const [{ data: turnos }, { data: numeros }, miembros, indice] = await Promise.all([
     supabase.from("limpieza_turnos").select("fecha, perfil_id").eq("anio", anio),
@@ -62,9 +88,8 @@ export default async function LimpiezaPage() {
     porFecha.set(t.fecha, lista);
   }
 
-  const dias: DiaTurno[] = diasLimpieza(anio).map((d) => ({
+  const dias: DiaTurno[] = diasLimpieza(fechas.inicio, fechas.fin).map((d) => ({
     fecha: d.fecha,
-    dia: d.dia,
     plazas: d.plazas,
     desmontaje: d.desmontaje,
     miembros: (porFecha.get(d.fecha) ?? []).sort((a, b) =>
@@ -92,8 +117,8 @@ export default async function LimpiezaPage() {
         </Link>
 
         <h1 className="mt-2 text-2xl font-semibold sm:text-3xl">Limpieza</h1>
-        <p className="mt-1 text-sm text-white/50 tabular-nums">
-          Del 22 al 31 de agosto de {anio}
+        <p className="mt-1 text-sm text-white/50">
+          {rangoLegible(fechas.inicio, fechas.fin)} de {anio}
         </p>
 
         <PanelLimpieza

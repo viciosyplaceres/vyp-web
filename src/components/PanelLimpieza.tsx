@@ -6,6 +6,7 @@ import { Dices, Loader2, SkipForward, Trash2, Wrench } from "lucide-react";
 import Avatar from "./Avatar";
 import { tirarDadosLimpieza, borrarSorteoLimpieza } from "@/app/actions/limpieza";
 import type { Tirada } from "@/lib/limpieza";
+import { diaLegible } from "@/lib/formato";
 
 export type MiembroTurno = {
   id: string;
@@ -17,7 +18,6 @@ export type MiembroTurno = {
 
 export type DiaTurno = {
   fecha: string;
-  dia: number;
   plazas: number;
   desmontaje: boolean;
   miembros: MiembroTurno[];
@@ -112,6 +112,10 @@ export default function PanelLimpieza({
   const nombreDe = (i?: number) =>
     i === undefined ? null : (guion?.numeros[i]?.nombre ?? "Miembro");
 
+  const diasNormales = dias.filter((d) => !d.desmontaje);
+  const diaDesmontaje = dias.find((d) => d.desmontaje);
+  const totalTurnos = dias.reduce((s, d) => s + d.plazas, 0);
+
   return (
     <div className="mt-6">
       {/* ---------- Animación de los dados ---------- */}
@@ -123,7 +127,7 @@ export default function PanelLimpieza({
           className="fixed inset-0 z-50 flex flex-col items-center justify-center bg-black/95 p-6"
         >
           <p className="mb-2 text-sm uppercase tracking-[0.2em] text-white/40">
-            Día {Number(tiradaActual.fecha.slice(8, 10))} de agosto
+            Día {diaLegible(tiradaActual.fecha)}
           </p>
 
           {/* El dado. La `key` reinicia la animación en cada tirada. */}
@@ -176,11 +180,22 @@ export default function PanelLimpieza({
       {/* ---------- Cómo funciona + botón de sortear ---------- */}
       <div className="rounded-xl border border-white/15 p-4">
         <p className="text-sm text-white/70">
-          Del 22 al 30 limpian <strong>2 personas cada día</strong>. El 31 es{" "}
-          <strong>limpieza y desmontaje</strong>, y ahí van <strong>3</strong>.
+          {diasNormales.length > 0 && (
+            <>
+              Del {diaLegible(diasNormales[0].fecha)} al{" "}
+              {diaLegible(diasNormales[diasNormales.length - 1].fecha)} limpian{" "}
+              <strong>2 personas cada día</strong>.{" "}
+            </>
+          )}
+          {diaDesmontaje && (
+            <>
+              El {diaLegible(diaDesmontaje.fecha)} es{" "}
+              <strong>limpieza y desmontaje</strong>, y ahí van <strong>3</strong>.
+            </>
+          )}
         </p>
         <p className="mt-2 text-xs text-white/50">
-          Son 21 turnos entre {miembros.length}{" "}
+          Son {totalTurnos} turnos entre {miembros.length}{" "}
           {miembros.length === 1 ? "miembro" : "miembros"}, así que no toca a
           todos por igual. El sorteo reparte de la forma más equilibrada que se
           puede: nadie limpia más de dos días, y los turnos que sobran caen en
@@ -243,7 +258,7 @@ export default function PanelLimpieza({
             >
               <div className="flex items-baseline justify-between gap-3">
                 <p className="font-medium">
-                  <span className="tabular-nums">{d.dia}</span> de agosto
+                  {diaLegible(d.fecha)}
                   {d.desmontaje && (
                     <span className="ml-2 inline-flex items-center gap-1 rounded-full bg-white/10 px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wide text-white/70">
                       <Wrench size={10} aria-hidden="true" />

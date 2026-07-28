@@ -933,6 +933,51 @@ su propia deuda fue rechazado sin más.
 
 ---
 
+## 7sexvicies. Fechas de las fiestas configurables (migración `0018`) y compra sin selector de año
+
+Dos ajustes relacionados, pedidos juntos:
+
+**La lista de la compra ya no pregunta el año.** El desplegable de año del
+formulario (2010-2040) desapareció; el artículo se apunta siempre para
+`anioActivo` (el mismo "año de gestión" que ya usan tareas, camisetas y
+pagos), como un `<input type="hidden">`. La lista sigue agrupando por año al
+mostrarse —eso no cambia, por si queda algo de años anteriores—, pero ya no
+se puede elegir uno distinto al crear.
+
+**Las fechas de la limpieza ya no están escritas en el código.** Antes
+`lib/limpieza.ts` tenía `DIA_INICIO = 22`, `DIA_FIN = 31` y
+`MES_LIMPIEZA = 8` fijos: cada año, alguien iba a tener que tocar código
+para mover las fiestas. Ahora hay una tabla `fiestas_fechas` (`anio` clave
+primaria, `fecha_inicio`, `fecha_fin`), que la directiva rellena desde
+Gestión → "Solo la directiva" → **Fechas de las fiestas**, con dos
+`<input type="date">` (el calendario nativo del navegador, igual en móvil
+que en escritorio). Se guardan solas al cambiar cualquiera de las dos, sin
+botón de confirmar.
+
+- `diasLimpieza()` pasó de recibir un año a recibir `(fechaInicio, fechaFin)`
+  y genera los días con aritmética en UTC (evita el desfase de un día que
+  daría sumar con el reloj local). Ya no asume ningún mes: si las fiestas
+  cruzan de agosto a septiembre, lo pinta bien (probado de verdad
+  cambiándolas a "29 de agosto - 3 de septiembre" y sorteando encima).
+- `sortearLimpieza()` pasó de recibir un año a recibir directamente los
+  `dias` ya calculados — sigue siendo una función pura, fácil de simular en
+  miles de tiradas como se hizo la primera vez.
+- Los textos que decían "de agosto" a mano (el calendario, la animación del
+  dado, el resumen del perfil) ahora usan `diaLegible()`/`rangoLegible()`
+  (`lib/formato.ts`), que derivan el mes de la fecha real.
+- Si la directiva todavía no ha puesto las fechas del año, `/admin/limpieza`
+  no intenta pintar nada: avisa de que faltan y dice dónde ponerlas. Tirar
+  los dados sin fechas puestas da un error claro en vez de reventar.
+- `/perfil` y `/miembros/[id]` ya no necesitan generar el calendario entero
+  para saber si un turno es el de desmontaje: basta comparar la fecha del
+  turno con `fecha_fin`, que es más barato y más simple.
+
+Verificado con Playwright cambiando las fechas de 2026 a un rango real que
+cruza de mes, sorteando encima y mirando perfil/miembro/calendario, y
+dejando las fechas como estaban (22-31 de agosto) al terminar.
+
+---
+
 ## 8. Pendiente / ideas para más adelante
 
 - Notificaciones también al subir fotos nuevas (hoy solo avisa el chat).
