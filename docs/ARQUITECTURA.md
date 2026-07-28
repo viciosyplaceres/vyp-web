@@ -1119,8 +1119,8 @@ galería completa no cambia.
 `MapaDiferido.tsx` sustituye el iframe inicial por un botón: OpenStreetMap pasa de una petición antes
 de interactuar a ninguna. `BottomNav` y `AvatarPendientes` importan `lib/realtime` solo cuando hay un
 miembro, por lo que visitantes anónimos no descargan Supabase Realtime. `ComplementosPWA.tsx`
-retrasa ocho segundos el registro, instalación y avisos; después registra `vyp-v5` y conserva el
-flujo nativo. El cartel de instalación espera además diez segundos para no cubrir la primera acción.
+carga estos componentes de forma diferida, pero sin retrasar su activación. `InstalarApp.tsx` solo
+ofrece el cartel en iPhone/iPad o Android; nunca en ordenadores, aunque Chrome soporte instalar PWA.
 
 El build de producción usa `next build --webpack`: en esta aplicación reduce los ficheros JS
 iniciales de 554 a 473 KiB sin comprimir y la medición de red de 65 peticiones/~850 KiB a

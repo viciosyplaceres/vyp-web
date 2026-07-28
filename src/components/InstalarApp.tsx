@@ -35,6 +35,11 @@ function esIOS() {
   );
 }
 
+function esMovil() {
+  if (typeof navigator === "undefined") return false;
+  return esIOS() || /android|mobile/i.test(navigator.userAgent);
+}
+
 /**
  * Cartel de "instala la app", pensado para gente que no es de tecnología:
  * ocupa la pantalla, explica para qué sirve y solo tiene un botón grande.
@@ -61,6 +66,9 @@ export default function InstalarApp() {
   useEffect(() => {
     if (!enHome) return;
     if (estaInstalada()) return;
+    // La web se puede instalar también desde Chrome de escritorio, pero el
+    // cartel guiado está pensado únicamente para el móvil de la peña.
+    if (!esMovil()) return;
 
     const enIOS = esIOS();
     const alPoderInstalar = (e: Event) => {

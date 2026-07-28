@@ -504,7 +504,7 @@ con el icono, una frase de para qué sirve y un solo botón grande:
   toque y la app queda en el móvil.
 - **iPhone**: ese instalador no existe, así que se enseñan los **dos pasos con los iconos reales**
   que verá (Compartir → Añadir a inicio), en vez de describirlos con palabras.
-- Si lo cierra, no se vuelve a mostrar en una semana (no dar la lata).
+- Solo aparece en iPhone/iPad o Android; nunca en PC, aunque el navegador soporte PWA.
 - No aparece nunca si la app ya está instalada.
 
 ### Permiso de avisos automático (`ActivarAvisosAuto.tsx`)
