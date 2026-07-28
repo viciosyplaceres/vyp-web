@@ -105,7 +105,6 @@ export default function InstalarApp() {
       window.removeEventListener("vyp-install-ready", alEventoYaCapturado);
       if (temporizador) clearTimeout(temporizador);
     };
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [enHome]);
 
   function cerrar() {
