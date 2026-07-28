@@ -224,9 +224,10 @@ consumo de Cloudinary/R2 desde un canal sin límite de tamaño de conversación:
   leído", no una fila por mensaje — comparar `created_at` del mensaje contra esa marca de cada
   miembro basta para saber si alguien más ya lo vio.
 - **Burbuja de no leídos en tiempo real**: `BottomNav.tsx` escucha `mensajes` por su cuenta (no
-  depende de que `/chat` esté montado). Con el chat abierto no hace nada: es el propio chat quien
-  marca leído (antes lo hacían los dos y se escribía dos veces en `chat_lecturas` por cada mensaje
-  recibido) y la burbuja ya se pinta en cero.
+  depende de que `/chat` esté montado). Al entrar en `/chat` resetea su estado local y el propio
+  chat guarda la lectura; así, al salir del chat la burbuja no puede reaparecer con un contador
+  obsoleto. Antes ambos marcaban leído por cada mensaje recibido, duplicando escrituras en
+  `chat_lecturas`.
 - **Piezas del chat** (ronda 2 de la auditoría): `Chat.tsx` es el orquestador y reparte el trabajo
   en `components/chat/` — `BurbujaMensaje.tsx` (memorizada con `memo`), `BarraEscritura.tsx` (el
   texto en curso vive ahí dentro, de modo que teclear no repinta la lista), `useRealtimeChat.ts` y

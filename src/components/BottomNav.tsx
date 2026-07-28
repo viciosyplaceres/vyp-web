@@ -27,8 +27,9 @@ export default function BottomNav({
   const enChat = pathname.startsWith("/chat");
   const [noLeidos, setNoLeidos] = useState(noLeidosInicial);
   // Entrar al chat cuenta como leído al instante en la propia interfaz, sin
-  // esperar a la respuesta del servidor: por eso se deriva en el render en
-  // vez de resetear el estado desde un efecto.
+  // esperar a la respuesta del servidor. El enlace vacía también el estado:
+  // limitarse a ocultarlo mientras estamos en /chat hacía que reapareciera al
+  // navegar fuera aunque la marca de lectura ya se hubiera guardado.
   const mostrado = enChat ? 0 : noLeidos;
 
   // Estar o no en el chat se lee dentro del callback, no como dependencia:
@@ -89,6 +90,7 @@ export default function BottomNav({
             <li key={href} className="flex-1">
               <Link
                 href={href}
+                onClick={esChat ? () => setNoLeidos(0) : undefined}
                 aria-current={activo ? "page" : undefined}
                 className={`relative flex min-h-[56px] cursor-pointer flex-col items-center justify-center gap-1 px-1 py-2 transition-colors duration-200 ${
                   activo ? "text-white" : "text-white/50 hover:text-white/80"
