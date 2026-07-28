@@ -272,7 +272,8 @@ tiene, iniciales sobre fondo gris si no).
   miniatura; la página de detalle dice "Subido por [avatar] Nombre" antes de la descripción; el
   carrusel de la portada lleva la misma insignia en miniatura. En el detalle de una foto, se pasa
   a la anterior o siguiente del mismo año deslizando horizontalmente en móvil, con flechas y
-  teclas izquierda/derecha en escritorio.
+  teclas izquierda/derecha en escritorio. El selector al subir fotos o vídeos admite de 2010 a
+  2040, para no requerir cambios anuales.
 - **Música**: cada pista de `/musica` y de la portada lleva el avatar de quien la subió (o pegó el
   enlace de Mixcloud/SoundCloud) al final de la fila.
 - **Comentarios**: el avatar aparece junto al nombre que ya se mostraba.

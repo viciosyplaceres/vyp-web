@@ -7,10 +7,7 @@ import { registrarMedia, finalizarSubidaGaleria } from "@/app/actions/media";
 
 const MAX_VIDEO_BYTES = 100 * 1024 * 1024; // tope real de la cuenta de Cloudinary
 
-const ANIOS = Array.from(
-  { length: new Date().getFullYear() - 2010 + 1 },
-  (_, i) => new Date().getFullYear() - i,
-);
+const ANIOS = Array.from({ length: 2040 - 2010 + 1 }, (_, i) => 2040 - i);
 
 /**
  * Tres botones, no uno: es más fiable que un único selector con `multiple`.
