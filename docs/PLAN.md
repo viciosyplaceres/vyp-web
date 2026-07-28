@@ -508,22 +508,20 @@ con el icono, una frase de para qué sirve y un solo botón grande:
 - Solo aparece en iPhone/iPad o Android; nunca en PC, aunque el navegador soporte PWA.
 - No aparece nunca si la app ya está instalada.
 
-### Permiso de avisos automático (`ActivarAvisosAuto.tsx`)
+### Permiso de avisos (`ActivarAvisosAuto.tsx`)
 
-Igual que arriba: nadie va a buscar un botón para activar notificaciones. **Al abrir la app ya
-instalada**, si el permiso todavía no se ha decidido, se pide directamente — en Android el teléfono
-muestra su ventana de permisos ahí mismo, sin que el usuario tenga que hacer nada.
+Al iniciar sesión como miembro, la web muestra un cartel pequeño con el botón **"Activar avisos"**
+si el permiso aún no se ha decidido. El diálogo del sistema solo se abre al tocarlo: Chrome y Safari
+requieren ese gesto explícito y pueden ignorar una petición automática. No depende de que la web se
+haya instalado antes como PWA, así que Android y escritorio pueden suscribirse desde el navegador.
 
-Safari en iPhone **exige un gesto del usuario** antes de poder pedir el permiso, así que la app
-instalada muestra directamente un cartel pequeño con un botón grande; no prueba una solicitud
-automática que Safari podría contestar con `default` sin abrir ningún diálogo. Requiere iOS/iPadOS
-16.4 o posterior, además de haberse añadido a la pantalla de inicio.
+Si se concede el permiso, se registra inmediatamente la suscripción Push. Si se deniega, el
+navegador no vuelve a ofrecerla hasta que se restaure manualmente desde los ajustes del sitio.
+Si el registro de la suscripción falla después de concederlo, el cartel conserva el botón y muestra
+un error para poder reintentarlo; no se oculta el problema.
 
-Solo se intenta **una vez por dispositivo**: si alguien dice que no, no se vuelve a insistir — entre
-otras cosas porque el navegador ya no permitiría volver a preguntar, y machacar con el prompt es la
-forma más rápida de que lo bloqueen para siempre.
-
-Fuera de la app instalada no se molesta a nadie: para eso está el botón manual de `/cuenta`.
+En iPhone sigue siendo necesario añadir la web a la pantalla de inicio antes de activar los avisos,
+por una limitación de Apple.
 
 ### Qué se notifica (todo)
 

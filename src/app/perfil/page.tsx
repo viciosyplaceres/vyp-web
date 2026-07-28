@@ -284,7 +284,7 @@ export default async function PerfilPage() {
           <div className="mt-4">
             <p className="mb-1 text-sm text-white/70">Notificaciones</p>
             <p className="mb-2 text-xs text-white/40">
-              Vienen activadas: te avisamos de fotos nuevas, música, tareas y
+              Actívalas para recibir avisos de fotos nuevas, música, tareas y
               mensajes del chat. Puedes apagarlas aquí cuando quieras.
             </p>
             <AvisosPush />

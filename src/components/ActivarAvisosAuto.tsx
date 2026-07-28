@@ -4,25 +4,12 @@ import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { urlBase64ToUint8Array } from "@/lib/push-cliente";
 
-function esIOS() {
-  return (
-    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
-    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
-  );
-}
-
 /**
- * Deja los avisos activados sin que el usuario tenga que buscar nada.
+ * Ofrece activar los avisos a cualquier miembro conectado.
  *
- * Al abrir la app instalada, si todavía no se ha decidido el permiso, se pide
- * directamente: en Android el teléfono muestra su ventana de permisos ahí
- * mismo. Safari en iPhone exige que el usuario toque algo antes de poder
- * pedirlo, así que en ese caso (y si el intento automático falla por lo que
- * sea) aparece un cartel con un botón grande que hace lo mismo.
- *
- * Solo se intenta una vez por dispositivo: si alguien dice que no, no se le
- * vuelve a insistir — entre otras cosas porque el navegador ya no dejaría
- * volver a preguntar.
+ * Chrome y Safari solo muestran el permiso tras un gesto explícito. El botón
+ * evita depender de que la web esté instalada como PWA para poder suscribir el
+ * dispositivo y recibir avisos.
  */
 export default function ActivarAvisosAuto({
   haySesion,
@@ -31,6 +18,7 @@ export default function ActivarAvisosAuto({
 }) {
   const [mostrarBoton, setMostrarBoton] = useState(false);
   const [ocupado, setOcupado] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
   const suscribir = useCallback(async () => {
     const reg = await navigator.serviceWorker.ready;
@@ -55,6 +43,7 @@ export default function ActivarAvisosAuto({
 
   const pedirPermiso = useCallback(async () => {
     setOcupado(true);
+    setError(null);
     try {
       const permiso = await Notification.requestPermission();
       if (permiso === "granted") {
@@ -70,6 +59,7 @@ export default function ActivarAvisosAuto({
         setMostrarBoton(true);
       }
     } catch {
+      setError("No se han podido activar los avisos. Vuelve a intentarlo.");
       setMostrarBoton(true);
     } finally {
       setOcupado(false);
@@ -86,14 +76,6 @@ export default function ActivarAvisosAuto({
       return;
     }
 
-    const enApp =
-      window.matchMedia("(display-mode: standalone)").matches ||
-      (window.navigator as unknown as { standalone?: boolean }).standalone ===
-        true;
-
-    // Fuera de la app instalada no se molesta: ahí está el botón de /perfil.
-    if (!enApp) return;
-
     (async () => {
       if (Notification.permission === "granted") {
         // Ya concedido: asegurar que este dispositivo está registrado en el
@@ -102,30 +84,7 @@ export default function ActivarAvisosAuto({
         return;
       }
 
-      if (Notification.permission === "denied") return;
-
-      // iOS/iPadOS solo acepta el permiso tras un toque. No se intenta de
-      // forma automática: Safari puede devolver "default" sin lanzar error y
-      // entonces el botón de activación nunca llegaría a mostrarse.
-      if (esIOS()) {
-        setMostrarBoton(true);
-        return;
-      }
-
-      if (localStorage.getItem("vyp-avisos-intentado")) return;
-
-      localStorage.setItem("vyp-avisos-intentado", "1");
-
-      try {
-        const permiso = await Notification.requestPermission();
-        if (permiso === "granted") await suscribir();
-        else if (permiso === "denied") {
-          localStorage.setItem("vyp-avisos-intentado", "1");
-        } else {
-          setMostrarBoton(true);
-        }
-      } catch {
-        // Safari exige un gesto del usuario: se enseña el botón.
+      if (Notification.permission === "default") {
         setMostrarBoton(true);
       }
     })();
@@ -138,7 +97,8 @@ export default function ActivarAvisosAuto({
       <div className="rounded-2xl border border-white/15 bg-neutral-950 p-4 shadow-lg">
         <p className="text-sm font-medium">Activa los avisos</p>
         <p className="mt-1 text-xs text-white/60">
-          Para enterarte cuando suban fotos o escriban en el chat.
+          Para enterarte cuando suban fotos o escriban en el chat. Te pedirá
+          permiso al tocar el botón.
         </p>
         <button
           type="button"
@@ -149,6 +109,11 @@ export default function ActivarAvisosAuto({
           <Bell size={18} aria-hidden="true" />
           {ocupado ? "Un momento…" : "Activar avisos"}
         </button>
+        {error && (
+          <p role="alert" className="mt-2 text-xs text-red-400">
+            {error}
+          </p>
+        )}
       </div>
     </div>
   );
