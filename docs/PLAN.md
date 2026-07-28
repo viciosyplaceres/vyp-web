@@ -270,7 +270,9 @@ tiene, iniciales sobre fondo gris si no).
 
 - **Galería**: la cuadrícula de cada año lleva una insignia con el avatar en la esquina de cada
   miniatura; la página de detalle dice "Subido por [avatar] Nombre" antes de la descripción; el
-  carrusel de la portada lleva la misma insignia en miniatura.
+  carrusel de la portada lleva la misma insignia en miniatura. En el detalle de una foto, se pasa
+  a la anterior o siguiente del mismo año deslizando horizontalmente en móvil, con flechas y
+  teclas izquierda/derecha en escritorio.
 - **Música**: cada pista de `/musica` y de la portada lleva el avatar de quien la subió (o pegó el
   enlace de Mixcloud/SoundCloud) al final de la fila.
 - **Comentarios**: el avatar aparece junto al nombre que ya se mostraba.

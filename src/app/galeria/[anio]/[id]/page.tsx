@@ -1,4 +1,3 @@
-import Image from "next/image";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import { ChevronLeft } from "lucide-react";
@@ -8,6 +7,7 @@ import { getSesion } from "@/lib/auth";
 import { autorDe } from "@/lib/relaciones";
 import Comentarios, { type Comentario } from "@/components/Comentarios";
 import Avatar from "@/components/Avatar";
+import NavegadorFoto from "@/components/NavegadorFoto";
 
 export const dynamic = "force-dynamic";
 
@@ -45,6 +45,30 @@ export default async function DetalleMediaPage({ params }: Props) {
 
   if (!media) notFound();
 
+  const [{ data: anterior }, { data: siguiente }] =
+    media.tipo === "foto"
+      ? await Promise.all([
+          supabase
+            .from("media")
+            .select("id")
+            .eq("anio", media.anio)
+            .eq("tipo", "foto")
+            .lt("created_at", media.created_at)
+            .order("created_at", { ascending: false })
+            .limit(1)
+            .maybeSingle(),
+          supabase
+            .from("media")
+            .select("id")
+            .eq("anio", media.anio)
+            .eq("tipo", "foto")
+            .gt("created_at", media.created_at)
+            .order("created_at", { ascending: true })
+            .limit(1)
+            .maybeSingle(),
+        ])
+      : [{ data: null }, { data: null }];
+
   const subidoPor = autorDe(media.autores);
 
   const comentarios: Comentario[] = (filas ?? []).map((c) => {
@@ -79,14 +103,13 @@ export default async function DetalleMediaPage({ params }: Props) {
               className="h-auto w-full"
             />
           ) : (
-            <Image
+            <NavegadorFoto
               src={media.url}
               alt={media.descripcion || `Fiestas de ${media.anio}`}
-              width={media.ancho || 1600}
-              height={media.alto || 1200}
-              sizes="(max-width: 768px) 100vw, 768px"
-              className="h-auto w-full"
-              priority
+              ancho={media.ancho || 1600}
+              alto={media.alto || 1200}
+              anterior={anterior ? `/galeria/${media.anio}/${anterior.id}` : null}
+              siguiente={siguiente ? `/galeria/${media.anio}/${siguiente.id}` : null}
             />
           )}
         </div>
