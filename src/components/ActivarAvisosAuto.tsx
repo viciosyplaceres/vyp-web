@@ -4,6 +4,13 @@ import { useCallback, useEffect, useState } from "react";
 import { Bell } from "lucide-react";
 import { urlBase64ToUint8Array } from "@/lib/push-cliente";
 
+function esIOS() {
+  return (
+    /iphone|ipad|ipod/i.test(navigator.userAgent) ||
+    (navigator.platform === "MacIntel" && navigator.maxTouchPoints > 1)
+  );
+}
+
 /**
  * Deja los avisos activados sin que el usuario tenga que buscar nada.
  *
@@ -38,11 +45,12 @@ export default function ActivarAvisosAuto({
         ),
       }));
 
-    await fetch("/api/push/suscribir", {
+    const respuesta = await fetch("/api/push/suscribir", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(sub),
     });
+    if (!respuesta.ok) throw new Error("No se pudo guardar la suscripción.");
   }, []);
 
   const pedirPermiso = useCallback(async () => {
@@ -52,10 +60,14 @@ export default function ActivarAvisosAuto({
       if (permiso === "granted") {
         await suscribir();
         setMostrarBoton(false);
-      } else {
+      } else if (permiso === "denied") {
         // Denegado: el navegador no permitirá volver a preguntar.
         localStorage.setItem("vyp-avisos-intentado", "1");
         setMostrarBoton(false);
+      } else {
+        // Si se cerró el diálogo, se mantiene el botón para poder intentarlo
+        // de nuevo con un gesto explícito.
+        setMostrarBoton(true);
       }
     } catch {
       setMostrarBoton(true);
@@ -91,6 +103,15 @@ export default function ActivarAvisosAuto({
       }
 
       if (Notification.permission === "denied") return;
+
+      // iOS/iPadOS solo acepta el permiso tras un toque. No se intenta de
+      // forma automática: Safari puede devolver "default" sin lanzar error y
+      // entonces el botón de activación nunca llegaría a mostrarse.
+      if (esIOS()) {
+        setMostrarBoton(true);
+        return;
+      }
+
       if (localStorage.getItem("vyp-avisos-intentado")) return;
 
       localStorage.setItem("vyp-avisos-intentado", "1");
@@ -98,6 +119,11 @@ export default function ActivarAvisosAuto({
       try {
         const permiso = await Notification.requestPermission();
         if (permiso === "granted") await suscribir();
+        else if (permiso === "denied") {
+          localStorage.setItem("vyp-avisos-intentado", "1");
+        } else {
+          setMostrarBoton(true);
+        }
       } catch {
         // Safari exige un gesto del usuario: se enseña el botón.
         setMostrarBoton(true);

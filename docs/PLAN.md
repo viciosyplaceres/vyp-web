@@ -491,9 +491,10 @@ Igual que arriba: nadie va a buscar un botón para activar notificaciones. **Al 
 instalada**, si el permiso todavía no se ha decidido, se pide directamente — en Android el teléfono
 muestra su ventana de permisos ahí mismo, sin que el usuario tenga que hacer nada.
 
-Safari en iPhone **exige un gesto del usuario** antes de poder pedir el permiso, así que en ese caso
-(y si el intento automático falla por lo que sea) aparece un cartel pequeño con un botón grande que
-hace exactamente lo mismo.
+Safari en iPhone **exige un gesto del usuario** antes de poder pedir el permiso, así que la app
+instalada muestra directamente un cartel pequeño con un botón grande; no prueba una solicitud
+automática que Safari podría contestar con `default` sin abrir ningún diálogo. Requiere iOS/iPadOS
+16.4 o posterior, además de haberse añadido a la pantalla de inicio.
 
 Solo se intenta **una vez por dispositivo**: si alguien dice que no, no se vuelve a insistir — entre
 otras cosas porque el navegador ya no permitiría volver a preguntar, y machacar con el prompt es la

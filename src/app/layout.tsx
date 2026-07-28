@@ -116,7 +116,7 @@ export default async function RootLayout({
         </ReproductorProvider>
         <RegistrarSW />
         <InstalarApp />
-        <ActivarAvisosAuto haySesion={Boolean(sesion)} />
+        <ActivarAvisosAuto haySesion={sesion?.esMiembro ?? false} />
       </body>
     </html>
   );
