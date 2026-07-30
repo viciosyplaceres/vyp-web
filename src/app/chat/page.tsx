@@ -141,18 +141,6 @@ export default async function ChatPage() {
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden px-4 sm:px-6">
-      <div className="shrink-0 border-b border-white/10 py-4">
-        <h1 className="text-xl font-semibold">Chat de la peña</h1>
-        <p className="text-xs text-white/40">
-          Privado. Solo lo ven los miembros aprobados.
-        </p>
-        {/* El gesto hay que contarlo: nadie adivina que se mantiene pulsado. */}
-        <p className="mt-1 text-xs text-white/30">
-          Mantén pulsado un mensaje para responder, reaccionar, editarlo o
-          borrarlo.
-        </p>
-      </div>
-
       <Chat
         inicial={mensajes}
         userId={sesion.userId}

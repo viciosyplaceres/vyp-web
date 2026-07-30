@@ -548,8 +548,9 @@ Arreglo, con el gesto de cualquier app de mensajería:
 - Se elimina de paso el estado `picketaAbierta`: el selector de emojis suelto y el menú hacían lo
   mismo por dos caminos distintos. Ahora hay uno.
 - En escritorio queda un botón "···" al pasar por encima que abre ese mismo menú.
-- La cabecera del chat lo explica ("Mantén pulsado un mensaje para…"): el gesto hay que contarlo,
-  nadie lo adivina.
+- La ayuda inicial explicaba el gesto en la cabecera. Se retiró después para maximizar el espacio
+  útil de lectura; el menú contextual y el botón "···" de escritorio mantienen las acciones
+  accesibles sin reservar una cabecera permanente.
 
 **Verificado en un Chromium real con pantalla táctil simulada (390×844, `has_touch`)**, no con
 curl: un toque suelto no abre nada; mantener pulsado abre el menú; responder deja la cita en la
