@@ -1117,12 +1117,23 @@ para aparecer en orden y conservar `CLS 0`. Liberarlas según terminaba cada con
 descartó porque desplazaba contenido (`CLS 0,096`). La cinta muestra seis fotos en portada; la
 galería completa no cambia.
 
-`MapaDiferido.tsx` sustituye el iframe inicial por un botón: OpenStreetMap pasa de una petición antes
-de interactuar a ninguna. `BottomNav` y `AvatarPendientes` importan `lib/realtime` solo cuando hay un
-miembro, por lo que visitantes anónimos no descargan Supabase Realtime. El service worker y el
-cartel PWA se montan directamente desde `layout.tsx`: así Android recibe a tiempo
-`beforeinstallprompt` y conserva el botón nativo de instalación. `InstalarApp.tsx` solo ofrece el
-cartel en iPhone/iPad o Android; nunca en ordenadores, aunque Chrome soporte instalar PWA.
+El primer `MapaDiferido.tsx` sustituyó el iframe inicial por un botón. Después se recuperó el mapa
+directo por decisión de producto, pero `loading="lazy"` no bastó: Chrome puede precargar iframes a
+varias pantallas de distancia y OpenStreetMap llegó a bloquear 3,3 s de hilo principal bajo CPU
+móvil simulada. `MapaAlAcercarse.tsx` conserva el mapa automático e interactivo, pero no monta el
+iframe hasta que queda a 200 px de entrar en pantalla. `BottomNav` y `AvatarPendientes` importan
+`lib/realtime` solo cuando hay un miembro, por lo que visitantes anónimos no descargan Supabase
+Realtime. El service worker y el cartel PWA se montan directamente desde `layout.tsx`: así Android
+recibe a tiempo `beforeinstallprompt` y conserva el botón nativo de instalación. `InstalarApp.tsx`
+solo ofrece el cartel en iPhone/iPad o Android; nunca en ordenadores, aunque Chrome soporte instalar
+PWA.
+
+La carga del chat evita tres costes que no aportaban interfaz: `app/chat/loading.tsx` crea una
+frontera de navegación inmediata para esta ruta dinámica; la consulta principal ya no repite nombre
+y avatar dentro de cada mensaje porque reutiliza el índice completo de autores; y la actualización
+de `chat_lecturas` se programa con `after()` usando la sesión ya validada, una vez enviada la
+respuesta. Se mantienen el límite de 200 mensajes, las reacciones embebidas y las tres consultas de
+lectura en paralelo.
 
 El build de producción usa `next build --webpack`: en esta aplicación reduce los ficheros JS
 iniciales de 554 a 473 KiB sin comprimir y la medición de red de 65 peticiones/~850 KiB a

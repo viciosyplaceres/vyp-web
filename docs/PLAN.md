@@ -261,6 +261,9 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
   (`grayscale invert`) para que encaje con el resto de la web. Sin clave de API. El bloque técnico
   de atribución que añade MapLibre dentro del iframe se recorta y se sustituye por una única
   atribución visible y obligatoria: “© Colaboradores de OpenStreetMap”.
+- `MapaAlAcercarse.tsx` monta el iframe automáticamente cuando la sección queda a 200 px de entrar
+  en pantalla. No exige pulsar ni muestra instrucciones, pero evita que el JavaScript pesado de
+  OpenStreetMap bloquee la portada y la navegación mientras el mapa todavía está lejos.
 - Botón grande **"Cómo llegar"** que abre la URL exacta de Google Maps guardada por la directiva.
 - En móvil abre directamente la app de Google Maps.
 - El propio formulario explica cómo obtenerlo: mantener pulsado el punto exacto en Google Maps,
@@ -458,6 +461,10 @@ Un único grupo, estilo WhatsApp, **invisible para quien no sea miembro aprobado
 - Burbujas propias en blanco a la derecha, ajenas en gris a la izquierda, con separadores de día
   ("Hoy", "Ayer", fecha) y hora en cada mensaje.
 - Enviar con Enter; Mayús+Enter hace salto de línea.
+- La ruta tiene `loading.tsx`, por lo que al tocar Chat la carcasa y un esqueleto aparecen de
+  inmediato mientras llega la conversación. La consulta descarga cada autor una sola vez y lo
+  reutiliza para los mensajes y Realtime; la escritura de “leído” se ejecuta con `after()` una vez
+  enviada la respuesta, de modo que no retrasa la apertura.
 - En Gestión → Solo la directiva hay una zona de peligro para **borrar físicamente todo el
   historial**. Un modal explica que no se puede deshacer. La función SQL elimina en una transacción
   mensajes, reacciones (por cascada) y marcas de lectura; solo acepta un JWT de directiva.

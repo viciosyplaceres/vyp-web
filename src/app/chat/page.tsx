@@ -1,9 +1,8 @@
 import Link from "next/link";
 import type { Metadata } from "next";
+import { after } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
-import { autorDe } from "@/lib/relaciones";
-import { marcarChatLeido } from "@/app/actions/chat";
 import Chat, { type Mensaje, type InfoAutor } from "@/components/Chat";
 
 export const dynamic = "force-dynamic";
@@ -73,7 +72,7 @@ export default async function ChatPage() {
         // a pintar (antes se descargaban las de toda la historia del chat) y
         // se ahorra un viaje a la base de datos.
         .select(
-          "id, texto, created_at, autor_id, respuesta_a, respuesta_texto, respuesta_autor, editado_at, borrado, autores!mensajes_autor_id_fkey(nombre, avatar_url), mensaje_reacciones(perfil_id, emoji)",
+          "id, texto, created_at, autor_id, respuesta_a, respuesta_texto, respuesta_autor, editado_at, borrado, mensaje_reacciones(perfil_id, emoji)",
         )
         // Los últimos 200, no los 200 primeros: ordenar ascendente con
         // `limit` dejaba fuera la conversación reciente en cuanto el chat
@@ -94,15 +93,23 @@ export default async function ChatPage() {
   const recientesPrimero = filas ?? [];
   const enOrden = [...recientesPrimero].reverse();
 
+  // Un único índice sirve para pintar los 200 mensajes y para resolver los
+  // eventos en vivo. Antes cada mensaje repetía su autor dentro de la consulta
+  // principal y además se descargaba esta misma lista por separado.
+  const autores: Record<string, InfoAutor> = {};
+  for (const autor of todosAutores ?? []) {
+    autores[autor.id] = { nombre: autor.nombre, avatarUrl: autor.avatar_url };
+  }
+
   const mensajes: Mensaje[] = enOrden.map((m) => {
-    const info = autorDe(m.autores);
+    const info = autores[m.autor_id];
     return {
       id: m.id,
       texto: m.texto,
       created_at: m.created_at,
       autor_id: m.autor_id,
-      autor: info.nombre,
-      avatarUrl: info.avatarUrl,
+      autor: info?.nombre ?? null,
+      avatarUrl: info?.avatarUrl ?? null,
       respuestaA: m.respuesta_a,
       respuestaTexto: m.respuesta_texto,
       respuestaAutor: m.respuesta_autor,
@@ -110,13 +117,6 @@ export default async function ChatPage() {
       borrado: m.borrado,
     };
   });
-
-  // Índice de autores para poder etiquetar los mensajes que llegan en vivo,
-  // que solo traen el autor_id.
-  const autores: Record<string, InfoAutor> = {};
-  for (const a of todosAutores ?? []) {
-    autores[a.id] = { nombre: a.nombre, avatarUrl: a.avatar_url };
-  }
 
   const reaccionesIniciales: Record<string, { emoji: string; perfilId: string; nombre: string | null }[]> = {};
   for (const m of enOrden) {
@@ -134,10 +134,16 @@ export default async function ChatPage() {
     lecturas[l.perfil_id] = l.ultimo_leido_at;
   }
 
-  // Entrar al chat cuenta como haberlo leído hasta ahora: la burbuja de no
-  // leídos del menú inferior baja a cero y el doble check azul avisa a los
-  // demás de que sus mensajes ya se han visto.
-  await marcarChatLeido().catch(() => undefined);
+  // La interfaz ya pone la burbuja a cero al entrar. La escritura persistente
+  // se hace después de enviar la respuesta para no retrasar la apertura del
+  // chat; el cliente de Supabase ya fue creado con la sesión validada.
+  after(async () => {
+    const { error } = await supabase.from("chat_lecturas").upsert(
+      { perfil_id: sesion.userId, ultimo_leido_at: new Date().toISOString() },
+      { onConflict: "perfil_id" },
+    );
+    if (error) console.error("Error al marcar el chat como leído:", error.message);
+  });
 
   return (
     <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden px-4 sm:px-6">

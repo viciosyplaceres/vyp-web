@@ -352,8 +352,9 @@ la migración de Supabase sí está aplicada y es compatible con el frontend act
 - El hero se envía sin esperar las consultas de galería, música, estadísticas y sesión. Las
   secciones inferiores usan fronteras de `Suspense` pequeñas y coordinadas; el experimento de
   liberar consultas fuera de orden produjo `CLS 0,096` y se descartó.
-- El iframe de OpenStreetMap se muestra directamente en portada por decisión de producto; mantiene
-  `loading="lazy"`, por lo que no bloquea la parte superior de la página.
+- El mapa sigue apareciendo automáticamente por decisión de producto, pero el iframe no se monta
+  hasta quedar a 200 px de su sección. `loading="lazy"` por sí solo no impedía a Chrome precargar
+  OpenStreetMap y bloquear el hilo principal en móviles.
 - Supabase Realtime se importa dinámicamente solo para miembros. En anónimo desaparece el chunk de
   66 KiB que Lighthouse marcaba 95% sin usar. Registro SW, instalación y avisos conservan carga
   diferida de código, pero el aviso se activa en cuanto el navegador permite instalarlo.

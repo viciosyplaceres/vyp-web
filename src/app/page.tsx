@@ -15,6 +15,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { getSesion } from "@/lib/auth";
 import { autorDe } from "@/lib/relaciones";
 import CarruselFotos, { type FotoCarrusel } from "@/components/CarruselFotos";
+import MapaAlAcercarse from "@/components/MapaAlAcercarse";
 import MusicaCompacta from "@/components/MusicaCompacta";
 import type { PistaListada } from "@/components/ListaMusica";
 import {
@@ -241,14 +242,10 @@ async function UbicacionHome({
           </div>
 
           <div className="mt-5 overflow-hidden rounded-xl border border-white/15 bg-white/5">
-            <div className="relative h-[320px] overflow-hidden sm:h-[420px]">
-              <iframe
-                src={mapaEmbed}
-                title={`Mapa de la peña en ${ubicacion.direccion}`}
-                loading="lazy"
-                className="absolute inset-x-0 top-0 h-[calc(100%+44px)] w-full border-0 grayscale invert"
-              />
-            </div>
+            <MapaAlAcercarse
+              src={mapaEmbed}
+              title={`Mapa de la peña en ${ubicacion.direccion}`}
+            />
             <p className="border-t border-white/10 px-3 py-2 text-[11px] text-white/60">
               ©{" "}
               <a
