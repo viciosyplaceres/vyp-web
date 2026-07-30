@@ -43,7 +43,8 @@ export default function Chat({
   const [infoMensaje, setInfoMensaje] = useState<Mensaje | null>(null);
   const [pedirFoco, setPedirFoco] = useState(0);
   const [, startTransition] = useTransition();
-  const finRef = useRef<HTMLDivElement>(null);
+  const listaRef = useRef<HTMLOListElement>(null);
+  const siguiendoFinalRef = useRef(true);
 
   const [optimistas, addOptimista] = useOptimistic(
     mensajes,
@@ -58,10 +59,28 @@ export default function Chat({
 
   useRealtimeChat({ userId, autores, setMensajes, setReacciones, setLecturas });
 
-  // Siempre abajo, como en cualquier app de mensajería.
+  const fijarAlFinal = useCallback(() => {
+    const lista = listaRef.current;
+    if (lista) lista.scrollTop = lista.scrollHeight;
+  }, []);
+
+  // Si se estaba leyendo el final, mantenerlo visible cuando entra un mensaje
+  // o el teclado reduce la altura disponible. Si se subió a leer, no interrumpir.
   useEffect(() => {
-    finRef.current?.scrollIntoView({ behavior: "smooth" });
-  }, [optimistas.length]);
+    if (!siguiendoFinalRef.current) return;
+    const frame = requestAnimationFrame(fijarAlFinal);
+    return () => cancelAnimationFrame(frame);
+  }, [optimistas.length, fijarAlFinal]);
+
+  useEffect(() => {
+    const lista = listaRef.current;
+    if (!lista) return;
+    const observer = new ResizeObserver(() => {
+      if (siguiendoFinalRef.current) fijarAlFinal();
+    });
+    observer.observe(lista);
+    return () => observer.disconnect();
+  }, [fijarAlFinal]);
 
   const enviar = useCallback(
     (limpio: string) => {
@@ -183,8 +202,16 @@ export default function Chat({
   const editando = editandoId ? mensajesPorId.get(editandoId) ?? null : null;
 
   return (
-    <div className="flex flex-1 flex-col">
-      <ol className="flex-1 space-y-2 py-4">
+    <div className="flex min-h-0 flex-1 flex-col overflow-hidden">
+      <ol
+        ref={listaRef}
+        onScroll={(evento) => {
+          const lista = evento.currentTarget;
+          siguiendoFinalRef.current =
+            lista.scrollHeight - lista.scrollTop - lista.clientHeight <= 80;
+        }}
+        className="min-h-0 flex-1 space-y-2 overflow-y-auto overscroll-contain py-4"
+      >
         {optimistas.length === 0 && (
           <li className="py-10 text-center text-sm text-white/40">
             Aún no hay mensajes. Escribe el primero.
@@ -212,7 +239,6 @@ export default function Chat({
             />
           </li>
         ))}
-        <div ref={finRef} />
       </ol>
 
       {menuMensaje && (

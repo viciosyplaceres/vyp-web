@@ -3,6 +3,11 @@
 :root {
   --background: #000000;
   --foreground: #ffffff;
+  --app-height: 100dvh;
+}
+
+:root[data-teclado-abierto] .vyp-player {
+  display: none;
 }
 
 @theme inline {

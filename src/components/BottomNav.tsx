@@ -100,63 +100,78 @@ export default function BottomNav({
     };
   }, [esMiembro, userId]);
 
-  // Patrón de las apps móviles: la navegación desaparece mientras se escribe.
-  // El foco permite ocultarla antes de que termine la animación del teclado;
-  // VisualViewport permite restaurarla si el teclado se cierra sin perder foco.
+  // Mismo patrón probado en Padeliner: el viewport decide, no el foco. Se
+  // conserva la reducción durante el toque en Enviar y se trata la rotación
+  // como una nueva referencia, evitando saltos y falsos positivos.
   useEffect(() => {
     const visual = window.visualViewport;
-    let alturaSinTeclado = Math.max(
-      window.innerHeight,
-      visual?.height ?? window.innerHeight,
-    );
-    let ancho = window.innerWidth;
+    let alturaSinTeclado = visual?.height ?? window.innerHeight;
+    let anchoSinTeclado = visual?.width ?? window.innerWidth;
+    let restaurar: ReturnType<typeof setTimeout> | null = null;
+    let viewportReducidoDesdeFoco = false;
 
-    const medirTeclado = () => {
-      if (window.innerWidth !== ancho) {
-        ancho = window.innerWidth;
-        alturaSinTeclado = Math.max(
-          window.innerHeight,
-          visual?.height ?? window.innerHeight,
-        );
-      }
-
-      const alturaActual = Math.min(
-        window.innerHeight,
-        visual?.height ?? window.innerHeight,
-      );
-      const reduccion = alturaSinTeclado - alturaActual;
-      const editando = esCampoEditable(document.activeElement);
-
-      if (!editando) {
-        alturaSinTeclado = Math.max(alturaSinTeclado, alturaActual);
-        setTecladoAbierto(false);
-      } else {
-        setTecladoAbierto(reduccion > 120);
-      }
+    const actualizarAlturaVisible = () => {
+      const altura = visual?.height ?? window.innerHeight;
+      document.documentElement.style.setProperty("--app-height", `${Math.round(altura)}px`);
     };
 
+    const actualizarTeclado = (abierto: boolean) => {
+      document.documentElement.toggleAttribute("data-teclado-abierto", abierto);
+      setTecladoAbierto(abierto);
+    };
+
+    const viewportReducido = () =>
+      alturaSinTeclado - (visual?.height ?? window.innerHeight) > 120;
+
     const alEnfocar = (evento: FocusEvent) => {
+      if (restaurar) clearTimeout(restaurar);
       if (esCampoEditable(evento.target as Element)) {
-        setTecladoAbierto(true);
+        viewportReducidoDesdeFoco = false;
+        actualizarTeclado(viewportReducido());
       }
     };
     const alDesenfocar = () => {
-      setTimeout(() => {
-        if (!esCampoEditable(document.activeElement)) {
-          setTecladoAbierto(false);
-        }
-      }, 0);
+      if (restaurar) clearTimeout(restaurar);
+      // El foco deja el campo antes de terminar el toque en Enviar. Esperar
+      // impide que reaparezca la navegación y desplace el botón bajo el dedo.
+      restaurar = setTimeout(() => actualizarTeclado(viewportReducido()), 300);
+    };
+    const alRedimensionarViewport = () => {
+      actualizarAlturaVisible();
+      const alturaActual = visual?.height ?? window.innerHeight;
+      const anchoActual = visual?.width ?? window.innerWidth;
+
+      if (window.innerWidth >= 768 || Math.abs(anchoActual - anchoSinTeclado) > 80) {
+        alturaSinTeclado = alturaActual;
+        anchoSinTeclado = anchoActual;
+        viewportReducidoDesdeFoco = false;
+        actualizarTeclado(false);
+        return;
+      }
+
+      if (viewportReducido()) {
+        viewportReducidoDesdeFoco = true;
+        actualizarTeclado(true);
+        return;
+      }
+
+      // Safari puede cerrar el teclado conservando el foco en el textarea;
+      // recuperar la altura es la señal concluyente de cierre.
+      if (viewportReducidoDesdeFoco) viewportReducidoDesdeFoco = false;
+      actualizarTeclado(false);
     };
 
     window.addEventListener("focusin", alEnfocar);
     window.addEventListener("focusout", alDesenfocar);
-    window.addEventListener("resize", medirTeclado);
-    visual?.addEventListener("resize", medirTeclado);
+    (visual ?? window).addEventListener("resize", alRedimensionarViewport);
+    actualizarAlturaVisible();
     return () => {
+      if (restaurar) clearTimeout(restaurar);
       window.removeEventListener("focusin", alEnfocar);
       window.removeEventListener("focusout", alDesenfocar);
-      window.removeEventListener("resize", medirTeclado);
-      visual?.removeEventListener("resize", medirTeclado);
+      (visual ?? window).removeEventListener("resize", alRedimensionarViewport);
+      document.documentElement.removeAttribute("data-teclado-abierto");
+      document.documentElement.style.removeProperty("--app-height");
     };
   }, []);
 
@@ -185,7 +200,7 @@ export default function BottomNav({
     <nav
       aria-hidden={tecladoAbierto || undefined}
       aria-label="Navegación principal"
-      className={`${tecladoAbierto ? "hidden" : "fixed"} bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden`}
+      className={`${tecladoAbierto ? "hidden" : "block"} relative z-40 shrink-0 border-t border-white/10 bg-black/95 pb-[env(safe-area-inset-bottom)] backdrop-blur-md md:hidden`}
     >
       <ul className="flex items-stretch justify-around">
         {items.map(({ href, etiqueta, Icono }) => {

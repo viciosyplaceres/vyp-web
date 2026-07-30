@@ -140,8 +140,8 @@ export default async function ChatPage() {
   await marcarChatLeido().catch(() => undefined);
 
   return (
-    <main className="mx-auto flex w-full max-w-3xl flex-1 flex-col px-4 sm:px-6">
-      <div className="border-b border-white/10 py-4">
+    <main className="mx-auto flex min-h-0 w-full max-w-3xl flex-1 flex-col overflow-hidden px-4 sm:px-6">
+      <div className="shrink-0 border-b border-white/10 py-4">
         <h1 className="text-xl font-semibold">Chat de la peña</h1>
         <p className="text-xs text-white/40">
           Privado. Solo lo ven los miembros aprobados.

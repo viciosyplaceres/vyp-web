@@ -566,10 +566,19 @@ Detalles que importan en el uso real:
 
 El uso mayoritario será desde el móvil en la calle, así que la interfaz se diseñó en ese orden:
 
-- **Barra de navegación inferior** fija tipo app nativa (Inicio · Galería · Música · Chat · Cuenta),
-  visible solo en móvil; en pantalla grande se usa el menú del encabezado.
-- Al abrir el teclado móvil, la barra de navegación desaparece por completo y vuelve a su sitio al
-  cerrarlo, como en las aplicaciones sociales; el campo de escritura permanece disponible.
+- **Barra de navegación inferior** tipo app nativa (Inicio · Galería · Música · Chat · Cuenta),
+  visible solo en móvil; vive en el flujo de una carcasa de altura visible, no superpuesta con
+  `position: fixed`. En pantalla grande se usa el menú del encabezado.
+- Al abrir el teclado móvil, la barra de navegación desaparece por completo junto con todo el
+  espacio que reservaba (56 px y zona segura): el campo de escritura queda pegado al teclado. Al
+  cerrarlo vuelve la barra, como en las aplicaciones sociales. `VisualViewport` actualiza la altura
+  de la carcasa y detecta la reducción real; el foco solo confirma que se está editando, para no
+  confundir un teclado físico con el virtual. Al estar la navegación en flujo, ocultarla libera su
+  altura automáticamente: no hay padding ni zona segura fantasma que retirar.
+- El chat sigue la estructura probada en JARVIS y Padeliner: carcasa flex limitada al viewport,
+  cabecera y compositor fuera del scroll, y solo la lista de mensajes con `overflow-y-auto`. Así el
+  teclado encoge la conversación mientras el campo permanece anclado abajo, sin `sticky` ni
+  desplazamientos manuales. Si el usuario estaba al final, un `ResizeObserver` conserva ese anclaje.
 - Respeto de `env(safe-area-inset-bottom)` para que nada quede bajo la barra gestual del teléfono.
 - **Objetivos táctiles de 44 px mínimo** en todo elemento pulsable, con 8 px de separación.
 - Texto base de 16 px: por debajo, los navegadores móviles hacen zoom automático al enfocar un campo.

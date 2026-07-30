@@ -54,10 +54,9 @@ export default function BarraEscritura({
   }
 
   return (
-    // En móvil se separa del fondo lo que mide la barra de navegación
-    // inferior (56px + zona segura del teléfono); en escritorio no hay barra
-    // inferior, así que se pega abajo del todo.
-    <div className="sticky bottom-[calc(56px+env(safe-area-inset-bottom))] border-t border-white/10 bg-black/95 backdrop-blur-md md:bottom-0">
+    // Fuera del contenedor con scroll: la lista se encoge con el viewport, pero
+    // el campo permanece anclado abajo como en una aplicación de mensajería.
+    <div className="shrink-0 border-t border-white/10 bg-black/95 backdrop-blur-md">
       {respondiendoA && (
         <div className="flex items-center gap-2 border-b border-white/10 px-1 pt-2">
           <div className="min-w-0 flex-1 rounded-lg border-l-2 border-white/30 bg-white/5 px-2.5 py-1.5 text-xs">

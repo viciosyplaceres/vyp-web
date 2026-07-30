@@ -22,7 +22,7 @@ export default function BarraReproductor() {
   const progreso = duracion > 0 ? (posicion / duracion) * 100 : 0;
 
   return (
-    <div className="fixed inset-x-0 bottom-[calc(56px+env(safe-area-inset-bottom))] z-40 border-t border-white/10 bg-neutral-950/95 backdrop-blur-md md:bottom-0">
+    <div className="vyp-player relative z-40 shrink-0 border-t border-white/10 bg-neutral-950/95 backdrop-blur-md">
       {/* En móvil la zona segura ya la absorbe la barra de navegación de abajo;
           en escritorio, donde no hay barra, se añade aquí. */}
       <div className="mx-auto max-w-5xl px-4 py-2.5 md:pb-[max(0.625rem,env(safe-area-inset-bottom))]">
