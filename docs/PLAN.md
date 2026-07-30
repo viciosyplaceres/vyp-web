@@ -568,6 +568,8 @@ El uso mayoritario será desde el móvil en la calle, así que la interfaz se di
 
 - **Barra de navegación inferior** fija tipo app nativa (Inicio · Galería · Música · Chat · Cuenta),
   visible solo en móvil; en pantalla grande se usa el menú del encabezado.
+- Al abrir el teclado móvil, la barra se mantiene en el borde físico de la pantalla y no sube con el
+  viewport visual; el campo de escritura sí permanece encima del teclado para poder seguir usándolo.
 - Respeto de `env(safe-area-inset-bottom)` para que nada quede bajo la barra gestual del teléfono.
 - **Objetivos táctiles de 44 px mínimo** en todo elemento pulsable, con 8 px de separación.
 - Texto base de 16 px: por debajo, los navegadores móviles hacen zoom automático al enfocar un campo.

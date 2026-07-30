@@ -27,6 +27,7 @@ export default function BottomNav({
   noLeidosInicial: number;
 }) {
   const pathname = usePathname();
+  const navRef = useRef<HTMLElement>(null);
   const enChat = pathname.startsWith("/chat");
   const [noLeidos, setNoLeidos] = useState(noLeidosInicial);
   // Entrar al chat cuenta como leído al instante en la propia interfaz, sin
@@ -73,6 +74,32 @@ export default function BottomNav({
     };
   }, [esMiembro, userId]);
 
+  // Chrome y otros navegadores móviles reducen el viewport visual al abrir el
+  // teclado, haciendo que un elemento fixed suba con él. La navegación debe
+  // quedarse en el borde físico de la pantalla, no encima del teclado.
+  useEffect(() => {
+    const visual = window.visualViewport;
+    if (!visual) return;
+
+    const ajustarTeclado = () => {
+      const desplazamiento = Math.max(
+        0,
+        window.innerHeight - visual.height - visual.offsetTop,
+      );
+      if (navRef.current) {
+        navRef.current.style.transform = `translateY(${Math.round(desplazamiento)}px)`;
+      }
+    };
+
+    ajustarTeclado();
+    visual.addEventListener("resize", ajustarTeclado);
+    visual.addEventListener("scroll", ajustarTeclado);
+    return () => {
+      visual.removeEventListener("resize", ajustarTeclado);
+      visual.removeEventListener("scroll", ajustarTeclado);
+    };
+  }, []);
+
   const items: Item[] = [
     { href: "/", etiqueta: "Inicio", Icono: Home },
     { href: "/galeria", etiqueta: "Galería", Icono: Images },
@@ -96,6 +123,7 @@ export default function BottomNav({
 
   return (
     <nav
+      ref={navRef}
       aria-label="Navegación principal"
       className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden"
     >
