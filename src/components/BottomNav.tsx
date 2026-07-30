@@ -17,6 +17,32 @@ const ESCUCHAS: Escucha[] = [
   { tabla: "mensajes", evento: "DELETE" },
 ];
 
+const INPUTS_SIN_TECLADO = new Set([
+  "button",
+  "checkbox",
+  "color",
+  "file",
+  "hidden",
+  "radio",
+  "range",
+  "reset",
+  "submit",
+]);
+
+function esCampoEditable(elemento: Element | null) {
+  if (elemento instanceof HTMLTextAreaElement) {
+    return !elemento.disabled && !elemento.readOnly;
+  }
+  if (elemento instanceof HTMLInputElement) {
+    return (
+      !elemento.disabled &&
+      !elemento.readOnly &&
+      !INPUTS_SIN_TECLADO.has(elemento.type)
+    );
+  }
+  return elemento instanceof HTMLElement && elemento.isContentEditable;
+}
+
 export default function BottomNav({
   esMiembro,
   userId,
@@ -27,9 +53,9 @@ export default function BottomNav({
   noLeidosInicial: number;
 }) {
   const pathname = usePathname();
-  const navRef = useRef<HTMLElement>(null);
   const enChat = pathname.startsWith("/chat");
   const [noLeidos, setNoLeidos] = useState(noLeidosInicial);
+  const [tecladoAbierto, setTecladoAbierto] = useState(false);
   // Entrar al chat cuenta como leído al instante en la propia interfaz, sin
   // esperar a la respuesta del servidor. El enlace vacía también el estado:
   // limitarse a ocultarlo mientras estamos en /chat hacía que reapareciera al
@@ -74,45 +100,63 @@ export default function BottomNav({
     };
   }, [esMiembro, userId]);
 
-  // Los navegadores pueden reducir el viewport visual o el de diseño al abrir
-  // el teclado. En ambos casos la navegación debe quedarse bajo el teclado.
+  // Patrón de las apps móviles: la navegación desaparece mientras se escribe.
+  // El foco permite ocultarla antes de que termine la animación del teclado;
+  // VisualViewport permite restaurarla si el teclado se cierra sin perder foco.
   useEffect(() => {
     const visual = window.visualViewport;
-    let alturaSinTeclado = window.innerHeight;
+    let alturaSinTeclado = Math.max(
+      window.innerHeight,
+      visual?.height ?? window.innerHeight,
+    );
     let ancho = window.innerWidth;
 
-    const ajustarTeclado = () => {
-      // Un cambio de ancho es una rotación, no un teclado: toma la nueva
-      // altura de referencia antes de calcular ningún desplazamiento.
+    const medirTeclado = () => {
       if (window.innerWidth !== ancho) {
         ancho = window.innerWidth;
-        alturaSinTeclado = window.innerHeight;
+        alturaSinTeclado = Math.max(
+          window.innerHeight,
+          visual?.height ?? window.innerHeight,
+        );
       }
 
-      const visualReducido = visual
-        ? Math.max(
-            0,
-            window.innerHeight - visual.height - visual.offsetTop,
-          )
-        : 0;
-      const layoutReducido = Math.max(0, alturaSinTeclado - window.innerHeight);
-      const teclado = Math.max(visualReducido, layoutReducido);
-      // La barra del navegador puede variar unas decenas de píxeles; el teclado
-      // siempre ocupa bastante más y es el único caso que debe ocultar el nav.
-      const desplazamiento = teclado > 120 ? teclado : 0;
-      if (navRef.current) {
-        navRef.current.style.transform = `translateY(${Math.round(desplazamiento)}px)`;
+      const alturaActual = Math.min(
+        window.innerHeight,
+        visual?.height ?? window.innerHeight,
+      );
+      const reduccion = alturaSinTeclado - alturaActual;
+      const editando = esCampoEditable(document.activeElement);
+
+      if (!editando) {
+        alturaSinTeclado = Math.max(alturaSinTeclado, alturaActual);
+        setTecladoAbierto(false);
+      } else {
+        setTecladoAbierto(reduccion > 120);
       }
     };
 
-    ajustarTeclado();
-    window.addEventListener("resize", ajustarTeclado);
-    visual?.addEventListener("resize", ajustarTeclado);
-    visual?.addEventListener("scroll", ajustarTeclado);
+    const alEnfocar = (evento: FocusEvent) => {
+      if (esCampoEditable(evento.target as Element)) {
+        setTecladoAbierto(true);
+      }
+    };
+    const alDesenfocar = () => {
+      setTimeout(() => {
+        if (!esCampoEditable(document.activeElement)) {
+          setTecladoAbierto(false);
+        }
+      }, 0);
+    };
+
+    window.addEventListener("focusin", alEnfocar);
+    window.addEventListener("focusout", alDesenfocar);
+    window.addEventListener("resize", medirTeclado);
+    visual?.addEventListener("resize", medirTeclado);
     return () => {
-      window.removeEventListener("resize", ajustarTeclado);
-      visual?.removeEventListener("resize", ajustarTeclado);
-      visual?.removeEventListener("scroll", ajustarTeclado);
+      window.removeEventListener("focusin", alEnfocar);
+      window.removeEventListener("focusout", alDesenfocar);
+      window.removeEventListener("resize", medirTeclado);
+      visual?.removeEventListener("resize", medirTeclado);
     };
   }, []);
 
@@ -139,9 +183,9 @@ export default function BottomNav({
 
   return (
     <nav
-      ref={navRef}
+      aria-hidden={tecladoAbierto || undefined}
       aria-label="Navegación principal"
-      className="fixed bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden"
+      className={`${tecladoAbierto ? "hidden" : "fixed"} bottom-0 left-0 right-0 z-40 border-t border-white/10 bg-black/95 backdrop-blur-md pb-[env(safe-area-inset-bottom)] md:hidden`}
     >
       <ul className="flex items-stretch justify-around">
         {items.map(({ href, etiqueta, Icono }) => {
