@@ -74,29 +74,45 @@ export default function BottomNav({
     };
   }, [esMiembro, userId]);
 
-  // Chrome y otros navegadores móviles reducen el viewport visual al abrir el
-  // teclado, haciendo que un elemento fixed suba con él. La navegación debe
-  // quedarse en el borde físico de la pantalla, no encima del teclado.
+  // Los navegadores pueden reducir el viewport visual o el de diseño al abrir
+  // el teclado. En ambos casos la navegación debe quedarse bajo el teclado.
   useEffect(() => {
     const visual = window.visualViewport;
-    if (!visual) return;
+    let alturaSinTeclado = window.innerHeight;
+    let ancho = window.innerWidth;
 
     const ajustarTeclado = () => {
-      const desplazamiento = Math.max(
-        0,
-        window.innerHeight - visual.height - visual.offsetTop,
-      );
+      // Un cambio de ancho es una rotación, no un teclado: toma la nueva
+      // altura de referencia antes de calcular ningún desplazamiento.
+      if (window.innerWidth !== ancho) {
+        ancho = window.innerWidth;
+        alturaSinTeclado = window.innerHeight;
+      }
+
+      const visualReducido = visual
+        ? Math.max(
+            0,
+            window.innerHeight - visual.height - visual.offsetTop,
+          )
+        : 0;
+      const layoutReducido = Math.max(0, alturaSinTeclado - window.innerHeight);
+      const teclado = Math.max(visualReducido, layoutReducido);
+      // La barra del navegador puede variar unas decenas de píxeles; el teclado
+      // siempre ocupa bastante más y es el único caso que debe ocultar el nav.
+      const desplazamiento = teclado > 120 ? teclado : 0;
       if (navRef.current) {
         navRef.current.style.transform = `translateY(${Math.round(desplazamiento)}px)`;
       }
     };
 
     ajustarTeclado();
-    visual.addEventListener("resize", ajustarTeclado);
-    visual.addEventListener("scroll", ajustarTeclado);
+    window.addEventListener("resize", ajustarTeclado);
+    visual?.addEventListener("resize", ajustarTeclado);
+    visual?.addEventListener("scroll", ajustarTeclado);
     return () => {
-      visual.removeEventListener("resize", ajustarTeclado);
-      visual.removeEventListener("scroll", ajustarTeclado);
+      window.removeEventListener("resize", ajustarTeclado);
+      visual?.removeEventListener("resize", ajustarTeclado);
+      visual?.removeEventListener("scroll", ajustarTeclado);
     };
   }, []);
 
