@@ -270,6 +270,18 @@ pistas se reproduce dentro de su propia tarjeta, con controles nativos de Mixclo
   copiar el enlace desde “Compartir” y copiar la pareja decimal `latitud, longitud` de la ficha.
   El mapa OpenStreetMap se vuelve a construir automáticamente con esas coordenadas.
 
+> **Añadido el 2026-08-02 — «Detectar con el GPS»** (`ConfiguracionUbicacion.tsx`): la directiva
+> puede registrar la ubicación exacta desde el móvil, estando en la sede o la caseta. El botón
+> pide la geolocalización del navegador (`enableHighAccuracy`, 15 s de espera), rellena las
+> coordenadas, genera la URL de «cómo llegar»
+> (`https://www.google.com/maps/dir/?api=1&destination=lat,lng`) y busca la dirección con geocodificación
+> inversa de Nominatim (OpenStreetMap), mostrando la precisión («±X m») y avisos claros si se
+> deniega el permiso, no hay GPS o agota el tiempo. Todo sigue siendo solo editable por la
+> directiva (`exigirAdmin` en la action + política RLS `private.es_admin()`); el botón ahorra el
+> copiado manual pero no cambia permisos. Verificado con geolocalización simulada en navegador:
+> rellena coordenadas, URL y dirección real. Pensado para la fábrica: cada peña nueva registrará
+> su ubicación así, por eso el formulario de Fiestas Fuente Álamo ya no la pide.
+
 > **Corregido el 2026-07-27**: el primer intento usaba el embed de Google Maps sin clave
 > (`/maps?q=...&output=embed`). Google cambió su comportamiento y esa URL ahora redirige a un
 > endpoint interno que responde con `X-Frame-Options: SAMEORIGIN`, así que el navegador bloquea
@@ -441,6 +453,14 @@ Sustituye a la antigua `/cuenta`. Cada miembro pone su **foto de avatar y su nom
 (único, en minúsculas, 3–20 caracteres). El avatar sale **en el encabezado** y al pulsarlo se llega
 aquí. Dentro: sus tareas, lo que le toca comprar (ambas marcables), sus fotos, su música, y los
 **ajustes** — notificaciones (vienen activadas; aquí se apagan) y cerrar sesión.
+
+**Cambiar contraseña** (`CambiarContrasena.tsx`, añadido el 2026-08-02): el miembro escribe su
+contraseña actual y la nueva dos veces. Se verifica la actual con `signInWithPassword` (sin tocar
+la sesión si falla) y se aplica con `auth.updateUser`; mínimo 8 caracteres, validado en
+`src/lib/contrasena.ts` (función pura con tests). Nace para la entrega de apps de la fábrica: se
+entrega la cuenta de directiva con una clave generada y la directiva la cambia en su primer
+acceso. Probado de punta a punta con un usuario desechable (alta → cambio → la nueva entra y la
+vieja es rechazada → borrado), sin tocar cuentas reales.
 
 La vista `autores` se amplía con `usuario` y `avatar_url`: son datos públicos (quién comenta, quién
 sube), y sigue sin exponer `rol` ni `aprobado`.

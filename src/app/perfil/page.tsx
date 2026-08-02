@@ -10,6 +10,7 @@ import { obtenerAnioActivo, obtenerFechasFiestas } from "@/app/actions/configura
 import { cerrarSesion } from "@/app/actions/auth";
 import AvisosPush from "@/components/AvisosPush";
 import EditarPerfil from "@/components/EditarPerfil";
+import CambiarContrasena from "@/components/CambiarContrasena";
 import MisPendientes, {
   type MiTarea,
   type MiCompra,
@@ -220,6 +221,10 @@ export default async function PerfilPage() {
               Ver miembros de la peña
             </Link>
           )}
+        </section>
+
+        <section className="border-t border-white/10 pt-8">
+          <CambiarContrasena />
         </section>
 
         {sesion.esMiembro && (

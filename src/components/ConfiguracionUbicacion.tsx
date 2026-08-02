@@ -1,7 +1,7 @@
 "use client";
 
 import { useState, useTransition } from "react";
-import { ExternalLink, Loader2, MapPinned, Save } from "lucide-react";
+import { ExternalLink, Loader2, LocateFixed, MapPinned, Save } from "lucide-react";
 import {
   actualizarUbicacion,
   type UbicacionPublica,
@@ -19,9 +19,72 @@ export default function ConfiguracionUbicacion({
     `${ubicacion.latitud}, ${ubicacion.longitud}`,
   );
   const [pendiente, startTransition] = useTransition();
+  const [detectando, setDetectando] = useState(false);
+  const [precision, setPrecision] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
   const [guardado, setGuardado] = useState(false);
   const enlacePrueba = mapsUrl.trim().startsWith("https://") ? mapsUrl : ubicacion.mapsUrl;
+
+  /**
+   * Rellena coordenadas, enlace y dirección con el GPS del móvil. La idea es
+   * que la directiva lo pulse ESTANDO en la caseta o la sede: no hace falta
+   * saber sacar coordenadas de Google Maps. La dirección se completa con
+   * OpenStreetMap y siempre se puede corregir a mano antes de guardar.
+   */
+  function detectarConGps() {
+    if (!("geolocation" in navigator)) {
+      setError("Este navegador no puede usar el GPS. Entra desde el móvil.");
+      return;
+    }
+
+    setDetectando(true);
+    setError(null);
+    setGuardado(false);
+    setPrecision(null);
+
+    navigator.geolocation.getCurrentPosition(
+      async (posicion) => {
+        const latitud = Number(posicion.coords.latitude.toFixed(6));
+        const longitud = Number(posicion.coords.longitude.toFixed(6));
+        setCoordenadas(`${latitud}, ${longitud}`);
+        setMapsUrl(
+          `https://www.google.com/maps/dir/?api=1&destination=${latitud},${longitud}`,
+        );
+        setPrecision(
+          `Ubicación detectada con una precisión de ±${Math.round(posicion.coords.accuracy)} m. Revisa los datos y guarda.`,
+        );
+
+        // La calle se pide a OpenStreetMap; si falla, se deja la que hubiera.
+        try {
+          const respuesta = await fetch(
+            `https://nominatim.openstreetmap.org/reverse?format=jsonv2&lat=${latitud}&lon=${longitud}&zoom=18&accept-language=es`,
+          );
+          if (respuesta.ok) {
+            const datos = (await respuesta.json()) as { display_name?: string };
+            if (datos.display_name) {
+              setDireccion(datos.display_name.slice(0, 300));
+            }
+          }
+        } catch {
+          // opcional: sin dirección automática se puede escribir a mano
+        }
+        setDetectando(false);
+      },
+      (fallo) => {
+        setDetectando(false);
+        if (fallo.code === fallo.PERMISSION_DENIED) {
+          setError(
+            "Has denegado el permiso de ubicación. Actívalo en el navegador del móvil y vuelve a intentarlo.",
+          );
+        } else if (fallo.code === fallo.POSITION_UNAVAILABLE) {
+          setError("El GPS no encuentra la posición. Prueba al aire libre.");
+        } else {
+          setError("El GPS ha tardado demasiado. Vuelve a intentarlo.");
+        }
+      },
+      { enableHighAccuracy: true, timeout: 20000, maximumAge: 0 },
+    );
+  }
 
   function guardar(e: React.FormEvent) {
     e.preventDefault();
@@ -97,6 +160,33 @@ export default function ConfiguracionUbicacion({
         />
       </label>
 
+      <div className="mt-3 rounded-lg border border-white/10 bg-black/20 p-3">
+        <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <p className="text-xs leading-relaxed text-white/55">
+            Lo más fácil: ponte <span className="text-white/80">delante de la caseta o la sede</span> y
+            pulsa el botón. Se rellenan solos las coordenadas, el enlace y la dirección.
+          </p>
+          <button
+            type="button"
+            onClick={detectarConGps}
+            disabled={detectando || pendiente}
+            className="inline-flex min-h-[48px] shrink-0 cursor-pointer items-center justify-center gap-2 rounded-full bg-white px-5 text-sm font-medium text-black transition-opacity duration-200 hover:opacity-85 disabled:opacity-50"
+          >
+            {detectando ? (
+              <Loader2 size={17} className="animate-spin" aria-hidden="true" />
+            ) : (
+              <LocateFixed size={17} aria-hidden="true" />
+            )}
+            {detectando ? "Buscando el GPS…" : "Detectar con el GPS"}
+          </button>
+        </div>
+        {precision && (
+          <p role="status" className="mt-2 text-xs text-emerald-300/90">
+            {precision}
+          </p>
+        )}
+      </div>
+
       <label className="mt-3 block space-y-1.5">
         <span className="text-xs text-white/60">Coordenadas exactas: latitud, longitud</span>
         <input
@@ -111,7 +201,7 @@ export default function ConfiguracionUbicacion({
 
       <details className="mt-3 rounded-lg border border-white/10 bg-black/20 px-3 py-2.5 text-xs text-white/55">
         <summary className="cursor-pointer font-medium text-white/70">
-          Cómo sacar estos datos de Google Maps
+          Prefiero hacerlo a mano con Google Maps
         </summary>
         <ol className="mt-2 list-decimal space-y-1.5 pl-4 leading-relaxed">
           <li>Abre Google Maps y mantén pulsado justo donde está la peña para poner un marcador.</li>
