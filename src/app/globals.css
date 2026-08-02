@@ -1,9 +1,33 @@
 @import "tailwindcss";
 
+/* ── Marca de la peña ───────────────────────────────────────────────────────
+   Este bloque, y solo este, es el que reescribe el motor de diseño de la
+   Fábrica de JARVIS al generar la app de una peña nueva: a partir de su
+   escudo elige una paleta propia en vez de calcar la de aquí.
+   Los valores por defecto son los de esta peña, así que sin tocar nada la
+   aplicación se ve exactamente igual que siempre. */
 :root {
-  --background: #000000;
-  --foreground: #ffffff;
+  --marca-fondo: #000000; /* fondo de toda la app */
+  --marca-tinta: #ffffff; /* texto y superficies claras */
+  --marca-superficie: #0a0a0a; /* paneles y capas elevadas */
+  --marca-acento: #ffffff; /* botón principal / llamadas a la acción */
+  --marca-acento-tinta: #000000; /* texto encima del acento */
+  --marca-brillo: rgba(255, 255, 255, 0.08); /* halo del hero de la portada */
+}
+
+:root {
+  --background: var(--marca-fondo);
+  --foreground: var(--marca-tinta);
   --app-height: 100dvh;
+  /* Fuente de los titulares. Si la Fábrica no carga una propia para la peña,
+     es la misma que la del texto, así que aquí no cambia nada. */
+  --marca-display: var(--font-marca-display, var(--font-geist-sans));
+}
+
+h1,
+h2,
+h3 {
+  font-family: var(--marca-display);
 }
 
 :root[data-teclado-abierto] .vyp-player {
@@ -13,8 +37,26 @@
 @theme inline {
   --color-background: var(--background);
   --color-foreground: var(--foreground);
+  /* La plantilla entera está escrita con text-white, bg-white/10, border-white/20
+     y bg-black. Redefinir aquí qué significan "white" y "black" tiñe la interfaz
+     completa con la marca de la peña sin tocar un solo componente — y con los
+     valores por defecto siguen siendo blanco y negro puros. */
+  --color-white: var(--marca-tinta);
+  --color-black: var(--marca-fondo);
+  --color-neutral-950: var(--marca-superficie);
+  --color-acento: var(--marca-acento);
+  --color-acento-tinta: var(--marca-acento-tinta);
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+}
+
+/* Halo del hero de la portada: sale de la paleta de la peña. */
+.marca-halo {
+  background: radial-gradient(
+    ellipse at top,
+    var(--marca-brillo),
+    transparent 70%
+  );
 }
 
 html {
@@ -34,7 +76,7 @@ body {
 
 /* Foco siempre visible para navegación con teclado */
 :focus-visible {
-  outline: 2px solid #ffffff;
+  outline: 2px solid var(--marca-tinta);
   outline-offset: 2px;
   border-radius: 4px;
 }
@@ -59,7 +101,7 @@ input[type="range"]::-webkit-slider-thumb {
   width: 14px;
   height: 14px;
   border-radius: 9999px;
-  background: #ffffff;
+  background: var(--marca-tinta);
   cursor: pointer;
 }
 
@@ -68,7 +110,7 @@ input[type="range"]::-moz-range-thumb {
   height: 14px;
   border: none;
   border-radius: 9999px;
-  background: #ffffff;
+  background: var(--marca-tinta);
   cursor: pointer;
 }
 

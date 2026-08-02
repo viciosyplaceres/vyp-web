@@ -379,7 +379,7 @@ export default function Home() {
       <section className="relative overflow-hidden px-4 pt-14 pb-16 sm:px-6 sm:pt-20 sm:pb-20">
         <div
           aria-hidden="true"
-          className="pointer-events-none absolute inset-x-0 -top-32 h-96 bg-[radial-gradient(ellipse_at_top,rgba(255,255,255,0.08),transparent_70%)]"
+          className="marca-halo pointer-events-none absolute inset-x-0 -top-32 h-96"
         />
 
         <div className="relative mx-auto max-w-5xl">
@@ -410,7 +410,7 @@ export default function Home() {
           <div className="mt-8 flex flex-wrap gap-3">
             <Link
               href="/galeria"
-              className="inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-full bg-white px-6 text-sm font-medium text-black transition-opacity duration-200 hover:opacity-85"
+              className="inline-flex min-h-[48px] cursor-pointer items-center gap-2 rounded-full bg-acento px-6 text-sm font-medium text-acento-tinta transition-opacity duration-200 hover:opacity-85"
             >
               <Images size={18} aria-hidden="true" />
               Ver la galería
