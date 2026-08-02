@@ -13,12 +13,15 @@ export type UbicacionPublica = {
   longitud: number | null;
 };
 
+// Solo se usa si la fila «configuracion» no existiera en absoluto (no debería
+// pasar: las migraciones la crean siempre). Nombre genérico de la localidad,
+// sin dirección ni pin: cada peña pone su sede real desde Gestión.
 const UBICACION_POR_DEFECTO: UbicacionPublica = {
   nombre: "Fuente Álamo · Murcia",
-  direccion: "C. Asturias, 30320 Fuente Álamo, Murcia",
-  mapsUrl: "https://www.google.com/maps/dir/?api=1&destination=37.717352,-1.17391",
-  latitud: 37.717352,
-  longitud: -1.17391,
+  direccion: "",
+  mapsUrl: "",
+  latitud: null,
+  longitud: null,
 };
 
 /**
