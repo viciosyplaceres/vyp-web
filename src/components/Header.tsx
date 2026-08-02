@@ -1,7 +1,9 @@
 import Image from "next/image";
 import Link from "next/link";
+import { Users2 } from "lucide-react";
 import type { Sesion } from "@/lib/auth";
 import AvatarPendientes from "@/components/AvatarPendientes";
+import { irAComunidad } from "@/app/actions/comunidad";
 
 /** Enlaces solo para pantallas grandes: en móvil manda la barra inferior. */
 const ENLACES = [
@@ -67,6 +69,19 @@ export default function Header({
         </nav>
 
         <div className="flex shrink-0 items-center gap-3 text-sm">
+          {sesion?.esMiembro && (
+            <form action={irAComunidad}>
+              <button
+                type="submit"
+                title="Fiestas Fuente Álamo"
+                aria-label="Ir a Fiestas Fuente Álamo"
+                className="flex h-8 w-8 shrink-0 cursor-pointer items-center justify-center rounded-full text-white/60 transition-colors duration-200 hover:text-white sm:h-auto sm:w-auto sm:gap-1.5 sm:rounded-md sm:px-1"
+              >
+                <Users2 size={18} aria-hidden="true" />
+                <span className="hidden sm:inline">Comunidad</span>
+              </button>
+            </form>
+          )}
           {sesion ? (
             <AvatarPendientes
               nombre={sesion.nombre}
