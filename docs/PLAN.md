@@ -645,6 +645,34 @@ El uso mayoritario será desde el móvil en la calle, así que la interfaz se di
 > vista previa del enlace (compartir, fijar como app de escritorio, etc.) caía en un icono pequeño
 > sobre una tarjeta en blanco — el efecto de "imagen que no cubre todo, con borde blanco".
 
+### 10-pre. La identidad, ahora por variables (2026-08-02)
+
+Este proyecto es además la **plantilla** con la que la Fábrica de Peñas de JARVIS
+genera la app de cada peña nueva. Hasta ahora la fábrica solo podía sustituir
+nombres, así que todas las peñas salían con la misma cara: negro y blanco. Se ha
+añadido una capa de tema para que cada una pueda tener la suya sin tocar ni un
+componente.
+
+- En `src/app/globals.css` hay **un único bloque** `:root { --marca-* }` con seis
+  variables: `fondo`, `tinta`, `superficie`, `acento`, `acento-tinta` y `brillo`.
+  Es el bloque que la fábrica reescribe entero.
+- El truco está en `@theme inline`: se redefine qué significan `--color-white`,
+  `--color-black` y `--color-neutral-950` en Tailwind. Como toda la aplicación
+  está escrita con `text-white`, `bg-white/10`, `border-white/20` y `bg-black`,
+  cambiar esas tres definiciones tiñe la interfaz completa de golpe.
+- `--marca-acento` / `--marca-acento-tinta` (clases `bg-acento` y
+  `text-acento-tinta`) visten el botón principal de la portada, y `.marca-halo`
+  el degradado del hero.
+- `--marca-display` es el hueco de la fuente de titulares (`h1, h2, h3`). Vive
+  **fuera** del bloque sustituible, y si la fábrica no carga una fuente propia
+  cae en la del texto.
+
+Los valores por defecto son exactamente los de esta peña (`#000000`, `#ffffff`,
+`#0a0a0a`…), así que la aplicación se ve igual que antes — verificado en el
+navegador tras el cambio. Estos anclajes son un contrato con la fábrica: hay un
+test en JARVIS (`backend/test/fabrica-diseno.test.mjs`) que los comprueba contra
+este repo de verdad, así que si se renombran o se borran, salta ahí.
+
 ## 10-bis. Portada — segunda versión (2026-07-27)
 
 Las tarjetas de "acceso a Galería/Música/Chat" del primer rediseño se sustituyeron por vista previa
