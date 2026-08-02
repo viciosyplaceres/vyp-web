@@ -214,6 +214,27 @@ async function UbicacionHome({
   ubicacion: Promise<UbicacionPublica>;
 }) {
   const ubicacion = await ubicacionPromise;
+
+  if (!ubicacion.direccion || ubicacion.latitud === null || ubicacion.longitud === null) {
+    return (
+      <section id="donde" className="scroll-mt-16 px-4 pb-14 sm:px-6">
+        <div className="mx-auto max-w-5xl">
+          <h2 className="text-lg font-semibold sm:text-xl">Dónde estamos</h2>
+          <div className="mt-4 flex items-start gap-3 text-white/60">
+            <MapPin size={20} className="mt-0.5 shrink-0" aria-hidden="true" />
+            <p>
+              {ubicacion.nombre}
+              <br />
+              <span className="text-sm">
+                La directiva aún no ha configurado la dirección exacta.
+              </span>
+            </p>
+          </div>
+        </div>
+      </section>
+    );
+  }
+
   const bbox = [
     ubicacion.longitud - DELTA_LON,
     ubicacion.latitud - DELTA_LAT,

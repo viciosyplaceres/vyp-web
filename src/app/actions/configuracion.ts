@@ -8,8 +8,9 @@ export type UbicacionPublica = {
   nombre: string;
   direccion: string;
   mapsUrl: string;
-  latitud: number;
-  longitud: number;
+  /** null = la directiva aún no ha configurado un pin GPS real. */
+  latitud: number | null;
+  longitud: number | null;
 };
 
 const UBICACION_POR_DEFECTO: UbicacionPublica = {
@@ -77,8 +78,8 @@ export async function obtenerUbicacion(): Promise<UbicacionPublica> {
     nombre: data.ubicacion_nombre,
     direccion: data.ubicacion_direccion,
     mapsUrl: data.ubicacion_maps_url,
-    latitud: Number(data.ubicacion_latitud),
-    longitud: Number(data.ubicacion_longitud),
+    latitud: data.ubicacion_latitud === null ? null : Number(data.ubicacion_latitud),
+    longitud: data.ubicacion_longitud === null ? null : Number(data.ubicacion_longitud),
   };
 }
 
@@ -90,10 +91,10 @@ export async function actualizarUbicacion(ubicacion: UbicacionPublica) {
   const direccion = ubicacion.direccion.trim();
   if (!nombre || nombre.length > 120) throw new Error("Pon un nombre breve para la ubicación.");
   if (!direccion || direccion.length > 300) throw new Error("Pon la dirección de la peña.");
-  if (!Number.isFinite(ubicacion.latitud) || ubicacion.latitud < -90 || ubicacion.latitud > 90) {
+  if (ubicacion.latitud === null || !Number.isFinite(ubicacion.latitud) || ubicacion.latitud < -90 || ubicacion.latitud > 90) {
     throw new Error("La latitud debe estar entre -90 y 90.");
   }
-  if (!Number.isFinite(ubicacion.longitud) || ubicacion.longitud < -180 || ubicacion.longitud > 180) {
+  if (ubicacion.longitud === null || !Number.isFinite(ubicacion.longitud) || ubicacion.longitud < -180 || ubicacion.longitud > 180) {
     throw new Error("La longitud debe estar entre -180 y 180.");
   }
 

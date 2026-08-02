@@ -16,7 +16,9 @@ export default function ConfiguracionUbicacion({
   const [direccion, setDireccion] = useState(ubicacion.direccion);
   const [mapsUrl, setMapsUrl] = useState(ubicacion.mapsUrl);
   const [coordenadas, setCoordenadas] = useState(
-    `${ubicacion.latitud}, ${ubicacion.longitud}`,
+    ubicacion.latitud === null || ubicacion.longitud === null
+      ? ""
+      : `${ubicacion.latitud}, ${ubicacion.longitud}`,
   );
   const [pendiente, startTransition] = useTransition();
   const [detectando, setDetectando] = useState(false);
