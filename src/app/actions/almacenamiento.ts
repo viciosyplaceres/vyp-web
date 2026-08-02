@@ -50,6 +50,40 @@ export async function borrarMediaAdmin(
   revalidatePath("/admin/almacenamiento");
 }
 
+/**
+ * Borrado en lote desde el panel de almacenamiento: destruye todos los
+ * archivos en Cloudinary (los fallos puntuales no detienen el lote) y luego
+ * borra todas las filas de una vez. Devuelve cuántos elementos se borraron.
+ */
+export async function borrarMediaLote(
+  elementos: { id: string; anio: number; storageId: string; tipo: "foto" | "video" }[],
+) {
+  await exigirAdmin();
+  if (elementos.length === 0) return { borrados: 0 };
+
+  await Promise.allSettled(
+    elementos.map((e) =>
+      cloudinary.uploader.destroy(e.storageId, {
+        resource_type: e.tipo === "video" ? "video" : "image",
+      }),
+    ),
+  );
+
+  const supabase = await createClient();
+  const { error } = await supabase
+    .from("media")
+    .delete()
+    .in("id", elementos.map((e) => e.id));
+  if (error) throw new Error(error.message);
+
+  revalidatePath("/galeria");
+  for (const anio of new Set(elementos.map((e) => e.anio))) {
+    revalidatePath(`/galeria/${anio}`);
+  }
+  revalidatePath("/admin/almacenamiento");
+  return { borrados: elementos.length };
+}
+
 /** Igual que arriba, pero para música guardada en R2. */
 export async function borrarPistaAdmin(
   id: string,

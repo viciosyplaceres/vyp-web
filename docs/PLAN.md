@@ -363,6 +363,15 @@ normalidad hoy.
 registro de la base de datos: el archivo se quedaba ocupando espacio en Cloudinary o R2 sin que
 nadie lo supiera. Las nuevas acciones (`borrarMediaAdmin`, `borrarPistaAdmin`) primero borran el
 **archivo real** (`cloudinary.uploader.destroy` / `DeleteObjectCommand`) y solo después la fila.
+
+**Gestión en lote (2026-08-02).** La lista de fotos y vídeos ya no es solo texto: cada fila lleva
+**miniatura** (`thumb_url`, con distintivo de vídeo), año y tamaño. Se puede **seleccionar con
+casillas** (una a una o «Seleccionar todas»), borrar las seleccionadas o pulsar **«Eliminar
+todas»**; ambos borrados pasan por un **modal de confirmación** que avisa de que es irreversible
+(Escape o Cancelar lo cierran). La acción `borrarMediaLote` destruye los archivos en Cloudinary
+con `allSettled` (un fallo puntual no detiene el lote) y borra las filas de una vez. La lógica de
+selección es una lib pura (`src/lib/seleccion.ts`) con tests. Probado en navegador real: marcar
+2 de 78, seleccionar/deseleccionar todas y abrir y cancelar el modal sin borrar nada.
 Verificado subiendo un fichero de prueba a R2 y confirmando con `HeadObjectCommand` que, tras
 borrarlo desde el panel, el objeto ya no existe en el bucket (antes: `ContentLength: 500000`;
 después: `NotFound`).

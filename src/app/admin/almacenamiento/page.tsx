@@ -37,7 +37,7 @@ export default async function AlmacenamientoPage() {
       obtenerUsoR2().catch(() => null),
       supabase
         .from("media")
-        .select("id, tipo, anio, storage_id, descripcion, bytes")
+        .select("id, tipo, anio, storage_id, descripcion, bytes, url, thumb_url")
         .order("bytes", { ascending: false, nullsFirst: false }),
       supabase
         .from("pistas")
