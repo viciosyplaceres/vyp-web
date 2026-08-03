@@ -7,6 +7,7 @@ import { avisarAdmins } from "@/lib/push";
 import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
 import { validarArticulosCompra, validarAsignadosCompra } from "@/lib/compra";
 import { esClaveDocumento } from "@/lib/r2-claves";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 // `participantes` (talla + pago + importe en una sola ficha) se retiró: se
 // partió en `Camisetas` y `Pagos`, que es como se usa de verdad. Sus acciones
@@ -22,6 +23,7 @@ export async function crearDeuda(
 ): Promise<{ error?: string } | null> {
   try {
     const sesion = await exigirAdmin();
+    exigirTemporadaAbierta();
 
     // "" en el desplegable significa "VYP" (la peña), que se guarda como NULL.
     const deudorId = String(formData.get("deudor") ?? "") || null;
@@ -80,6 +82,7 @@ export async function crearDeuda(
  */
 export async function marcarDeuda(id: string, pagada: boolean) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   if (!sesion.esAdmin && !sesion.esTesorero) {
@@ -107,6 +110,7 @@ export async function marcarDeuda(id: string, pagada: boolean) {
 /** Borrar una deuda es solo de la directiva o el tesorero, nunca del acreedor. */
 export async function borrarDeuda(id: string) {
   await exigirDirectivaOTesorero();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
   const { error } = await supabase.from("deudas").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -121,6 +125,7 @@ export async function crearItemCompra(
 ): Promise<{ error?: string } | null> {
   try {
     const sesion = await exigirAdmin();
+    exigirTemporadaAbierta();
 
     const anio = Number(formData.get("anio"));
     const resultadoArticulos = validarArticulosCompra(
@@ -200,6 +205,7 @@ export async function crearItemCompra(
  */
 export async function alternarComprado(id: string, comprado: boolean) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
   const { data, error } = await supabase
     .from("lista_compra")
@@ -225,6 +231,7 @@ export async function alternarComprado(id: string, comprado: boolean) {
 
 export async function borrarItemCompra(id: string) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
   const { error } = await supabase.from("lista_compra").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -242,6 +249,7 @@ export async function adjuntarDocumentoCompra(
   documentoNombre: string | null,
 ) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
   const { error } = await supabase
     .from("lista_compra")

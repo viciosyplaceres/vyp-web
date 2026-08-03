@@ -10,6 +10,7 @@ import {
   type Tirada,
 } from "@/lib/limpieza";
 import { obtenerFechasFiestas } from "./configuracion";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 export type ResultadoTirada =
   | {
@@ -34,6 +35,7 @@ export type ResultadoTirada =
  */
 export async function tirarDadosLimpieza(anio: number): Promise<ResultadoTirada> {
   await exigirAdmin();
+  exigirTemporadaAbierta();
 
   const fechas = await obtenerFechasFiestas(anio);
   if (!fechas) {
@@ -97,6 +99,7 @@ export async function tirarDadosLimpieza(anio: number): Promise<ResultadoTirada>
 /** Borra el reparto de un año, por si hay que empezar de cero. */
 export async function borrarSorteoLimpieza(anio: number) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   await supabase.from("limpieza_turnos").delete().eq("anio", anio);

@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { getSesion } from "@/lib/auth";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 /**
  * Guarda nombre visible, nombre de usuario y avatar del propio perfil.
@@ -18,6 +19,11 @@ export async function guardarPerfil(
 ): Promise<{ error?: string; ok?: boolean } | null> {
   const sesion = await getSesion();
   if (!sesion) return { error: "No has iniciado sesión." };
+  try {
+    exigirTemporadaAbierta();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Cambios cerrados." };
+  }
 
   const nombre = String(formData.get("nombre") ?? "").trim();
   const usuarioBruto = String(formData.get("usuario") ?? "").trim();

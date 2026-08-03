@@ -4,6 +4,7 @@ import { Suspense, useActionState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
 import { iniciarSesion } from "@/app/actions/auth";
+import { useTemporadaAbierta } from "@/components/Temporada";
 
 export default function LoginPage() {
   return (
@@ -17,6 +18,7 @@ function FormularioLogin() {
   const searchParams = useSearchParams();
   const next = searchParams.get("next") ?? "/";
   const [state, formAction, pending] = useActionState(iniciarSesion, null);
+  const temporadaAbierta = useTemporadaAbierta();
 
   return (
     <main className="flex-1 flex items-center justify-center px-4 py-16">
@@ -67,12 +69,14 @@ function FormularioLogin() {
           {pending ? "Entrando…" : "Entrar"}
         </button>
 
-        <p className="text-sm text-white/60 text-center">
-          ¿No tienes cuenta?{" "}
-          <Link href="/registro" className="underline">
-            Regístrate
-          </Link>
-        </p>
+        {temporadaAbierta && (
+          <p className="text-sm text-white/60 text-center">
+            ¿No tienes cuenta?{" "}
+            <Link href="/registro" className="underline">
+              Regístrate
+            </Link>
+          </p>
+        )}
       </form>
     </main>
   );

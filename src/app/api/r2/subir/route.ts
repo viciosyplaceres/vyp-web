@@ -4,6 +4,8 @@ import { getSignedUrl } from "@aws-sdk/s3-request-presigner";
 import { r2, R2_BUCKET } from "@/lib/r2";
 import { getSesion } from "@/lib/auth";
 import { haySitioR2 } from "@/lib/almacenamiento";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
+import { segundosHastaCierreTemporada } from "@/lib/temporada";
 
 const TIPOS_AUDIO = [
   "audio/mpeg",
@@ -49,6 +51,15 @@ export async function POST(request: Request) {
   if (!sesion?.esMiembro) {
     return NextResponse.json(
       { error: "Solo los miembros de la peña pueden subir." },
+      { status: 403 },
+    );
+  }
+
+  try {
+    exigirTemporadaAbierta();
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Subidas cerradas." },
       { status: 403 },
     );
   }
@@ -101,6 +112,11 @@ export async function POST(request: Request) {
     .slice(0, 5);
   const clave = `${prefijo}/${crypto.randomUUID()}.${extension || extPorDefecto}`;
 
+  const segundosHastaCierre = segundosHastaCierreTemporada();
+  const caducidad = Math.max(
+    1,
+    Math.min(60 * 30, Math.floor(segundosHastaCierre)),
+  );
   const url = await getSignedUrl(
     r2,
     new PutObjectCommand({
@@ -109,7 +125,7 @@ export async function POST(request: Request) {
       ContentType: contentType,
       ContentLength: tamano,
     }),
-    { expiresIn: 60 * 30 },
+    { expiresIn: caducidad },
   );
 
   return NextResponse.json({ url, clave });

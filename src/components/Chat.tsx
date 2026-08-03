@@ -14,6 +14,7 @@ import PanelInfoLectura from "./chat/PanelInfoLectura";
 import BarraEscritura from "./chat/BarraEscritura";
 import { useRealtimeChat } from "./chat/useRealtimeChat";
 import type { InfoAutor, Mensaje, Reaccion } from "./chat/tipos";
+import { useTemporadaAbierta } from "./Temporada";
 
 export type { Mensaje, InfoAutor } from "./chat/tipos";
 
@@ -42,6 +43,7 @@ export default function Chat({
   // Qué mensaje tiene abierto el panel de "quién lo ha visto".
   const [infoMensaje, setInfoMensaje] = useState<Mensaje | null>(null);
   const [pedirFoco, setPedirFoco] = useState(0);
+  const temporadaAbierta = useTemporadaAbierta();
   const [, startTransition] = useTransition();
   const listaRef = useRef<HTMLOListElement>(null);
   const siguiendoFinalRef = useRef(true);
@@ -81,6 +83,15 @@ export default function Chat({
     observer.observe(lista);
     return () => observer.disconnect();
   }, [fijarAlFinal]);
+
+  useEffect(() => {
+    if (temporadaAbierta) return;
+    const frame = requestAnimationFrame(() => {
+      setRespondiendoA(null);
+      setEditandoId(null);
+    });
+    return () => cancelAnimationFrame(frame);
+  }, [temporadaAbierta]);
 
   const enviar = useCallback(
     (limpio: string) => {
@@ -214,7 +225,7 @@ export default function Chat({
       >
         {optimistas.length === 0 && (
           <li className="py-10 text-center text-sm text-white/40">
-            Aún no hay mensajes. Escribe el primero.
+            {temporadaAbierta ? "Aún no hay mensajes. Escribe el primero." : "Aún no hay mensajes."}
           </li>
         )}
 
@@ -236,6 +247,7 @@ export default function Chat({
               leido={leidoHasta >= new Date(m.created_at).getTime()}
               onAbrirMenu={abrirMenu}
               onReaccionar={alternarReaccion}
+              soloLectura={!temporadaAbierta}
             />
           </li>
         ))}
@@ -255,6 +267,7 @@ export default function Chat({
           onEditar={empezarEdicion}
           onEliminar={eliminar}
           onVerInfo={verInfo}
+          soloLectura={!temporadaAbierta}
         />
       )}
 
@@ -267,17 +280,23 @@ export default function Chat({
         />
       )}
 
-      <BarraEscritura
-        key={editandoId ?? "nuevo"}
-        respondiendoA={respondiendoA}
-        editando={editando}
-        userId={userId}
-        pedirFoco={pedirFoco}
-        onCancelarRespuesta={() => setRespondiendoA(null)}
-        onCancelarEdicion={() => setEditandoId(null)}
-        onEnviar={enviar}
-        onGuardarEdicion={guardarEdicion}
-      />
+      {temporadaAbierta ? (
+        <BarraEscritura
+          key={editandoId ?? "nuevo"}
+          respondiendoA={respondiendoA}
+          editando={editando}
+          userId={userId}
+          pedirFoco={pedirFoco}
+          onCancelarRespuesta={() => setRespondiendoA(null)}
+          onCancelarEdicion={() => setEditandoId(null)}
+          onEnviar={enviar}
+          onGuardarEdicion={guardarEdicion}
+        />
+      ) : (
+        <p className="shrink-0 border-t border-white/10 bg-black/95 px-3 py-3 text-center text-sm text-white/55">
+          Chat en modo lectura hasta el 1 de agosto.
+        </p>
+      )}
     </div>
   );
 }

@@ -25,6 +25,7 @@ export default function HojaAcciones({
   onEditar,
   onEliminar,
   onVerInfo,
+  soloLectura,
 }: {
   mensaje: Mensaje;
   mio: boolean;
@@ -36,6 +37,7 @@ export default function HojaAcciones({
   onEditar: (m: Mensaje) => void;
   onEliminar: (id: string) => void;
   onVerInfo: (m: Mensaje) => void;
+  soloLectura: boolean;
 }) {
   // Escape cierra, como cualquier ventana modal.
   useEffect(() => {
@@ -71,38 +73,42 @@ export default function HojaAcciones({
           </p>
 
           {/* Reacciones rápidas */}
-          <div className="flex justify-around border-b border-white/10 px-2 py-2">
-            {EMOJIS_RAPIDOS.map((e) => (
-              <button
-                key={e}
-                type="button"
-                onClick={() => {
-                  onReaccionar(mensaje.id, e);
-                  onCerrar();
-                }}
-                aria-label={`Reaccionar con ${e}`}
-                aria-pressed={miEmoji === e}
-                className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-2xl transition-transform duration-100 hover:scale-110 ${
-                  miEmoji === e ? "bg-white/15" : ""
-                }`}
-              >
-                {e}
-              </button>
-            ))}
-          </div>
+          {!soloLectura && (
+            <div className="flex justify-around border-b border-white/10 px-2 py-2">
+              {EMOJIS_RAPIDOS.map((e) => (
+                <button
+                  key={e}
+                  type="button"
+                  onClick={() => {
+                    onReaccionar(mensaje.id, e);
+                    onCerrar();
+                  }}
+                  aria-label={`Reaccionar con ${e}`}
+                  aria-pressed={miEmoji === e}
+                  className={`flex h-11 w-11 cursor-pointer items-center justify-center rounded-full text-2xl transition-transform duration-100 hover:scale-110 ${
+                    miEmoji === e ? "bg-white/15" : ""
+                  }`}
+                >
+                  {e}
+                </button>
+              ))}
+            </div>
+          )}
 
           <div className="p-1.5">
-            <button
-              type="button"
-              onClick={() => {
-                onResponder(mensaje);
-                onCerrar();
-              }}
-              className={accion}
-            >
-              <Reply size={18} className="text-white/60" aria-hidden="true" />
-              Responder
-            </button>
+            {!soloLectura && (
+              <button
+                type="button"
+                onClick={() => {
+                  onResponder(mensaje);
+                  onCerrar();
+                }}
+                className={accion}
+              >
+                <Reply size={18} className="text-white/60" aria-hidden="true" />
+                Responder
+              </button>
+            )}
 
             <button
               type="button"
@@ -135,17 +141,19 @@ export default function HojaAcciones({
 
             {mio && (
               <>
-                <button
-                  type="button"
-                  onClick={() => {
-                    onEditar(mensaje);
-                    onCerrar();
-                  }}
-                  className={accion}
-                >
-                  <Pencil size={18} className="text-white/60" aria-hidden="true" />
-                  Editar
-                </button>
+                {!soloLectura && (
+                  <button
+                    type="button"
+                    onClick={() => {
+                      onEditar(mensaje);
+                      onCerrar();
+                    }}
+                    className={accion}
+                  >
+                    <Pencil size={18} className="text-white/60" aria-hidden="true" />
+                    Editar
+                  </button>
+                )}
 
                 <button
                   type="button"

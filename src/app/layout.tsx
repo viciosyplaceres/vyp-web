@@ -7,7 +7,12 @@ import BarraReproductor from "@/components/BarraReproductor";
 import RegistrarSW from "@/components/RegistrarSW";
 import InstalarApp from "@/components/InstalarApp";
 import ActivarAvisosAuto from "@/components/ActivarAvisosAuto";
+import {
+  AvisoTemporada,
+  TemporadaProvider,
+} from "@/components/Temporada";
 import { getSesion } from "@/lib/auth";
+import { temporadaAbierta } from "@/lib/temporada";
 import { obtenerContadoresNavegacion } from "@/app/actions/contadores";
 import "./globals.css";
 
@@ -107,23 +112,26 @@ export default async function RootLayout({
         />
       </head>
       <body className="flex h-[var(--app-height)] flex-col overflow-hidden bg-black text-white">
-        <ReproductorProvider>
-          <Header sesion={sesion} pendientesInicial={contadores.pendientes} />
-          {/* Shell tipo app: solo el contenido central desplaza; las barras
-              superior e inferiores viven en el flujo y nunca se superponen. */}
-          <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
-            {children}
-          </div>
-          <BarraReproductor />
-          <BottomNav
-            esMiembro={sesion?.esMiembro ?? false}
-            userId={sesion?.userId ?? null}
-            noLeidosInicial={contadores.noLeidos}
-          />
-        </ReproductorProvider>
-        <RegistrarSW />
-        <InstalarApp />
-        <ActivarAvisosAuto haySesion={sesion?.esMiembro ?? false} />
+        <TemporadaProvider abiertaInicial={temporadaAbierta()}>
+          <ReproductorProvider>
+            <Header sesion={sesion} pendientesInicial={contadores.pendientes} />
+            <AvisoTemporada />
+            {/* Shell tipo app: solo el contenido central desplaza; las barras
+                superior e inferiores viven en el flujo y nunca se superponen. */}
+            <div className="flex min-h-0 flex-1 flex-col overflow-y-auto overscroll-contain">
+              {children}
+            </div>
+            <BarraReproductor />
+            <BottomNav
+              esMiembro={sesion?.esMiembro ?? false}
+              userId={sesion?.userId ?? null}
+              noLeidosInicial={contadores.noLeidos}
+            />
+          </ReproductorProvider>
+          <RegistrarSW />
+          <InstalarApp />
+          <ActivarAvisosAuto haySesion={sesion?.esMiembro ?? false} />
+        </TemporadaProvider>
       </body>
     </html>
   );

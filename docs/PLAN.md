@@ -17,6 +17,32 @@ durante 10 días**, y ese ciclo anual organiza todo el contenido.
 
 Regla central: **nadie que no sea miembro sube ni comenta nada.** Todo lo demás es abierto.
 
+### Temporada anual de cambios
+
+La aplicación y todo el contenido histórico siguen disponibles durante el año completo. Las
+**escrituras interactivas normales** solo se abren cada año desde el **1 de agosto a las 00:00:00**
+hasta el **10 de septiembre a las 23:59:59**, siempre en `Europe/Madrid` (técnicamente el intervalo
+semiabierto `[1 de agosto 00:00, 11 de septiembre 00:00)`).
+
+Fuera de ese intervalo:
+
+- Siguen disponibles la aplicación, login, logout, cambio y reseteo administrativo de contraseña,
+  SSO a Fiestas Fuente Álamo, galería y música existentes, reproducción, todas las lecturas,
+  suscripción/baja push y marcas de lectura del chat.
+- Se permiten la revocación y eliminación de cuentas por seguridad/privacidad, y el borrado ya
+  autorizado de fotos, vídeos, pistas, comentarios y mensajes existentes. En mensajes esto incluye
+  el borrado blando (`borrado: false -> true`), pero no permite cambiar el texto a la vez.
+- Se bloquean registro, altas/aprobaciones, cambios de perfil/miembros/roles, nuevas subidas o
+  enlaces de galería/música, comentarios, mensajes, ediciones y reacciones, y toda gestión normal:
+  pagos, deudas, tareas, compra, camisetas, limpieza, ubicación, año activo y fechas.
+- Las firmas de Cloudinary y las URLs de subida R2 tampoco se emiten, por lo que no se puede dejar
+  un archivo nuevo en almacenamiento aunque luego se intente saltar la Server Action.
+
+La interfaz muestra un aviso global siempre sincronizado con la hora de Madrid. Registro y los
+controles principales de subida desaparecen; el chat conserva lectura, copiar, información y
+borrado autorizado, pero oculta compositor, respuesta, edición y reacciones. El servidor y
+Postgres son la autoridad aunque una pantalla de gestión siga mostrando algún control.
+
 ---
 
 ## 2. Corrección importante sobre lo ya montado
@@ -40,11 +66,11 @@ Los límites reales de la cuenta gratuita de Cloudinary, ya verificados contra s
 |---|---|
 | Tamaño máximo de imagen | 10 MB |
 | Tamaño máximo de vídeo | **100 MB** |
-| Créditos totales | 25 (1 crédito ≈ 1 GB almacenado/mes ≈ 1 GB servido) |
+| Créditos totales | 25 compartidos entre almacenamiento, transformaciones y tráfico |
 
-Esto tiene una consecuencia dura: **una sesión de DJ de 1–2 horas (100–200 MB) no cabe en
-Cloudinary.** Y aunque cupiera, la música se escucha entera y repetidamente, así que consumiría
-los 25 créditos de tráfico en semanas.
+Esto no garantiza 25 GB de almacenamiento: el consumo real depende también de las transformaciones
+y del tráfico servido. Además, **una sesión de DJ de 1–2 horas (100–200 MB) no cabe en Cloudinary**
+si supera el límite de fichero, y escucharla repetidamente gastaría la bolsa compartida.
 
 Reparto propuesto:
 

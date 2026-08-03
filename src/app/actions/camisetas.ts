@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro, exigirDirectivaOTesorero } from "@/lib/auth";
 import { esUrlDeCloudinary } from "@/lib/cloudinary-url";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 /**
  * Guarda un diseño de camiseta que alguien acaba de subir a Cloudinary, para
@@ -18,6 +19,7 @@ export async function registrarCamiseta(datos: {
   bytes: number | null;
 }) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
 
   // Misma cautela que con los tickets: la URL la manda el navegador.
   if (!esUrlDeCloudinary(datos.url)) {
@@ -50,6 +52,7 @@ export async function registrarCamiseta(datos: {
  */
 export async function votarCamiseta(camisetaId: string, anio: number) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   const { data: voto } = await supabase
@@ -82,6 +85,7 @@ export async function votarCamiseta(camisetaId: string, anio: number) {
 /** Quita un diseño. La base de datos solo deja borrar el propio, o todos si eres admin. */
 export async function borrarCamiseta(id: string) {
   await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
   const { error } = await supabase.from("camisetas").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -102,6 +106,7 @@ export async function guardarPedidoCamiseta(
   tallas: string[],
 ) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
 
   // Cada uno lo suyo; la directiva puede rellenar el de cualquiera (siempre
   // hay quien lo dice por el grupo y no lo mete). La base de datos lo vuelve
@@ -144,6 +149,7 @@ export async function guardarPedidoCamiseta(
 /** Marca o desmarca la cuota. Puede la directiva o el tesorero. */
 export async function marcarPago(perfilId: string, anio: number, pagado: boolean) {
   await exigirDirectivaOTesorero();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   const { error } = await supabase.from("pagos").upsert(

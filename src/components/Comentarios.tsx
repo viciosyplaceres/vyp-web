@@ -5,6 +5,7 @@ import Link from "next/link";
 import { comentarMedia } from "@/app/actions/comentarios";
 import Avatar from "./Avatar";
 import { fechaCortaConHora as fecha } from "@/lib/formato";
+import { useTemporadaAbierta } from "./Temporada";
 
 export type Comentario = {
   id: string;
@@ -29,6 +30,7 @@ export default function Comentarios({
 }) {
   const [estado, accion, pendiente] = useActionState(comentarMedia, null);
   const formRef = useRef<HTMLFormElement>(null);
+  const temporadaAbierta = useTemporadaAbierta();
 
   // Vacía la caja al enviar bien, para poder escribir el siguiente.
   useEffect(() => {
@@ -41,7 +43,7 @@ export default function Comentarios({
         Comentarios
       </h2>
 
-      {esMiembro ? (
+      {esMiembro && temporadaAbierta ? (
         <form ref={formRef} action={accion} className="mt-4">
           <input type="hidden" name="mediaId" value={mediaId} />
           <input type="hidden" name="anio" value={anio} />
@@ -72,9 +74,11 @@ export default function Comentarios({
         </form>
       ) : (
         <p className="mt-3 text-sm text-white/50">
-          {haySesion
-            ? "Tu cuenta todavía está pendiente de que la directiva la apruebe."
-            : "Solo los miembros de la peña pueden comentar."}{" "}
+          {esMiembro
+            ? "Los comentarios nuevos vuelven a abrir el 1 de agosto."
+            : haySesion
+              ? "Tu cuenta todavía está pendiente de que la directiva la apruebe."
+              : "Solo los miembros de la peña pueden comentar."}{" "}
           {!haySesion && (
             <Link href="/login" className="cursor-pointer underline hover:text-white">
               Acceder

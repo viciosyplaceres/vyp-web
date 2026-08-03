@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro } from "@/lib/auth";
 import { avisarMiembros } from "@/lib/push";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 export type DatosMedia = {
   tipo: "foto" | "video";
@@ -31,6 +32,7 @@ export type DatosMedia = {
  */
 export async function registrarMedia(datos: DatosMedia) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   const { error } = await supabase.from("media").insert({
@@ -58,6 +60,7 @@ export async function registrarMedia(datos: DatosMedia) {
  */
 export async function finalizarSubidaGaleria(anio: number, cantidad: number) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
 
   revalidatePath("/galeria");
   revalidatePath(`/galeria/${anio}`);

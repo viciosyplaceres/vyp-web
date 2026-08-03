@@ -3,6 +3,7 @@
 import { ImagePlus } from "lucide-react";
 import PanelSubir from "./PanelSubir";
 import SubirMedia from "./SubirMedia";
+import { useTemporadaAbierta } from "./Temporada";
 
 /**
  * Envoltorio de cliente para el panel de subida de la galería.
@@ -21,6 +22,9 @@ export default function PanelSubirGaleria({
   etiqueta?: string;
   anioInicial?: number;
 }) {
+  const abierta = useTemporadaAbierta();
+  if (!abierta) return null;
+
   return (
     <PanelSubir etiqueta={etiqueta} Icono={ImagePlus}>
       {(cerrar) => <SubirMedia anioInicial={anioInicial} onSubido={cerrar} />}

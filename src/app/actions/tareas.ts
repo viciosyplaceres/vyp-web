@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirMiembro } from "@/lib/auth";
 import { avisarUsuario, avisarMiembros } from "@/lib/push";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 export type DatosTarea = {
   titulo: string;
@@ -17,6 +18,7 @@ export type DatosTarea = {
 /** Crea una tarea y se la reparte a quien corresponda. Solo la directiva. */
 export async function crearTarea(datos: DatosTarea) {
   const sesion = await exigirAdmin();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   const titulo = datos.titulo.trim();
@@ -62,6 +64,7 @@ export async function crearTarea(datos: DatosTarea) {
 
 export async function editarTarea(id: string, datos: DatosTarea) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   const titulo = datos.titulo.trim();
@@ -99,6 +102,7 @@ export async function editarTarea(id: string, datos: DatosTarea) {
  */
 export async function marcarTarea(id: string, hecha: boolean) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   const { data, error } = await supabase
@@ -132,6 +136,7 @@ export async function marcarTarea(id: string, hecha: boolean) {
 
 export async function borrarTarea(id: string) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
   const { error } = await supabase.from("tareas").delete().eq("id", id);
   if (error) throw new Error(error.message);
@@ -142,6 +147,7 @@ export async function borrarTarea(id: string) {
 /** Reparte un artículo de la compra entre uno o varios miembros. */
 export async function asignarCompra(itemId: string, perfiles: string[]) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   await supabase.from("compra_miembros").delete().eq("item_id", itemId);

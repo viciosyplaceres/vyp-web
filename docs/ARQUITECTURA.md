@@ -3,7 +3,7 @@
 Documento de referencia para mantener o ampliar la web. El *qué* y el *por qué* del producto están
 en `PLAN.md`; aquí está el *cómo*.
 
-Actualizado: 2026-07-28
+Actualizado: 2026-08-03
 
 ---
 
@@ -92,15 +92,66 @@ Cada regla se comprueba en más de un sitio a propósito. El orden importa:
 
 La regla de oro: **si una comprobación solo existe en el JavaScript del navegador, no existe.**
 
+### Ventana anual de escritura
+
+`src/lib/temporada.ts` es una función pura y la fuente de verdad en TypeScript: convierte el
+instante recibido a `Europe/Madrid` con `Intl.DateTimeFormat` y abre desde el 1 de agosto 00:00
+incluido hasta el 11 de septiembre 00:00 excluido. `tests/temporada.test.mjs` fija los cuatro bordes
+UTC/Madrid y comprueba que el `TZ` del proceso no cambia el resultado.
+
+La defensa se reparte así:
+
+1. `components/Temporada.tsx` mantiene el estado global alineado al segundo, pinta el banner al
+   cerrar y permite ocultar registro/subidas. `Chat.tsx` pasa a solo lectura: sin compositor,
+   respuesta, edición ni reacciones; copiar, información y borrado propio siguen accesibles.
+2. `lib/temporada-servidor.ts` expone `exigirTemporadaAbierta()`. Todas las Server Actions que crean
+   o cambian contenido normal lo llaman antes de su primera escritura. También lo hacen
+   `/api/cloudinary/firma` y `/api/r2/subir` antes de consultar cuota o emitir una firma.
+3. `supabase/migrations/20260803014636_temporada_escrituras.sql` define
+   `private.temporada_abierta(timestamptz)` y un único trigger genérico
+   `private.exigir_temporada_escritura()`, instalado como `BEFORE INSERT OR UPDATE OR DELETE` en
+   todas las tablas de contenido y gestión. Así una escritura directa por PostgREST o una RPC no
+   evita la temporada. La migración es idempotente y usa referencias `public.`/`private.` completas
+   para que JARVIS pueda reescribir los esquemas de cada app fabricada. Aplicada en producción el
+   2026-08-03 tanto a `public` (VYP) como, ya adaptada, a `pena_akelarre`: 20 tablas y 60 eventos de
+   trigger por schema.
+
+Fuera de temporada el trigger conserva exactamente estas excepciones, siempre subordinadas al RLS
+existente:
+
+| Escritura | Motivo |
+|---|---|
+| `push_subs` INSERT/UPDATE/DELETE | Activar o retirar avisos todo el año |
+| `chat_lecturas` INSERT/UPDATE/DELETE | No leídos y checks de lectura |
+| `perfiles` DELETE | Baja y privacidad |
+| `perfiles` UPDATE solo `aprobado: true -> false` | Revocación de acceso inmediata |
+| `media`, `pistas`, `comentarios`, `mensajes` DELETE | Borrado autorizado de contenido existente |
+| `mensajes` UPDATE solo `borrado: false -> true` | Borrado blando sin edición encubierta |
+| DELETE en cascada nacido de uno de los borrados anteriores | La baja/purga no queda a medias |
+| UPDATE anidado que solo pone a NULL una FK con `ON DELETE SET NULL` | Conserva media, música, camisetas, tareas, deudas y respuestas al borrar su autor/origen |
+
+Login, logout, cambios/reset de contraseña y SSO actúan en Auth o generan una redirección, no en
+las tablas bloqueadas, y permanecen disponibles. Lecturas y reproducción nunca pasan por el trigger.
+Las acciones `borrarMedia*`, `borrarPista*`, `borrarComentario`, `borrarMensaje`,
+`vaciarHistorialChat`, `revocarMiembro` y `eliminarMiembro` no llevan guardia estacional a propósito.
+
+El alta normal de Auth termina insertando `public.perfiles`; fuera de temporada ese INSERT solo se
+acepta si la fila correspondiente de `auth.users` contiene el booleano
+`raw_app_meta_data.fabrica_provisioning = true`. Esa metadata de aplicación solo la establece un
+cliente de confianza. `raw_user_meta_data` no se consulta ni se considera autorización bajo ningún
+concepto.
+
 ### Subidas: por qué van firmadas
 
 Ni Cloudinary ni R2 reciben ficheros del navegador sin permiso previo:
 
 - **Fotos/vídeos**: el navegador pide una firma a `/api/cloudinary/firma`. Esa ruta comprueba que
   quien la pide es miembro aprobado y firma con el `API_SECRET`, que nunca sale del servidor. Sin
-  firma válida, Cloudinary rechaza la subida.
+  firma válida, Cloudinary rechaza la subida. En la última hora del 10 de septiembre, el timestamp
+  se antedata para que la validez máxima de una hora termine justo con la temporada.
 - **Música**: `/api/r2/subir` devuelve una URL prefirmada de 30 minutos. **La clave del objeto la
-  decide el servidor**, no el cliente: así nadie elige dónde escribe dentro del bucket.
+  decide el servidor**, no el cliente: así nadie elige dónde escribe dentro del bucket. En los
+  últimos 30 minutos de temporada, su caducidad se recorta al cierre.
 - **Escuchar**: `/api/r2/reproducir?clave=…` redirige a una URL prefirmada de lectura. Antes
   comprueba que la clave tiene el formato `musica/<uuid>.<ext>` y corresponde a una pista
   registrada, para que nadie use la ruta como visor del bucket entero.
@@ -214,7 +265,7 @@ que sus plugins publiquen una versión compatible.
 
 | Recurso | Límite | Qué pasa al acercarse |
 |---|---|---|
-| Cloudinary | 25 créditos (≈25 GB) | Bajar la calidad de compresión o pasar fotos antiguas a R2 |
+| Cloudinary | 25 créditos compartidos | Bajar la calidad de compresión o pasar fotos antiguas a R2 |
 | Cloudinary vídeo | 100 MB por fichero | La interfaz avisa antes de subir |
 | R2 | 10 GB, salida gratis | De sobra para años de sesiones |
 | Supabase | 500 MB de base de datos | Solo texto: tardará mucho en llenarse |
@@ -222,6 +273,10 @@ que sus plugins publiquen una versión compatible.
 
 El reparto está pensado justo para esto: lo que se escucha en bucle (música) va donde la salida es
 gratis, y lo que se ve una vez (fotos) donde hay optimización automática.
+
+Un crédito de Cloudinary no equivale a 1 GB garantizado de almacenamiento: la misma bolsa mensual
+se consume con almacenamiento, transformaciones y tráfico. La interfaz consulta el uso real de la
+cuenta, no promete una capacidad fija de 25 GB.
 
 **Ya no hace falta vigilarlo a mano**: `/admin/almacenamiento` (ver `lib/almacenamiento.ts`) muestra
 el uso real de Cloudinary y R2, y `/api/cloudinary/firma` + `/api/r2/subir` bloquean subidas nuevas

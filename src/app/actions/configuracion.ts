@@ -3,6 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin } from "@/lib/auth";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 export type UbicacionPublica = {
   nombre: string;
@@ -43,6 +44,7 @@ export async function obtenerAnioActivo(): Promise<number> {
 
 export async function actualizarAnioActivo(anio: number) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
 
   if (!Number.isInteger(anio) || anio < 2010 || anio > 2100) {
     throw new Error("Año no válido.");
@@ -89,6 +91,7 @@ export async function obtenerUbicacion(): Promise<UbicacionPublica> {
 /** Cambia la sede sin tocar código; solo la directiva puede actualizarla. */
 export async function actualizarUbicacion(ubicacion: UbicacionPublica) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
 
   const nombre = ubicacion.nombre.trim();
   const direccion = ubicacion.direccion.trim();
@@ -178,6 +181,7 @@ export async function actualizarFechasFiestas(
   plazasDesmontaje: number,
 ) {
   await exigirAdmin();
+  exigirTemporadaAbierta();
 
   if (!Number.isInteger(anio) || anio < 2010 || anio > 2100) {
     throw new Error("Año no válido.");

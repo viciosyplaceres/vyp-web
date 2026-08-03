@@ -3,9 +3,31 @@
 import { useActionState } from "react";
 import Link from "next/link";
 import { registrarse } from "@/app/actions/auth";
+import { useTemporadaAbierta } from "@/components/Temporada";
 
 export default function RegistroPage() {
   const [state, formAction, pending] = useActionState(registrarse, null);
+  const abierta = useTemporadaAbierta();
+
+  if (!abierta) {
+    return (
+      <main className="flex flex-1 items-center justify-center px-4 py-16 text-center">
+        <div className="max-w-sm space-y-4 rounded-xl border border-white/15 p-8">
+          <h1 className="text-2xl font-semibold">Registro fuera de temporada</h1>
+          <p className="text-sm text-white/60">
+            Las nuevas cuentas se pueden crear del 1 de agosto al 10 de septiembre.
+            Si ya tienes cuenta, puedes seguir entrando con normalidad.
+          </p>
+          <Link
+            href="/login"
+            className="inline-flex min-h-[44px] items-center rounded-full bg-white px-5 text-sm font-medium text-black"
+          >
+            Acceder
+          </Link>
+        </div>
+      </main>
+    );
+  }
 
   return (
     <main className="flex-1 flex items-center justify-center px-4 py-16">

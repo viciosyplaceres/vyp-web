@@ -25,6 +25,7 @@ function BurbujaMensaje({
   leido,
   onAbrirMenu,
   onReaccionar,
+  soloLectura,
 }: {
   mensaje: Mensaje;
   mio: boolean;
@@ -35,6 +36,7 @@ function BurbujaMensaje({
   onAbrirMenu: (m: Mensaje) => void;
   /** Solo para el atajo de tocar una reacción ya puesta; el resto va por el menú. */
   onReaccionar: (id: string, emoji: string) => void;
+  soloLectura: boolean;
 }) {
   const esTemporal = m.id.startsWith("temp-");
 
@@ -141,22 +143,39 @@ function BurbujaMensaje({
 
         {grupos.size > 0 && (
           <div className={`mt-1 flex flex-wrap gap-1 ${mio ? "justify-end" : "justify-start"}`}>
-            {[...grupos.entries()].map(([emoji, lista]) => (
-              <button
-                key={emoji}
-                type="button"
-                onClick={() => onReaccionar(m.id, emoji)}
-                title={lista.map((r) => r.nombre ?? "Miembro").join(", ")}
-                className={`flex cursor-pointer items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs transition-colors duration-150 ${
-                  lista.some((r) => r.perfilId === userId)
-                    ? "border-white/40 bg-white/15"
-                    : "border-white/10 bg-white/5 hover:bg-white/10"
-                }`}
-              >
-                <span>{emoji}</span>
-                {lista.length > 1 && <span className="text-white/60">{lista.length}</span>}
-              </button>
-            ))}
+            {[...grupos.entries()].map(([emoji, lista]) => {
+              const contenido = (
+                <>
+                  <span>{emoji}</span>
+                  {lista.length > 1 && <span className="text-white/60">{lista.length}</span>}
+                </>
+              );
+              const className = `flex items-center gap-1 rounded-full border px-1.5 py-0.5 text-xs ${
+                lista.some((r) => r.perfilId === userId)
+                  ? "border-white/40 bg-white/15"
+                  : "border-white/10 bg-white/5"
+              }`;
+
+              return soloLectura ? (
+                <span
+                  key={emoji}
+                  title={lista.map((r) => r.nombre ?? "Miembro").join(", ")}
+                  className={className}
+                >
+                  {contenido}
+                </span>
+              ) : (
+                <button
+                  key={emoji}
+                  type="button"
+                  onClick={() => onReaccionar(m.id, emoji)}
+                  title={lista.map((r) => r.nombre ?? "Miembro").join(", ")}
+                  className={`${className} cursor-pointer transition-colors duration-150 hover:bg-white/10`}
+                >
+                  {contenido}
+                </button>
+              );
+            })}
           </div>
         )}
       </div>

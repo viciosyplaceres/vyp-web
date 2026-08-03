@@ -5,6 +5,7 @@ import { createClient } from "@/lib/supabase/server";
 import { exigirAdmin, exigirMiembro } from "@/lib/auth";
 import { avisarMiembros } from "@/lib/push";
 import { autorDe } from "@/lib/relaciones";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 export type MensajeCreado = {
   id: string;
@@ -30,6 +31,7 @@ export async function enviarMensaje(
   respuestaA?: string | null,
 ): Promise<MensajeCreado | null> {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
 
   const limpio = texto.trim();
   if (!limpio) return null;
@@ -105,6 +107,7 @@ export async function enviarMensaje(
 
 /** Edita el texto de un mensaje propio. La base de datos impide tocar el ajeno. */
 export async function editarMensaje(id: string, texto: string) {
+  exigirTemporadaAbierta();
   const limpio = texto.trim();
   if (!limpio) throw new Error("El mensaje no puede quedar vacío.");
   if (limpio.length > 4000) throw new Error("El mensaje es demasiado largo.");
@@ -148,6 +151,7 @@ export async function vaciarHistorialChat(): Promise<number> {
 /** Pone o quita tu reacción a un mensaje (una por persona, como WhatsApp). */
 export async function reaccionar(mensajeId: string, emoji: string) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   const { data: mia } = await supabase

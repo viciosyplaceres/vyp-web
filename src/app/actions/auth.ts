@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { createClient } from "@/lib/supabase/server";
 import { avisarAdmins } from "@/lib/push";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 export type EstadoFormulario = { error?: string } | null;
 
@@ -35,6 +36,12 @@ export async function registrarse(
   _prevState: EstadoFormulario,
   formData: FormData,
 ): Promise<EstadoFormulario> {
+  try {
+    exigirTemporadaAbierta();
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : "Registro cerrado." };
+  }
+
   const email = String(formData.get("email") ?? "");
   const password = String(formData.get("password") ?? "");
   const nombre = String(formData.get("nombre") ?? "");

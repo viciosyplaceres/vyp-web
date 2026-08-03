@@ -2,6 +2,8 @@ import { NextResponse } from "next/server";
 import { v2 as cloudinary } from "cloudinary";
 import { getSesion } from "@/lib/auth";
 import { haySitioCloudinary } from "@/lib/almacenamiento";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
+import { segundosHastaCierreTemporada } from "@/lib/temporada";
 
 /**
  * Emite una firma de subida de Cloudinary SOLO si quien la pide es un miembro
@@ -21,6 +23,15 @@ export async function POST(request: Request) {
   if (!sesion?.esMiembro) {
     return NextResponse.json(
       { error: "Solo los miembros de la peña pueden subir." },
+      { status: 403 },
+    );
+  }
+
+  try {
+    exigirTemporadaAbierta();
+  } catch (error) {
+    return NextResponse.json(
+      { error: error instanceof Error ? error.message : "Subidas cerradas." },
       { status: 403 },
     );
   }
@@ -50,7 +61,14 @@ export async function POST(request: Request) {
     return NextResponse.json({ error: "Tipo no válido." }, { status: 400 });
   }
 
-  const timestamp = Math.round(Date.now() / 1000);
+  const ahora = Date.now();
+  const segundosHastaCierre = segundosHastaCierreTemporada(ahora);
+  // Cloudinary acepta una firma durante una hora desde su timestamp. En la
+  // última hora de temporada se antedata para que caduque justo al cerrar.
+  const antiguedad = Number.isFinite(segundosHastaCierre)
+    ? Math.max(0, 60 * 60 - segundosHastaCierre)
+    : 0;
+  const timestamp = Math.floor(ahora / 1000 - antiguedad);
 
   // Los parámetros firmados son exactamente los que enviará el navegador.
   const paramsAFirmar = { folder, timestamp };

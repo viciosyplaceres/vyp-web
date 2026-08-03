@@ -18,6 +18,7 @@ import CarruselFotos, { type FotoCarrusel } from "@/components/CarruselFotos";
 import MapaAlAcercarse from "@/components/MapaAlAcercarse";
 import MusicaCompacta from "@/components/MusicaCompacta";
 import type { PistaListada } from "@/components/ListaMusica";
+import { SoloTemporadaAbierta } from "@/components/Temporada";
 import {
   obtenerUbicacion,
   type UbicacionPublica,
@@ -312,7 +313,8 @@ async function InvitacionHome({
 
       {/* Invitación a unirse */}
       {!sesion?.esMiembro && (
-        <section className="px-4 pb-16 sm:px-6">
+        <SoloTemporadaAbierta>
+          <section className="px-4 pb-16 sm:px-6">
           <div className="mx-auto max-w-5xl rounded-2xl border border-white/15 bg-white/5 p-6 sm:p-8">
             <div className="flex flex-col gap-6 sm:flex-row sm:items-center sm:justify-between">
               <div>
@@ -337,7 +339,8 @@ async function InvitacionHome({
               </Link>
             </div>
           </div>
-        </section>
+          </section>
+        </SoloTemporadaAbierta>
       )}
     </>
   );

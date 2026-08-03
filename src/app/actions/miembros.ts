@@ -5,6 +5,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { avisarUsuario, avisarMiembros } from "@/lib/push";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 type RolPerfil = "miembro" | "tesorero" | "admin";
 
@@ -60,6 +61,7 @@ export async function aprobarMiembro(id: string, rol: RolPerfil = "miembro") {
   // Chequeo explícito en el server action, ADEMÁS de la política RLS de "perfiles"
   // (que ya exige es_admin() para modificar el perfil de otro): defensa en profundidad.
   const { supabase, puedeAsignarRoles } = await exigirAdmin();
+  exigirTemporadaAbierta();
 
   if (rol !== "miembro" && !puedeAsignarRoles) {
     throw new Error("Solo quien puede repartir roles puede aprobar con ese rol.");
@@ -132,6 +134,7 @@ export async function revocarMiembro(id: string) {
  */
 export async function cambiarRolMiembro(id: string, rol: RolPerfil) {
   const { supabase, puedeAsignarRoles } = await exigirAdmin();
+  exigirTemporadaAbierta();
 
   if (!puedeAsignarRoles) {
     throw new Error("Solo quien puede repartir roles puede cambiar el de otra cuenta.");

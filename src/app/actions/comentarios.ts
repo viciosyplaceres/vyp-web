@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { createClient } from "@/lib/supabase/server";
 import { exigirMiembro } from "@/lib/auth";
 import { avisarMiembros } from "@/lib/push";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 export async function comentarMedia(
   _prev: { error?: string } | null,
@@ -11,6 +12,7 @@ export async function comentarMedia(
 ): Promise<{ error?: string } | null> {
   try {
     const sesion = await exigirMiembro();
+    exigirTemporadaAbierta();
 
     const mediaId = String(formData.get("mediaId") ?? "");
     const anio = String(formData.get("anio") ?? "");

@@ -6,6 +6,7 @@ import { exigirMiembro } from "@/lib/auth";
 import { analizarEnlaceMusica } from "@/lib/embeds";
 import { avisarMiembros } from "@/lib/push";
 import { esClaveMusica } from "@/lib/r2-claves";
+import { exigirTemporadaAbierta } from "@/lib/temporada-servidor";
 
 /** Registra una pista propia ya subida a R2. */
 export async function registrarPistaR2(datos: {
@@ -18,6 +19,7 @@ export async function registrarPistaR2(datos: {
   bytes?: number | null;
 }) {
   const sesion = await exigirMiembro();
+  exigirTemporadaAbierta();
   const supabase = await createClient();
 
   if (!datos.titulo?.trim()) throw new Error("Hace falta un título.");
@@ -57,6 +59,7 @@ export async function registrarPistaEnlace(
 ): Promise<{ error?: string } | null> {
   try {
     const sesion = await exigirMiembro();
+    exigirTemporadaAbierta();
 
     const titulo = String(formData.get("titulo") ?? "").trim();
     const artista = String(formData.get("artista") ?? "").trim();
